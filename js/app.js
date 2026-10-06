@@ -1434,7 +1434,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
       DOM.themeToggleBtn.querySelector("i").className = isLight ? "fa-solid fa-sun" : "fa-solid fa-moon";
     }
-    showToast(isLight ? "Switched to Light Theme" : "Switched to Dark Theme", "info");
   });
 
   function showToast(message, type = "success") {
