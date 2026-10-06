@@ -62,12 +62,58 @@ const SupabaseManager = {
 
       this.isConnected = true;
       this.setupRealtimeSubscriptions();
+      this.setupAuthListener();
       return true;
     } catch (err) {
       console.error("Failed to connect to Supabase:", err);
       this.isConnected = false;
       return false;
     }
+  },
+
+  /**
+   * Listen for email sign-in link clicks & redirect to Dev/QA hub
+   */
+  setupAuthListener() {
+    if (!this.client) return;
+
+    this.client.auth.onAuthStateChange(async (event, session) => {
+      if (session && session.user && session.user.email) {
+        const email = session.user.email.toLowerCase().trim();
+        console.log(`⚡ Supabase Auth State: ${event} for ${email}`);
+
+        const users = StorageManager.getUsers();
+        let user = users.find(u => u.email && u.email.toLowerCase() === email);
+        if (!user) {
+          const isDev = email === "chhotumonster225@gmail.com" || email.includes("dev");
+          user = {
+            id: `user-${session.user.id.substring(0, 8)}`,
+            name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+            email: email,
+            role: isDev ? "dev" : "qa",
+            roleTitle: isDev ? "Lead Full-Stack Developer" : "QA Automation Tester",
+            avatar: email.substring(0, 2).toUpperCase(),
+            color: isDev ? "#10b981" : "#6366f1",
+            status: "active",
+            emailVerified: true,
+            createdAt: new Date().toISOString()
+          };
+          users.push(user);
+          StorageManager.saveUsers(users);
+        }
+
+        StorageManager.setCurrentUser(user);
+
+        const pathname = window.location.pathname.toLowerCase();
+        if (pathname.endsWith("index.html") || pathname === "/" || pathname === "") {
+          if (user.role === "dev") {
+            window.location.href = "dev.html";
+          } else {
+            window.location.href = "tester.html";
+          }
+        }
+      }
+    });
   },
 
   /**
