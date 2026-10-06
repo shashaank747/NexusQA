@@ -234,6 +234,22 @@ const StorageManager = {
     return users[index];
   },
 
+  deleteUser(userId) {
+    const users = this.getUsers();
+    const targetUser = users.find(u => u.id === userId);
+    if (!targetUser) return null;
+
+    const cur = this.getCurrentUser();
+    if (cur && cur.id === userId) {
+      return { error: "CANNOT_DELETE_SELF" };
+    }
+
+    const filtered = users.filter(u => u.id !== userId);
+    this.saveUsers(filtered);
+    this.broadcast("USER_DELETED", { userId, user: targetUser });
+    return { success: true, user: targetUser };
+  },
+
   saveUsers(users) {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     this.broadcast("USERS_UPDATED");

@@ -297,6 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
     closeEditMemberModalBtn: document.getElementById("closeEditMemberModalBtn"),
     cancelEditMemberModalBtn: document.getElementById("cancelEditMemberModalBtn"),
     saveEditMemberBtn: document.getElementById("saveEditMemberBtn"),
+    deleteMemberBtn: document.getElementById("deleteMemberBtn"),
     editMemberIdBadge: document.getElementById("editMemberIdBadge"),
     editMemberAuthBadge: document.getElementById("editMemberAuthBadge"),
 
@@ -1721,8 +1722,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           ? `<span class="badge badge-ai" style="background: rgba(59, 130, 246, 0.15) !important; color: #2563eb !important; border: 1px solid rgba(59, 130, 246, 0.3) !important;"><i class="fa-solid fa-code"></i> ${escapeHtml(u.roleTitle || 'Junior Developer')}</span>`
           : `<span class="badge badge-untested">${escapeHtml(u.roleTitle || 'QA Tester')}</span>`;
 
+        const isSelf = state.currentUser && state.currentUser.id === u.id;
         const actionCell = isSenior
-          ? `<button class="btn btn-secondary btn-xs" onclick="window.openEditMemberModal('${u.id}')" title="Edit member details as Senior Dev"><i class="fa-solid fa-user-pen"></i> Edit</button>`
+          ? `<div class="d-flex align-center gap-1">
+              <button class="btn btn-secondary btn-xs" onclick="window.openEditMemberModal('${u.id}')" title="Edit member details as Senior Dev"><i class="fa-solid fa-user-pen"></i> Edit</button>
+              ${isSelf ? '' : `<button class="btn btn-outline-danger btn-xs" onclick="window.deleteMember('${u.id}')" title="Delete user from workspace"><i class="fa-solid fa-trash-can"></i></button>`}
+            </div>`
           : `<span class="badge badge-untested text-xs" title="Only Senior Developers can edit"><i class="fa-solid fa-lock"></i> View Only</span>`;
 
         return `
@@ -1775,7 +1780,45 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       DOM.editMemberAuthBadge.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Senior Dev (${escapeHtml(state.currentUser ? state.currentUser.name : "Lead Dev")})`;
     }
 
+    const isSelf = state.currentUser && state.currentUser.id === user.id;
+    if (DOM.deleteMemberBtn) {
+      DOM.deleteMemberBtn.style.display = isSelf ? "none" : "inline-flex";
+    }
+
     if (DOM.editMemberModal) DOM.editMemberModal.style.display = "flex";
+  };
+
+  window.deleteMember = function(userId) {
+    const isSenior = StorageManager.isSeniorDev(state.currentUser);
+    if (!isSenior) {
+      showToast("Permission Denied: Only Senior Developers can remove users.", "error");
+      return;
+    }
+
+    const user = StorageManager.getUsers().find(u => u.id === userId);
+    if (!user) {
+      showToast("User not found.", "error");
+      return;
+    }
+
+    if (state.currentUser && state.currentUser.id === userId) {
+      showToast("Cannot delete your own active account while logged in.", "error");
+      return;
+    }
+
+    const confirmMsg = `Are you sure you want to permanently delete user "${user.name}" (${user.email}) from the workspace?\n\nThis will remove their account credentials and access permissions.`;
+    if (confirm(confirmMsg)) {
+      const result = StorageManager.deleteUser(userId);
+      if (result && result.success) {
+        if (DOM.editMemberModal) DOM.editMemberModal.style.display = "none";
+        showToast(`User "${user.name}" has been removed from workspace.`, "info");
+        renderDevApprovals();
+      } else if (result && result.error === "CANNOT_DELETE_SELF") {
+        showToast("Cannot delete your own active account while logged in.", "error");
+      } else {
+        showToast("Failed to delete user.", "error");
+      }
+    }
   };
 
   on(DOM.closeEditMemberModalBtn, "click", () => {
@@ -1784,6 +1827,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   on(DOM.cancelEditMemberModalBtn, "click", () => {
     if (DOM.editMemberModal) DOM.editMemberModal.style.display = "none";
+  });
+
+  on(DOM.deleteMemberBtn, "click", () => {
+    const userId = DOM.editMemberId ? DOM.editMemberId.value : "";
+    if (userId) {
+      window.deleteMember(userId);
+    }
   });
 
   on(DOM.saveEditMemberBtn, "click", () => {
