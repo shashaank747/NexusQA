@@ -92,8 +92,8 @@
             </li>
             <li class="nav-item" data-view="ai-generator">
               <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                <span>AI Test Generator</span>
+                <i class="fa-solid fa-microphone-lines"></i>
+                <span>Voice & AI Chat Studio</span>
                 <span class="nav-badge badge-ai">PRO</span>
               </a>
             </li>
@@ -163,6 +163,11 @@
         </div>
 
         <div class="topbar-right">
+          <button class="btn btn-ai-voice btn-sm" id="topbarVoiceAiBtn" title="Launch Voice & Chat AI Test Studio">
+            <i class="fa-solid fa-microphone text-cyan"></i>
+            <span>Voice AI Studio</span>
+          </button>
+
           <button class="btn btn-secondary btn-sm" id="quickRunBtn" title="Launch Active Test Run">
             <i class="fa-solid fa-bolt text-amber"></i>
             <span>Quick Run</span>
@@ -642,61 +647,116 @@
           </div>
         </section>
 
-        <!-- QA VIEW 5: AI GENERATOR -->
+        <!-- QA VIEW 5: VOICE & AI CHAT TEST CREATOR STUDIO -->
         <section class="view-panel" id="view-ai-generator">
           <div class="view-header">
             <div>
-              <h1 class="view-title">AI Test Case Generator</h1>
-              <p class="view-subtitle">Generate complete, step-by-step test suites, edge cases, and preconditions from user stories.</p>
+              <div class="d-flex align-center gap-2 mb-1">
+                <span class="badge badge-ai"><i class="fa-solid fa-sparkles"></i> AI Studio</span>
+                <span class="badge badge-version">Speech-to-Text Enabled</span>
+              </div>
+              <h1 class="view-title">Voice & AI Chat Test Case Creator</h1>
+              <p class="view-subtitle">Dictate your testing steps using your microphone or chat with the AI assistant. Automatically extracts structured test cases, generates unique test IDs, copies to Excel, and saves directly to your database.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-outline btn-sm" id="btnClearAiChat" title="Clear Chat History">
+                <i class="fa-solid fa-trash-can"></i> Clear Chat
+              </button>
             </div>
           </div>
 
           <div class="ai-workspace-grid">
-            <div class="ai-input-card">
+            <!-- Left Pane: Conversational Chatbot & Voice Dictation Interface -->
+            <div class="ai-input-card ai-chat-interface-card">
               <div class="card-header">
-                <h3><i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Requirement & Story Prompt</h3>
-                <button class="btn btn-secondary btn-xs" id="loadSampleStoryBtn"><i class="fa-solid fa-lightbulb"></i> Load Sample</button>
+                <div class="d-flex align-center gap-2">
+                  <div class="ai-avatar-icon">
+                    <i class="fa-solid fa-brain text-primary"></i>
+                  </div>
+                  <div>
+                    <h3 style="margin: 0; font-size: 0.95rem;">NexusQA AI Assistant</h3>
+                    <span class="text-xs text-muted">Powered by Gemini QA Engine</span>
+                  </div>
+                </div>
+                <div class="d-flex align-center gap-2">
+                  <label for="aiTargetSuiteSelect" class="text-xs text-muted mb-0">Target Suite:</label>
+                  <select id="aiTargetSuiteSelect" class="nexus-select" style="padding: 0.25rem 0.5rem; font-size: 0.78rem; width: auto;"></select>
+                </div>
               </div>
-              <div class="card-body">
-                <div class="ai-preset-chips mb-3">
-                  <span class="preset-label text-xs text-muted">Quick Presets:</span>
-                  <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('checkout')"><i class="fa-solid fa-credit-card"></i> Stripe Checkout</button>
-                  <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('oauth')"><i class="fa-solid fa-key"></i> OAuth2 / SSO</button>
-                  <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('security')"><i class="fa-solid fa-shield-virus"></i> API Security</button>
+
+              <div class="card-body p-0 d-flex flex-column" style="min-height: 560px; height: 100%;">
+                <!-- Live Chat Message Stream -->
+                <div class="ai-chat-history" id="aiChatHistory">
+                  <div class="chat-message chat-msg-assistant">
+                    <div class="chat-msg-avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="chat-msg-bubble">
+                      <p><strong>Hello Alex!</strong> How can I help you document your testing today?</p>
+                      <p class="mb-0">You can <strong>turn on the microphone</strong> and speak your test steps naturally, or type out what you did in chat. I will structure everything into formal test cases with step numbers, auto-assign <strong>Test IDs</strong>, and let you <strong>copy directly into Excel</strong> or <strong>save into your database</strong>.</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="aiTargetSuiteSelect">Assign Generated Tests to Suite</label>
-                  <select id="aiTargetSuiteSelect" class="nexus-select w-100"></select>
+                <!-- Voice Dictation Active Waveform Banner -->
+                <div class="voice-listening-banner" id="voiceListeningBanner" style="display: none;">
+                  <div class="voice-wave-bars">
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
+                  <div class="voice-listening-text">
+                    <strong>Listening to your voice...</strong> Speak your testing steps naturally. Click mic to finish.
+                  </div>
+                  <button type="button" class="btn btn-danger btn-xs" id="btnStopVoiceRec">Stop Dictation</button>
                 </div>
-                <div class="form-group">
-                  <label for="aiStoryPrompt">User Story / Feature Spec Acceptance Criteria</label>
-                  <textarea id="aiStoryPrompt" class="nexus-textarea font-sans" rows="9" placeholder="As a user, I want to securely checkout with promo code discounts and automatic currency conversion..."></textarea>
+
+                <!-- Chat & Voice Input Controls -->
+                <div class="ai-chat-input-container">
+                  <!-- Quick Prompt Presets -->
+                  <div class="ai-preset-chips mb-2">
+                    <span class="preset-label text-xs text-muted"><i class="fa-solid fa-bolt text-amber"></i> Quick Scenarios:</span>
+                    <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('checkout')"><i class="fa-solid fa-credit-card"></i> Stripe Checkout</button>
+                    <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('oauth')"><i class="fa-solid fa-key"></i> OAuth2 / SSO</button>
+                    <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('security')"><i class="fa-solid fa-shield-virus"></i> API Security</button>
+                  </div>
+
+                  <div class="ai-prompt-box-wrapper">
+                    <button type="button" class="btn-voice-mic" id="btnVoiceMic" title="Toggle Microphone Dictation (Speech to Text)">
+                      <i class="fa-solid fa-microphone"></i>
+                    </button>
+                    <textarea id="aiStoryPrompt" class="ai-chat-textarea" rows="2" placeholder="Tell AI what you tested or dictate steps via mic (e.g. 'I opened checkout, applied coupon SAVE20, verified 20% discount...')..."></textarea>
+                    <button type="button" class="btn-ai-send" id="generateAITestsBtn" title="Send to AI Assistant">
+                      <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                  </div>
                 </div>
-                <button class="btn btn-primary btn-block ai-generate-btn" id="generateAITestsBtn">
-                  <i class="fa-solid fa-wand-magic-sparkles"></i> Synthesize Test Cases with AI
-                </button>
               </div>
             </div>
 
+            <!-- Right Pane: Structured Extracted Test Cases Studio -->
             <div class="ai-output-card">
               <div class="output-header">
-                <h3><i class="fa-solid fa-microchip"></i> Generated Test Specifications</h3>
-                <button class="btn btn-success btn-sm" id="importAllAITestsBtn" style="display: none;">
-                  <i class="fa-solid fa-file-import"></i> Save All to Test Suite (<span id="aiGeneratedCount">0</span>)
-                </button>
+                <div>
+                  <h3 style="margin: 0; font-size: 0.95rem;"><i class="fa-solid fa-table-list text-cyan"></i> Extracted Test Specifications</h3>
+                  <span class="text-xs text-muted">Automatically structured with unique test IDs and actions</span>
+                </div>
+                <div class="d-flex align-center gap-2">
+                  <button class="btn btn-secondary btn-sm" id="btnCopyExcelTsv" style="display: none;" title="Copy in Tabular Format for Excel / Google Sheets">
+                    <i class="fa-solid fa-file-excel text-emerald"></i> Copy for Excel
+                  </button>
+                  <button class="btn btn-success btn-sm" id="importAllAITestsBtn" style="display: none;">
+                    <i class="fa-solid fa-database"></i> Save to Database (<span id="aiGeneratedCount">0</span>)
+                  </button>
+                </div>
               </div>
 
               <div class="ai-results-viewport" id="aiResultsViewport">
                 <div class="ai-idle-placeholder" id="aiIdlePlaceholder">
-                  <div class="ai-placeholder-icon"><i class="fa-solid fa-brain"></i></div>
-                  <h4>Ready to Generate Tests</h4>
-                  <p>Enter a user story on the left and click "Synthesize Test Cases".</p>
+                  <div class="ai-placeholder-icon"><i class="fa-solid fa-microphone-lines"></i></div>
+                  <h4>Ready for Voice Dictation & Natural Language</h4>
+                  <p>Turn on the microphone or type your testing narrative on the left. The AI will extract and structure test cases with preconditions, steps, expected results, and auto-generated IDs.</p>
                 </div>
 
                 <div class="ai-generating-loader" id="aiGeneratingLoader" style="display: none;">
                   <div class="spinner-pulse"></div>
-                  <h4>Synthesizing test scenarios & edge cases...</h4>
+                  <h4>Structuring test cases & assigning test IDs...</h4>
                 </div>
 
                 <div class="generated-cards-list" id="generatedCardsList" style="display: none;"></div>

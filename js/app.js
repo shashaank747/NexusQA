@@ -282,11 +282,18 @@ document.addEventListener("DOMContentLoaded", () => {
     cancelDevFixModalBtn: document.getElementById("cancelDevFixModalBtn"),
     saveDevFixBtn: document.getElementById("saveDevFixBtn"),
 
-    // AI Generator
+    // AI Generator & Voice Studio
+    topbarVoiceAiBtn: document.getElementById("topbarVoiceAiBtn"),
+    btnClearAiChat: document.getElementById("btnClearAiChat"),
+    aiChatHistory: document.getElementById("aiChatHistory"),
+    voiceListeningBanner: document.getElementById("voiceListeningBanner"),
+    btnStopVoiceRec: document.getElementById("btnStopVoiceRec"),
+    btnVoiceMic: document.getElementById("btnVoiceMic"),
     aiTargetSuiteSelect: document.getElementById("aiTargetSuiteSelect"),
     aiStoryPrompt: document.getElementById("aiStoryPrompt"),
     loadSampleStoryBtn: document.getElementById("loadSampleStoryBtn"),
     generateAITestsBtn: document.getElementById("generateAITestsBtn"),
+    btnCopyExcelTsv: document.getElementById("btnCopyExcelTsv"),
     importAllAITestsBtn: document.getElementById("importAllAITestsBtn"),
     aiGeneratedCount: document.getElementById("aiGeneratedCount"),
     aiIdlePlaceholder: document.getElementById("aiIdlePlaceholder"),
@@ -2837,9 +2844,122 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   };
 
-  // AI Generator
+  // =========================================================================
+  // VOICE & AI CHAT TEST CASE CREATOR STUDIO
+  // =========================================================================
+  let speechRecognition = null;
+  let isVoiceListening = false;
+
   function renderAIGeneratorSuiteDropdown() {
     populateSuiteDropdowns();
+  }
+
+  function initVoiceRecognition() {
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) return null;
+
+    const recognition = new SpeechRecognitionAPI();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+      isVoiceListening = true;
+      updateVoiceUI(true);
+    };
+
+    recognition.onresult = (event) => {
+      let interimTranscript = "";
+      let finalTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript && DOM.aiStoryPrompt) {
+        const currentVal = DOM.aiStoryPrompt.value;
+        DOM.aiStoryPrompt.value = currentVal ? `${currentVal.trim()} ${finalTranscript.trim()}` : finalTranscript.trim();
+        DOM.aiStoryPrompt.scrollTop = DOM.aiStoryPrompt.scrollHeight;
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.warn("Speech recognition event:", event.error);
+      if (event.error !== "no-speech") {
+        showToast(`Voice mic notice: ${event.error}`, "info");
+      }
+      stopVoiceListening();
+    };
+
+    recognition.onend = () => {
+      isVoiceListening = false;
+      updateVoiceUI(false);
+    };
+
+    return recognition;
+  }
+
+  function toggleVoiceListening() {
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
+      showToast("Speech Recognition is not supported by your current browser. You can type directly in the chat!", "error");
+      if (DOM.aiStoryPrompt) DOM.aiStoryPrompt.focus();
+      return;
+    }
+    if (!speechRecognition) {
+      speechRecognition = initVoiceRecognition();
+    }
+    if (isVoiceListening) {
+      stopVoiceListening();
+    } else {
+      try {
+        speechRecognition.start();
+        showToast("Microphone active! Speak your testing steps naturally...", "info");
+      } catch (err) {
+        console.warn("Speech recognition start warning:", err);
+      }
+    }
+  }
+
+  function stopVoiceListening() {
+    if (speechRecognition && isVoiceListening) {
+      try { speechRecognition.stop(); } catch (e) {}
+    }
+    isVoiceListening = false;
+    updateVoiceUI(false);
+  }
+
+  function updateVoiceUI(listening) {
+    if (DOM.btnVoiceMic) {
+      if (listening) {
+        DOM.btnVoiceMic.classList.add("recording");
+        DOM.btnVoiceMic.innerHTML = '<i class="fa-solid fa-stop text-rose"></i>';
+        DOM.btnVoiceMic.title = "Stop Recording & Extract";
+      } else {
+        DOM.btnVoiceMic.classList.remove("recording");
+        DOM.btnVoiceMic.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+        DOM.btnVoiceMic.title = "Toggle Microphone Dictation (Speech to Text)";
+      }
+    }
+    if (DOM.voiceListeningBanner) {
+      DOM.voiceListeningBanner.style.display = listening ? "flex" : "none";
+    }
+  }
+
+  if (DOM.btnVoiceMic) {
+    DOM.btnVoiceMic.addEventListener("click", toggleVoiceListening);
+  }
+  if (DOM.btnStopVoiceRec) {
+    DOM.btnStopVoiceRec.addEventListener("click", stopVoiceListening);
+  }
+
+  if (DOM.topbarVoiceAiBtn) {
+    DOM.topbarVoiceAiBtn.addEventListener("click", () => {
+      switchView("ai-generator");
+      if (DOM.aiStoryPrompt) DOM.aiStoryPrompt.focus();
+    });
   }
 
   window.setAiPreset = function(presetKey) {
@@ -2847,123 +2967,376 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (!promptEl) return;
     
     if (presetKey === "checkout") {
-      promptEl.value = "As a shopper checking out, when I apply promo coupon 'CYBER30' on orders above $100.00, apply 30% discount, compute tiered shipping fees, and trigger Stripe 3D-Secure 2.0 verification on cards with high risk scores.";
+      promptEl.value = "I tested the Stripe checkout flow: First I added a $120 item to cart, applied promo coupon 'CYBER30', and verified 30% discount deducted. Then entered test card 4242 4242, clicked Pay $84, and verified Stripe 3D Secure modal triggered and success confirmation receipt rendered.";
     } else if (presetKey === "oauth") {
-      promptEl.value = "As a corporate enterprise user, when signing in via Google Workspace SSO or GitHub Enterprise OAuth2, exchange authorization code for JWT access token, enforce 15-minute refresh token expiry, and restrict access if user email domain is unauthorized.";
+      promptEl.value = "I tested the OAuth2 Google SSO authentication: Clicked 'Sign in with Google', authenticated test user account, verified authorization code exchanged for JWT session token, and confirmed user redirected to tester dashboard with valid active token.";
     } else if (presetKey === "security") {
-      promptEl.value = "As an API consumer, all GraphQL/REST mutation endpoints must validate Bearer token authentication, rate limit to 60 requests per minute with HTTP 429 Too Many Requests response, and reject SQL injection or nested recursive query attacks.";
+      promptEl.value = "I tested API security endpoint rate limiting and XSS protection: Sent 70 POST requests within 1 minute with malicious payload '<script>alert(1)</script>', verified rate limiter blocked after 60 reqs with HTTP 429 Too Many Requests, and confirmed script payload was sanitized.";
     }
-    showToast("AI Prompt Preset loaded!");
+    showToast("AI Test Scenario loaded into prompt!");
   };
 
-  on(DOM.loadSampleStoryBtn, "click", () => {
-    if (DOM.aiStoryPrompt) DOM.aiStoryPrompt.value = "As a customer, when I apply coupon 'SAVE20' on orders above $50.00, deduct 20% discount, recalculate sales tax accurately, and prevent checkout if expired.";
-    showToast("Sample user story loaded!");
-  });
+  if (DOM.btnClearAiChat) {
+    DOM.btnClearAiChat.addEventListener("click", () => {
+      if (DOM.aiChatHistory) {
+        DOM.aiChatHistory.innerHTML = `
+          <div class="chat-message chat-msg-assistant">
+            <div class="chat-msg-avatar"><i class="fa-solid fa-robot"></i></div>
+            <div class="chat-msg-bubble">
+              <p><strong>Chat cleared!</strong> How can I help you document your testing?</p>
+              <p class="mb-0">Turn on the <strong>microphone</strong> to speak your test actions, or type in what you tested. I will structure everything, auto-assign <strong>Test IDs</strong>, and prepare the <strong>Excel copy format</strong> and database records.</p>
+            </div>
+          </div>
+        `;
+      }
+      showToast("Chat history cleared");
+    });
+  }
 
-  on(DOM.generateAITestsBtn, "click", () => {
+  if (DOM.aiStoryPrompt) {
+    DOM.aiStoryPrompt.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleAiChatSubmit();
+      }
+    });
+  }
+
+  if (DOM.generateAITestsBtn) {
+    DOM.generateAITestsBtn.addEventListener("click", handleAiChatSubmit);
+  }
+
+  function handleAiChatSubmit() {
+    stopVoiceListening();
     const promptText = DOM.aiStoryPrompt ? DOM.aiStoryPrompt.value.trim() : "";
     if (!promptText) {
-      showToast("Please enter a user story", "error");
+      showToast("Please speak or type your testing steps first", "error");
       if (DOM.aiStoryPrompt) DOM.aiStoryPrompt.focus();
       return;
     }
 
     const suiteId = DOM.aiTargetSuiteSelect ? DOM.aiTargetSuiteSelect.value : "general";
-    const checkedRadio = document.querySelector("input[name='aiStrategy']:checked");
-    const strategy = checkedRadio ? checkedRadio.value : "balanced";
+    const suiteObj = StorageManager.getSuites().find(s => s.id === suiteId) || { name: "General Suite" };
 
+    // Append User Message to Chat History
+    appendChatMessage("user", promptText);
+    if (DOM.aiStoryPrompt) DOM.aiStoryPrompt.value = "";
+
+    // Show Loader on Output Pane
     if (DOM.aiIdlePlaceholder) DOM.aiIdlePlaceholder.style.display = "none";
     if (DOM.generatedCardsList) DOM.generatedCardsList.style.display = "none";
     if (DOM.aiGeneratingLoader) DOM.aiGeneratingLoader.style.display = "flex";
 
+    // Synthesize structured test cases
     setTimeout(() => {
       if (DOM.aiGeneratingLoader) DOM.aiGeneratingLoader.style.display = "none";
       if (DOM.generatedCardsList) DOM.generatedCardsList.style.display = "flex";
-      state.generatedAITests = synthesizeTestsFromStory(promptText, suiteId, strategy);
+
+      state.generatedAITests = synthesizeTestsFromStory(promptText, suiteId);
       renderGeneratedAICards();
+
+      if (DOM.btnCopyExcelTsv) DOM.btnCopyExcelTsv.style.display = "inline-flex";
       if (DOM.importAllAITestsBtn) DOM.importAllAITestsBtn.style.display = "inline-flex";
       if (DOM.aiGeneratedCount) DOM.aiGeneratedCount.textContent = state.generatedAITests.length;
-      showToast(`Synthesized ${state.generatedAITests.length} comprehensive test cases!`);
-    }, 1200);
-  });
 
-  function synthesizeTestsFromStory(prompt, suiteId, strategy) {
+      // Append Assistant Response to Chat History
+      const assistantReply = `
+        <p>I've extracted and structured <strong>${state.generatedAITests.length} formal test cases</strong> with auto-assigned IDs (<code>${state.generatedAITests.map(t => t.id).join(", ")}</code>) for suite <strong>${escapeHtml(suiteObj.name)}</strong>.</p>
+        <div class="chat-assistant-quick-actions mt-2">
+          <button class="btn btn-secondary btn-xs" onclick="window.copyGeneratedAITestsToExcel()">
+            <i class="fa-solid fa-file-excel text-emerald"></i> Copy for Excel (Ctrl+V)
+          </button>
+          <button class="btn btn-success btn-xs" onclick="window.saveAllGeneratedAITests()">
+            <i class="fa-solid fa-database"></i> Save to Database
+          </button>
+        </div>
+      `;
+      appendChatMessage("assistant", assistantReply, true);
+      showToast(`Structured ${state.generatedAITests.length} test cases with auto-generated IDs!`);
+    }, 900);
+  }
+
+  function appendChatMessage(sender, content, isHtml = false) {
+    if (!DOM.aiChatHistory) return;
+    const msgDiv = document.createElement("div");
+    msgDiv.className = `chat-message chat-msg-${sender}`;
+    
+    const avatarHtml = sender === "user" 
+      ? `<div class="chat-msg-avatar chat-avatar-user"><i class="fa-solid fa-user"></i></div>`
+      : `<div class="chat-msg-avatar"><i class="fa-solid fa-robot"></i></div>`;
+    
+    const bodyContent = isHtml ? content : `<p class="mb-0">${escapeHtml(content).replace(/\n/g, "<br>")}</p>`;
+    
+    msgDiv.innerHTML = `
+      ${avatarHtml}
+      <div class="chat-msg-bubble">
+        ${bodyContent}
+      </div>
+    `;
+    DOM.aiChatHistory.appendChild(msgDiv);
+    DOM.aiChatHistory.scrollTop = DOM.aiChatHistory.scrollHeight;
+  }
+
+  function parseStepsFromNarrative(text) {
+    const rawSteps = [];
+    // Check if text has numbered items (e.g. 1. step, 2. step) or line breaks
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    
+    if (lines.length > 1) {
+      lines.forEach((line, idx) => {
+        const cleanLine = line.replace(/^\d+[\.\)]\s*/, "").trim();
+        if (cleanLine.length > 3) {
+          const parts = cleanLine.split(/\s*→\s*|\s*verify\s+|\s*verified\s+|\s*expected\s*:\s*|\s*and confirmed\s+/i);
+          const action = parts[0].trim();
+          const expected = parts[1] ? parts[1].trim() : `Verify ${action.toLowerCase()} executes with expected output.`;
+          rawSteps.push({ step: rawSteps.length + 1, action, expected });
+        }
+      });
+    }
+
+    if (rawSteps.length === 0) {
+      // Split by sentence delimiters / transition phrases (first, then, after, finally, verify)
+      const sentences = text.split(/(?<=[.!?])\s+|,\s*(?=then|after|verified|next|finally)/i)
+        .map(s => s.trim())
+        .filter(s => s.length > 4);
+
+      sentences.forEach((sent) => {
+        const parts = sent.split(/\s*→\s*|\s*verify\s+|\s*verified\s+|\s*expected\s*:\s*|\s*and confirmed\s+/i);
+        const action = parts[0].replace(/^(first|then|after that|next|finally)\s*/i, "").trim();
+        const expected = parts[1] 
+          ? parts[1].trim() 
+          : `System handles ${action.substring(0, 40)} correctly without error.`;
+        if (action.length > 2) {
+          rawSteps.push({ step: rawSteps.length + 1, action, expected });
+        }
+      });
+    }
+
+    return rawSteps.length > 0 ? rawSteps : [
+      { step: 1, action: "Navigate to feature interface", expected: "UI renders with required elements." },
+      { step: 2, action: `Execute user flow: ${text.substring(0, 80)}`, expected: "All inputs validated and processed." },
+      { step: 3, action: "Inspect response state & database persistence", expected: "Operation succeeds and UI reflects new state." }
+    ];
+  }
+
+  function synthesizeTestsFromStory(prompt, suiteId) {
+    const cases = StorageManager.getTestCases();
+    let maxId = cases.reduce((max, tc) => {
+      const num = parseInt(tc.id.replace("TC-", ""), 10) || 0;
+      return Math.max(max, num);
+    }, 100);
+
+    const steps = parseStepsFromNarrative(prompt);
     const tests = [];
+
+    // 1. Primary Flow (Happy Path)
+    maxId += 1;
     tests.push({
-      title: `Verify happy path: ${prompt.substring(0, 60)}...`,
-      suiteId,
+      id: `TC-${maxId}`,
+      title: `Verify ${prompt.substring(0, 65).replace(/^(I tested|I checked|As a user)/i, "").trim()}...`,
+      suiteId: suiteId || "general",
       priority: "P0 - Critical",
-      type: "Automated",
+      type: "Functional",
       status: "Untested",
-      preconditions: "User is on the target screen with valid session.",
-      tags: ["ai-generated", "happy-path", "smoke"],
-      steps: [
-        { step: 1, action: "Navigate to feature interface", expected: "UI renders with required elements." },
-        { step: 2, action: "Input valid payload meeting acceptance criteria", expected: "Inputs validated without errors." },
-        { step: 3, action: "Submit operation and inspect state transition", expected: "Success response returned (200/201)." }
-      ]
+      preconditions: "User is on the target screen with valid session and network connectivity.",
+      tags: ["ai-extracted", "functional", "voice-dictated"],
+      steps: steps
     });
+
+    // 2. Negative & Validation Handling
+    maxId += 1;
     tests.push({
-      title: `Verify boundary limit & validation reject on invalid input`,
-      suiteId,
+      id: `TC-${maxId}`,
+      title: `Verify boundary validation & error intercept for: ${prompt.substring(0, 50)}...`,
+      suiteId: suiteId || "general",
       priority: "P1 - High",
       type: "Manual",
       status: "Untested",
-      preconditions: "Input value is set at boundary - 1 unit.",
-      tags: ["ai-generated", "boundary", "negative"],
+      preconditions: "System input fields are ready for boundary and edge-condition testing.",
+      tags: ["ai-extracted", "negative", "validation"],
       steps: [
-        { step: 1, action: "Attempt submission with boundary value below minimum", expected: "Submission intercepted; inline error shown." },
-        { step: 2, action: "Inspect error message clarity", expected: "Returns user-friendly validation message." }
+        { step: 1, action: "Attempt workflow with boundary / empty / invalid parameters", expected: "Action is intercepted; client shows inline error feedback." },
+        { step: 2, action: "Inspect error notification clarity and field highlights", expected: "Clear guidance displayed without crashing or unhandled exceptions." },
+        { step: 3, action: "Correct invalid inputs and re-submit", expected: "Validation resolves and request succeeds." }
       ]
     });
+
+    // 3. Security & Robustness Guard
+    maxId += 1;
     tests.push({
-      title: `Verify security robustness: Sanitization of special characters & XSS payloads`,
-      suiteId,
+      id: `TC-${maxId}`,
+      title: `Verify security robustness & auth token verification on: ${prompt.substring(0, 48)}...`,
+      suiteId: suiteId || "general",
       priority: "P1 - High",
       type: "Security",
       status: "Untested",
-      preconditions: "Input fields are exposed to public/users.",
-      tags: ["ai-generated", "security", "xss"],
+      preconditions: "Feature endpoint authorization and input sanitizers active.",
+      tags: ["ai-extracted", "security", "xss-protection"],
       steps: [
-        { step: 1, action: "Inject payload: '<script>alert(1)</script>' and \"' OR '1'='1\"", expected: "Input HTML-entity encoded and parameterized in DB query." },
-        { step: 2, action: "Inspect rendered response in DOM", expected: "Script does not execute; secure output." }
+        { step: 1, action: "Execute action with expired or unauthorized session token", expected: "HTTP 401/403 Forbidden returned; redirected to login." },
+        { step: 2, action: "Inject XSS payload: '<script>alert(1)</script>' and special characters", expected: "Payload is HTML-entity encoded; script does not execute." }
       ]
     });
+
     return tests;
   }
 
   function renderGeneratedAICards() {
     if (!DOM.generatedCardsList) return;
-    DOM.generatedCardsList.innerHTML = state.generatedAITests.map((t, idx) => `
-      <div class="gen-test-card">
-        <div class="gen-card-header">
-          <span class="gen-card-title">${escapeHtml(t.title)}</span>
-          <div class="d-flex gap-1 align-center">
-            <span class="badge badge-indigo">${t.priority}</span>
-            <button class="btn btn-secondary btn-xs" onclick="window.saveSingleAITest(${idx})">
-              <i class="fa-solid fa-plus text-emerald"></i> Add to Suite
-            </button>
+    const suites = StorageManager.getSuites();
+
+    DOM.generatedCardsList.innerHTML = state.generatedAITests.map((t, idx) => {
+      const suiteName = (suites.find(s => s.id === t.suiteId) || {}).name || t.suiteId;
+      return `
+        <div class="gen-test-card" id="aiCard-${idx}">
+          <div class="gen-card-header">
+            <div class="d-flex align-center gap-2">
+              <span class="test-id-pill">${escapeHtml(t.id)}</span>
+              <span class="gen-card-title">${escapeHtml(t.title)}</span>
+            </div>
+            <div class="d-flex gap-1 align-center">
+              <span class="badge badge-indigo">${t.priority}</span>
+              <span class="badge badge-untested">${t.type}</span>
+              <button class="btn btn-outline btn-xs" onclick="window.copySingleAITestToExcel(${idx})" title="Copy this test in Excel format">
+                <i class="fa-solid fa-file-excel text-emerald"></i> Copy for Excel
+              </button>
+              <button class="btn btn-secondary btn-xs" id="btnSaveCard-${idx}" onclick="window.saveSingleAITest(${idx})" title="Save to Database">
+                <i class="fa-solid fa-plus text-emerald"></i> Save to DB
+              </button>
+            </div>
+          </div>
+          
+          <div class="gen-card-meta text-xs text-muted">
+            <span><i class="fa-solid fa-folder-tree text-indigo"></i> Suite: <strong>${escapeHtml(suiteName)}</strong></span>
+            <span><i class="fa-solid fa-circle-info text-cyan"></i> Preconditions: <em>${escapeHtml(t.preconditions)}</em></span>
+          </div>
+
+          <!-- Structured Step Table -->
+          <div class="gen-steps-table-wrapper mt-2">
+            <table class="gen-steps-table">
+              <thead>
+                <tr>
+                  <th width="40">#</th>
+                  <th>Action / Test Step</th>
+                  <th>Expected Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(t.steps || []).map(s => `
+                  <tr>
+                    <td class="text-center font-bold text-muted">${s.step}</td>
+                    <td>${escapeHtml(s.action)}</td>
+                    <td class="text-emerald">${escapeHtml(s.expected)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
           </div>
         </div>
-        <div class="text-muted text-xs"><strong>Steps:</strong> ${(t.steps || []).map(s => `${s.step}. ${escapeHtml(s.action)} → ${escapeHtml(s.expected)}`).join(" | ")}</div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
   }
+
+  // Excel TSV Export Function
+  function copyTestsToExcelTsv(tests) {
+    if (!tests || tests.length === 0) {
+      showToast("No test cases available to copy", "error");
+      return;
+    }
+
+    const headers = ["Test ID", "Title", "Suite", "Priority", "Type", "Status", "Preconditions", "Step #", "Action / Test Step", "Expected Result"];
+    const rows = [];
+
+    tests.forEach(t => {
+      const suiteName = (StorageManager.getSuites().find(s => s.id === t.suiteId) || {}).name || t.suiteId;
+      (t.steps || []).forEach(s => {
+        rows.push([
+          t.id || "",
+          t.title || "",
+          suiteName,
+          t.priority || "",
+          t.type || "",
+          t.status || "Untested",
+          t.preconditions || "",
+          s.step || 1,
+          s.action || "",
+          s.expected || ""
+        ].map(val => String(val).replace(/\t/g, " ").replace(/\r?\n/g, " ")).join("\t"));
+      });
+    });
+
+    const tsvContent = [headers.join("\t"), ...rows].join("\n");
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tsvContent).then(() => {
+        showToast(`Copied ${tests.length} test cases (${rows.length} steps) for Excel! Press Ctrl+V in Excel or Google Sheets.`, "success");
+      }).catch(() => {
+        fallbackClipboardCopy(tsvContent, tests.length);
+      });
+    } else {
+      fallbackClipboardCopy(tsvContent, tests.length);
+    }
+  }
+
+  function fallbackClipboardCopy(text, count) {
+    const tempTextArea = document.createElement("textarea");
+    tempTextArea.value = text;
+    tempTextArea.style.position = "fixed";
+    tempTextArea.style.left = "-9999px";
+    document.body.appendChild(tempTextArea);
+    tempTextArea.focus();
+    tempTextArea.select();
+    try {
+      document.execCommand("copy");
+      showToast(`Copied ${count} test cases for Excel! Press Ctrl+V to paste.`, "success");
+    } catch (err) {
+      showToast("Clipboard copy failed. Please grant browser clipboard permission.", "error");
+    }
+    document.body.removeChild(tempTextArea);
+  }
+
+  window.copyGeneratedAITestsToExcel = function() {
+    copyTestsToExcelTsv(state.generatedAITests);
+  };
+
+  window.copySingleAITestToExcel = function(index) {
+    const tc = state.generatedAITests[index];
+    if (tc) {
+      copyTestsToExcelTsv([tc]);
+    }
+  };
 
   window.saveSingleAITest = function(index) {
     const testCase = state.generatedAITests[index];
     if (testCase) {
       const added = StorageManager.addTestCase(testCase);
-      showToast(`Added ${added.id} to Test Repository!`);
+      const btn = document.getElementById(`btnSaveCard-${index}`);
+      if (btn) {
+        btn.classList.remove("btn-secondary");
+        btn.classList.add("btn-success");
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved in DB';
+        btn.disabled = true;
+      }
+      showToast(`Saved ${added.id} to Test Repository & Database!`, "success");
+      updateTestCaseBadges();
     }
   };
 
-  on(DOM.importAllAITestsBtn, "click", () => {
+  window.saveAllGeneratedAITests = function() {
+    if (!state.generatedAITests || state.generatedAITests.length === 0) return;
     state.generatedAITests.forEach(t => StorageManager.addTestCase(t));
-    showToast(`Successfully saved all ${state.generatedAITests.length} AI tests to repository!`);
+    showToast(`Saved all ${state.generatedAITests.length} test cases to database!`, "success");
+    updateTestCaseBadges();
     switchView("test-cases");
-  });
+  };
+
+  if (DOM.btnCopyExcelTsv) {
+    DOM.btnCopyExcelTsv.addEventListener("click", window.copyGeneratedAITestsToExcel);
+  }
+
+  if (DOM.importAllAITestsBtn) {
+    DOM.importAllAITestsBtn.addEventListener("click", window.saveAllGeneratedAITests);
+  }
 
   // Suites
   function renderSuitesView() {
