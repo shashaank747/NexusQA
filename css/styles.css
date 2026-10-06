@@ -1795,12 +1795,16 @@ body.light-theme .sidebar-secondary-panel {
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  transform-style: preserve-3d;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  will-change: transform;
 }
 
-.kpi-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-glow);
+.kpi-card.is-near {
+  transition: transform 0.08s ease-out, box-shadow 0.2s ease, border-color 0.2s ease;
+  border-color: var(--primary);
+  box-shadow: 0 14px 30px -6px rgba(0, 0, 0, 0.16);
+  z-index: 2;
 }
 
 .kpi-header {
@@ -6205,21 +6209,52 @@ body.light-theme {
   border-radius: 16px;
   padding: 1.35rem 1.4rem;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
   position: relative;
   overflow: hidden;
+  will-change: transform;
 }
 
-.kpi-card:hover {
-  transform: translateY(-3px);
+.kpi-card.is-near {
+  transition: transform 0.08s ease-out, box-shadow 0.2s ease, border-color 0.2s ease;
   border-color: var(--primary);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 14px 30px -6px rgba(0, 0, 0, 0.16);
+  z-index: 2;
 }
 
-.card-glow-indigo:hover { box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.2); }
-.card-glow-emerald:hover { box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.2); }
-.card-glow-cyan:hover { box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.2); }
-.card-glow-rose:hover { box-shadow: 0 10px 25px -5px rgba(244, 63, 94, 0.2); }
+.kpi-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle 180px at var(--mouse-x, -200px) var(--mouse-y, -200px),
+    rgba(99, 102, 241, 0.12),
+    transparent 70%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+body.dark-theme .kpi-card::after {
+  background: radial-gradient(
+    circle 180px at var(--mouse-x, -200px) var(--mouse-y, -200px),
+    rgba(255, 255, 255, 0.09),
+    transparent 70%
+  );
+}
+
+.kpi-card.is-near::after {
+  opacity: 1;
+}
+
+.card-glow-indigo.is-near, .card-glow-indigo:hover { box-shadow: 0 14px 32px -5px rgba(99, 102, 241, 0.25); border-color: rgba(99, 102, 241, 0.45); }
+.card-glow-emerald.is-near, .card-glow-emerald:hover { box-shadow: 0 14px 32px -5px rgba(16, 185, 129, 0.25); border-color: rgba(16, 185, 129, 0.45); }
+.card-glow-cyan.is-near, .card-glow-cyan:hover { box-shadow: 0 14px 32px -5px rgba(6, 182, 212, 0.25); border-color: rgba(6, 182, 212, 0.45); }
+.card-glow-rose.is-near, .card-glow-rose:hover { box-shadow: 0 14px 32px -5px rgba(244, 63, 94, 0.25); border-color: rgba(244, 63, 94, 0.45); }
+.card-glow-amber.is-near, .card-glow-amber:hover { box-shadow: 0 14px 32px -5px rgba(245, 158, 11, 0.25); border-color: rgba(245, 158, 11, 0.45); }
 
 .kpi-header {
   display: flex;
@@ -6450,6 +6485,32 @@ body.light-theme .chart-card {
   background: #ffffff !important;
   border: 1px solid #d8e0e8 !important;
   box-shadow: 0 1px 3px rgba(16, 28, 44, 0.05), 0 1px 2px rgba(16, 28, 44, 0.03) !important;
+}
+
+body.light-theme .kpi-card.is-near {
+  box-shadow: 0 14px 30px -6px rgba(16, 28, 44, 0.12), 0 6px 14px -4px rgba(16, 28, 44, 0.08) !important;
+  border-color: #6366f1 !important;
+}
+
+body.light-theme .kpi-card.card-glow-indigo.is-near {
+  border-color: rgba(99, 102, 241, 0.6) !important;
+  box-shadow: 0 16px 34px -6px rgba(99, 102, 241, 0.22) !important;
+}
+body.light-theme .kpi-card.card-glow-emerald.is-near {
+  border-color: rgba(16, 185, 129, 0.6) !important;
+  box-shadow: 0 16px 34px -6px rgba(16, 185, 129, 0.22) !important;
+}
+body.light-theme .kpi-card.card-glow-cyan.is-near {
+  border-color: rgba(6, 182, 212, 0.6) !important;
+  box-shadow: 0 16px 34px -6px rgba(6, 182, 212, 0.22) !important;
+}
+body.light-theme .kpi-card.card-glow-rose.is-near {
+  border-color: rgba(244, 63, 94, 0.6) !important;
+  box-shadow: 0 16px 34px -6px rgba(244, 63, 94, 0.22) !important;
+}
+body.light-theme .kpi-card.card-glow-amber.is-near {
+  border-color: rgba(245, 158, 11, 0.6) !important;
+  box-shadow: 0 16px 34px -6px rgba(245, 158, 11, 0.22) !important;
 }
 
 body.light-theme .kpi-title,

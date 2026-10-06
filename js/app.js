@@ -780,6 +780,98 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   });
 
   // =========================================================================
+  // KPI Card Proximity Mouse Hover & Magnetic Movement
+  // =========================================================================
+  function initKpiCardMagneticHover() {
+    let mouseX = -9999;
+    let mouseY = -9999;
+    let isTracking = false;
+    let rafId = null;
+
+    // Distance in pixels from card boundary where movement begins
+    const PROXIMITY_THRESHOLD = 90;
+
+    function updateCards() {
+      rafId = null;
+      const cards = document.querySelectorAll(".kpi-card");
+      if (!cards.length) return;
+
+      cards.forEach(card => {
+        const rect = card.getBoundingClientRect();
+        
+        // Skip hidden or off-screen elements
+        if (rect.width === 0 || rect.height === 0 || rect.bottom < -50 || rect.top > window.innerHeight + 50) {
+          return;
+        }
+
+        // Find nearest point on the card rect to cursor
+        const nearestX = Math.max(rect.left, Math.min(mouseX, rect.right));
+        const nearestY = Math.max(rect.top, Math.min(mouseY, rect.bottom));
+        const distFromEdge = Math.hypot(mouseX - nearestX, mouseY - nearestY);
+
+        if (distFromEdge < PROXIMITY_THRESHOLD) {
+          // Proximity factor (1 inside card, decaying smoothly to 0 at edge + threshold)
+          const proximity = Math.pow(1 - (distFromEdge / PROXIMITY_THRESHOLD), 1.25);
+          
+          // Normalized offset from card center (-1 to 1)
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+          const normX = Math.max(-1.5, Math.min(1.5, (mouseX - centerX) / (rect.width / 2)));
+          const normY = Math.max(-1.5, Math.min(1.5, (mouseY - centerY) / (rect.height / 2)));
+
+          // Subtle tilt and magnetic float
+          const rotateX = (-normY * 6 * proximity).toFixed(2);
+          const rotateY = (normX * 6 * proximity).toFixed(2);
+          const transX = (normX * 5.5 * proximity).toFixed(2);
+          const transY = (normY * 5.5 * proximity).toFixed(2);
+          const transZ = (10 * proximity).toFixed(1);
+
+          card.classList.add("is-near");
+          card.style.transform = `perspective(850px) translate3d(${transX}px, ${transY}px, ${transZ}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+          
+          // Radial spotlight reflection coordinates
+          card.style.setProperty("--mouse-x", `${(mouseX - rect.left).toFixed(1)}px`);
+          card.style.setProperty("--mouse-y", `${(mouseY - rect.top).toFixed(1)}px`);
+        } else {
+          if (card.classList.contains("is-near")) {
+            card.classList.remove("is-near");
+            card.style.transform = "";
+          }
+        }
+      });
+    }
+
+    function onPointerMove(e) {
+      if (e.pointerType === "touch") return; // Touch devices have standard tap/scroll
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      if (!isTracking) isTracking = true;
+      if (!rafId) {
+        rafId = requestAnimationFrame(updateCards);
+      }
+    }
+
+    function resetAllCards() {
+      mouseX = -9999;
+      mouseY = -9999;
+      isTracking = false;
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      const cards = document.querySelectorAll(".kpi-card");
+      cards.forEach(card => {
+        card.classList.remove("is-near");
+        card.style.transform = "";
+      });
+    }
+
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerleave", resetAllCards, { passive: true });
+    window.addEventListener("blur", resetAllCards);
+  }
+
+  // =========================================================================
   function initTheme() {
     const savedTheme = localStorage.getItem("nexusqa_theme") || "light";
     if (savedTheme === "dark") {
@@ -811,6 +903,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   function initRouting() {
     initTheme();
     initSidebarState();
+    initKpiCardMagneticHover();
     const pathname = window.location.pathname.toLowerCase();
     const isLandingPage = document.body.classList.contains("page-landing-auth") || pathname.endsWith("index.html") || pathname === "/" || (!document.body.classList.contains("page-tester") && !document.body.classList.contains("page-dev") && !document.getElementById("viewViewport"));
 
