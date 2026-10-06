@@ -161,7 +161,58 @@ const StorageManager = {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     }
 
+    // Ensure junior dev accounts (Toby & Maya) are synced
+    ["user-dev-junior-1", "user-dev-junior-2"].forEach(jId => {
+      if (!users.some(u => u.id === jId)) {
+        const seedJ = SEED_USERS.find(s => s.id === jId);
+        if (seedJ) {
+          users.push({ ...seedJ });
+          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+        }
+      }
+    });
+
     return users;
+  },
+
+  isSeniorDev(user) {
+    if (!user) return false;
+    const title = (user.roleTitle || "").toLowerCase();
+    const level = (user.devLevel || "").toLowerCase();
+    return user.role === "dev" && (
+      level === "senior" || 
+      level === "lead" || 
+      title.includes("lead") || 
+      title.includes("senior") || 
+      title.includes("principal") ||
+      title.includes("architect") ||
+      user.name === "Marcus Vance" ||
+      user.name === "Sarah Lin" ||
+      (user.email && user.email.toLowerCase() === "chhotumonster225@gmail.com")
+    );
+  },
+
+  updateUser(userId, updatedFields) {
+    const users = this.getUsers();
+    const index = users.findIndex(u => u.id === userId);
+    if (index === -1) return null;
+
+    users[index] = {
+      ...users[index],
+      ...updatedFields,
+      updatedAt: new Date().toISOString().replace("T", " ").substring(0, 16)
+    };
+
+    if (updatedFields.name) {
+      const parts = updatedFields.name.trim().split(/\s+/);
+      users[index].avatar = parts.length > 1 
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : updatedFields.name.substring(0, 2).toUpperCase();
+    }
+
+    this.saveUsers(users);
+    this.broadcast("USER_UPDATED", { user: users[index] });
+    return users[index];
   },
 
   saveUsers(users) {

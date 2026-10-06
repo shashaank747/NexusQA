@@ -82,11 +82,40 @@ const SEED_USERS = [
     email: "sarah.dev@nexusqa.io",
     role: "dev",
     roleTitle: "Senior Backend Engineer",
+    devLevel: "senior",
     avatar: "SL",
     color: "#f59e0b",
     status: "active",
     emailVerified: true,
     createdAt: "2026-10-01 08:00"
+  },
+  {
+    id: "user-dev-junior-1",
+    name: "Toby Parker",
+    email: "toby.dev@nexusqa.io",
+    role: "dev",
+    roleTitle: "Junior Frontend Developer",
+    devLevel: "junior",
+    avatar: "TP",
+    color: "#3b82f6",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2026-10-04 11:20",
+    approvedBy: "Marcus Vance"
+  },
+  {
+    id: "user-dev-junior-2",
+    name: "Maya Chen",
+    email: "maya.dev@nexusqa.io",
+    role: "dev",
+    roleTitle: "Junior Full-Stack Developer",
+    devLevel: "junior",
+    avatar: "MC",
+    color: "#06b6d4",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2026-10-05 14:15",
+    approvedBy: "Marcus Vance"
   }
 ];
 

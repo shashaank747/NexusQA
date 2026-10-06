@@ -351,8 +351,8 @@
           <div class="dashboard-card">
             <div class="card-header">
               <div class="card-title-group">
-                <h3><i class="fa-solid fa-users text-primary"></i> QA Team Roster & Authorization History</h3>
-                <p class="card-subtitle">All registered testers and their current access status</p>
+                <h3><i class="fa-solid fa-users text-primary"></i> Team Roster & Access Management (Testers & Junior Developers)</h3>
+                <p class="card-subtitle">Manage workspace authorization, roles, and profiles for QA testers and Junior Developers (Senior Dev Access)</p>
               </div>
             </div>
             <div class="card-body p-0">
@@ -360,12 +360,13 @@
                 <table class="nexus-table">
                   <thead>
                     <tr>
-                      <th>Tester</th>
+                      <th>Team Member</th>
                       <th>Email</th>
-                      <th>Specialty</th>
+                      <th>Specialty / Role</th>
                       <th>OTP Status</th>
                       <th>Workspace Access</th>
                       <th>Approved By</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody id="authorizedTestersTableBody"></tbody>
@@ -520,6 +521,75 @@
   <!-- ============================================== -->
   <!-- MODALS -->
   <!-- ============================================== -->
+
+  <!-- MODAL: EDIT TEAM MEMBER (SENIOR DEV ACCESS) -->
+  <div class="modal-backdrop" id="editMemberModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <i class="fa-solid fa-user-pen text-primary modal-icon"></i>
+          <div>
+            <h2 id="editMemberModalTitle">Edit Team Member Details</h2>
+            <div class="d-flex align-center gap-2 mt-1">
+              <span class="badge badge-passed" id="editMemberAuthBadge"><i class="fa-solid fa-shield-halved"></i> Senior Dev Access</span>
+              <span class="text-xs text-muted" id="editMemberIdBadge">ID: user-qa-1</span>
+            </div>
+          </div>
+        </div>
+        <button class="icon-btn close-modal-btn" id="closeEditMemberModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="editMemberForm">
+          <input type="hidden" id="editMemberId">
+          
+          <div class="form-group">
+            <label for="editMemberName">Full Name <span class="text-rose">*</span></label>
+            <input type="text" id="editMemberName" class="nexus-input" required placeholder="e.g. Alex Morgan">
+          </div>
+
+          <div class="form-group">
+            <label for="editMemberEmail">Email Address <span class="text-rose">*</span></label>
+            <input type="email" id="editMemberEmail" class="nexus-input font-mono" required placeholder="user@nexusqa.io">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="editMemberRoleType">Role Tier / Category</label>
+              <select id="editMemberRoleType" class="nexus-select w-100">
+                <option value="qa">QA Tester</option>
+                <option value="junior-dev">Junior Developer</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="editMemberSpecialty">Job Title / Specialty <span class="text-rose">*</span></label>
+              <input type="text" id="editMemberSpecialty" class="nexus-input" required placeholder="e.g. Lead QA Automation Engineer">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="editMemberStatus">Workspace Access Status</label>
+              <select id="editMemberStatus" class="nexus-select w-100">
+                <option value="active">Active & Authorized</option>
+                <option value="pending_approval">Pending Dev Signoff</option>
+                <option value="rejected">Rejected / Revoked</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="editMemberApprovedBy">Authorized By</label>
+              <input type="text" id="editMemberApprovedBy" class="nexus-input" placeholder="e.g. Marcus Vance">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelEditMemberModalBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveEditMemberBtn">
+          <i class="fa-solid fa-floppy-disk"></i> Save Member Details
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL: DEVELOPER FIX BUG -->
   <div class="modal-backdrop" id="devFixModal" style="display: none;">

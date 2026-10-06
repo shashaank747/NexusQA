@@ -284,6 +284,22 @@ document.addEventListener("DOMContentLoaded", () => {
     cancelDevFixModalBtn: document.getElementById("cancelDevFixModalBtn"),
     saveDevFixBtn: document.getElementById("saveDevFixBtn"),
 
+    // Edit Team Member Modal (Senior Dev)
+    editMemberModal: document.getElementById("editMemberModal"),
+    editMemberForm: document.getElementById("editMemberForm"),
+    editMemberId: document.getElementById("editMemberId"),
+    editMemberName: document.getElementById("editMemberName"),
+    editMemberEmail: document.getElementById("editMemberEmail"),
+    editMemberRoleType: document.getElementById("editMemberRoleType"),
+    editMemberSpecialty: document.getElementById("editMemberSpecialty"),
+    editMemberStatus: document.getElementById("editMemberStatus"),
+    editMemberApprovedBy: document.getElementById("editMemberApprovedBy"),
+    closeEditMemberModalBtn: document.getElementById("closeEditMemberModalBtn"),
+    cancelEditMemberModalBtn: document.getElementById("cancelEditMemberModalBtn"),
+    saveEditMemberBtn: document.getElementById("saveEditMemberBtn"),
+    editMemberIdBadge: document.getElementById("editMemberIdBadge"),
+    editMemberAuthBadge: document.getElementById("editMemberAuthBadge"),
+
     // AI Generator & Voice Studio
     topbarVoiceAiBtn: document.getElementById("topbarVoiceAiBtn"),
     btnClearAiChat: document.getElementById("btnClearAiChat"),
@@ -1278,9 +1294,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }
     }
 
-    // Authorized Team Roster Table
+    // Team Roster & Access Management (Testers & Junior Developers)
     if (DOM.authorizedTestersTableBody) {
-      DOM.authorizedTestersTableBody.innerHTML = allUsers.filter(u => u.role === "qa").map(u => {
+      const isSenior = StorageManager.isSeniorDev(state.currentUser);
+      const managedUsers = allUsers.filter(u => u.role === "qa" || (u.role === "dev" && (u.devLevel === "junior" || (u.roleTitle || "").toLowerCase().includes("junior"))));
+
+      DOM.authorizedTestersTableBody.innerHTML = managedUsers.map(u => {
         let statusBadge = '<span class="badge badge-passed"><i class="fa-solid fa-check"></i> Active & Authorized</span>';
         if (u.status === "pending_approval") {
           statusBadge = '<span class="badge badge-blocked"><i class="fa-solid fa-clock"></i> Pending Dev Signoff</span>';
@@ -1288,24 +1307,114 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           statusBadge = '<span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Rejected</span>';
         }
 
+        const isJuniorDev = u.role === "dev" && (u.devLevel === "junior" || (u.roleTitle || "").toLowerCase().includes("junior"));
+        const avatarClass = isJuniorDev ? "avatar-dev" : "avatar-qa";
+        const rolePill = isJuniorDev 
+          ? `<span class="badge badge-ai" style="background: rgba(59, 130, 246, 0.15) !important; color: #2563eb !important; border: 1px solid rgba(59, 130, 246, 0.3) !important;"><i class="fa-solid fa-code"></i> ${escapeHtml(u.roleTitle || 'Junior Developer')}</span>`
+          : `<span class="badge badge-untested">${escapeHtml(u.roleTitle || 'QA Tester')}</span>`;
+
+        const actionCell = isSenior
+          ? `<button class="btn btn-secondary btn-xs" onclick="window.openEditMemberModal('${u.id}')" title="Edit member details as Senior Dev"><i class="fa-solid fa-user-pen"></i> Edit</button>`
+          : `<span class="badge badge-untested text-xs" title="Only Senior Developers can edit"><i class="fa-solid fa-lock"></i> View Only</span>`;
+
         return `
           <tr>
             <td>
               <div class="d-flex align-center gap-2">
-                <div class="avatar-ring avatar-qa" style="width:28px; height:28px; font-size:11px;">${escapeHtml(u.avatar || u.name.substring(0, 2).toUpperCase())}</div>
-                <strong>${escapeHtml(u.name)}</strong>
+                <div class="avatar-ring ${avatarClass}" style="width:28px; height:28px; font-size:11px;">${escapeHtml(u.avatar || u.name.substring(0, 2).toUpperCase())}</div>
+                <div>
+                  <strong>${escapeHtml(u.name)}</strong>
+                  ${isJuniorDev ? '<span class="badge badge-version" style="font-size:9px; margin-left:4px;">Junior Dev</span>' : ''}
+                </div>
               </div>
             </td>
             <td><span class="font-mono text-xs text-muted">${escapeHtml(u.email)}</span></td>
-            <td><span class="badge badge-untested">${escapeHtml(u.roleTitle || 'QA Tester')}</span></td>
+            <td>${rolePill}</td>
             <td><span class="badge badge-passed"><i class="fa-solid fa-check"></i> 100% Verified</span></td>
             <td>${statusBadge}</td>
             <td><span class="text-xs text-muted">${escapeHtml(u.approvedBy || (u.status === 'active' ? 'System Seed' : 'Pending'))}</span></td>
+            <td>${actionCell}</td>
           </tr>
         `;
       }).join("");
     }
   }
+
+  window.openEditMemberModal = function(userId) {
+    const user = StorageManager.getUsers().find(u => u.id === userId);
+    if (!user) {
+      showToast("User not found", "error");
+      return;
+    }
+
+    const isSenior = StorageManager.isSeniorDev(state.currentUser);
+    if (!isSenior) {
+      showToast("Access Denied: Only Senior Developers can edit team member credentials.", "error");
+      return;
+    }
+
+    if (DOM.editMemberId) DOM.editMemberId.value = user.id;
+    if (DOM.editMemberName) DOM.editMemberName.value = user.name || "";
+    if (DOM.editMemberEmail) DOM.editMemberEmail.value = user.email || "";
+    if (DOM.editMemberRoleType) {
+      DOM.editMemberRoleType.value = (user.role === "dev" || user.devLevel === "junior") ? "junior-dev" : "qa";
+    }
+    if (DOM.editMemberSpecialty) DOM.editMemberSpecialty.value = user.roleTitle || "";
+    if (DOM.editMemberStatus) DOM.editMemberStatus.value = user.status || "active";
+    if (DOM.editMemberApprovedBy) DOM.editMemberApprovedBy.value = user.approvedBy || (state.currentUser ? state.currentUser.name : "Marcus Vance (Dev Lead)");
+    if (DOM.editMemberIdBadge) DOM.editMemberIdBadge.textContent = "ID: " + user.id;
+    if (DOM.editMemberAuthBadge) {
+      DOM.editMemberAuthBadge.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Senior Dev (${escapeHtml(state.currentUser ? state.currentUser.name : "Lead Dev")})`;
+    }
+
+    if (DOM.editMemberModal) DOM.editMemberModal.style.display = "flex";
+  };
+
+  on(DOM.closeEditMemberModalBtn, "click", () => {
+    if (DOM.editMemberModal) DOM.editMemberModal.style.display = "none";
+  });
+
+  on(DOM.cancelEditMemberModalBtn, "click", () => {
+    if (DOM.editMemberModal) DOM.editMemberModal.style.display = "none";
+  });
+
+  on(DOM.saveEditMemberBtn, "click", () => {
+    const isSenior = StorageManager.isSeniorDev(state.currentUser);
+    if (!isSenior) {
+      showToast("Permission Denied: Only Senior Developers can modify team members.", "error");
+      return;
+    }
+
+    const userId = DOM.editMemberId ? DOM.editMemberId.value : "";
+    const name = DOM.editMemberName ? DOM.editMemberName.value.trim() : "";
+    const email = DOM.editMemberEmail ? DOM.editMemberEmail.value.trim() : "";
+    const roleType = DOM.editMemberRoleType ? DOM.editMemberRoleType.value : "qa";
+    const roleTitle = DOM.editMemberSpecialty ? DOM.editMemberSpecialty.value.trim() : "";
+    const status = DOM.editMemberStatus ? DOM.editMemberStatus.value : "active";
+    const approvedBy = DOM.editMemberApprovedBy ? DOM.editMemberApprovedBy.value.trim() : (state.currentUser ? state.currentUser.name : "Marcus Vance (Dev Lead)");
+
+    if (!name || !email) {
+      showToast("Please provide both name and email.", "error");
+      return;
+    }
+
+    const isJuniorDev = roleType === "junior-dev";
+    const updated = StorageManager.updateUser(userId, {
+      name,
+      email,
+      role: isJuniorDev ? "dev" : "qa",
+      devLevel: isJuniorDev ? "junior" : "",
+      roleTitle: roleTitle || (isJuniorDev ? "Junior Developer" : "QA Tester"),
+      status,
+      approvedBy
+    });
+
+    if (updated) {
+      if (DOM.editMemberModal) DOM.editMemberModal.style.display = "none";
+      showToast(`Updated details for ${updated.name}!`, "success");
+      renderDevApprovals();
+    }
+  });
 
   window.approveTester = function(userId) {
     const user = StorageManager.approveTesterRequest(userId, state.currentUser.name);
