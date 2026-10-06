@@ -77,10 +77,10 @@ const SupabaseManager = {
   setupAuthListener() {
     if (!this.client) return;
 
-    this.client.auth.onAuthStateChange(async (event, session) => {
+    const handleSession = (session) => {
       if (session && session.user && session.user.email) {
         const email = session.user.email.toLowerCase().trim();
-        console.log(`⚡ Supabase Auth State: ${event} for ${email}`);
+        console.log(`⚡ Supabase Auth Session active for ${email}`);
 
         const users = StorageManager.getUsers();
         let user = users.find(u => u.email && u.email.toLowerCase() === email);
@@ -113,6 +113,16 @@ const SupabaseManager = {
           }
         }
       }
+    };
+
+    // Check existing / redirected session
+    this.client.auth.getSession().then(({ data: { session } }) => {
+      if (session) handleSession(session);
+    });
+
+    // Listen for incoming sign-in events
+    this.client.auth.onAuthStateChange(async (event, session) => {
+      if (session) handleSession(session);
     });
   },
 
