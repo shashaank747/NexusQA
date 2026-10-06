@@ -345,22 +345,27 @@ html, body {
   flex-direction: column;
   height: 100%;
   z-index: 50;
-  transition: transform var(--transition-normal);
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform var(--transition-normal);
 }
 
 .sidebar-header {
-  padding: 0.9rem 0.9rem 0.5rem;
+  padding: 0.85rem 0.85rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
 }
 
 .brand-logo {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  min-width: 0;
 }
 
 .logo-icon {
   width: 32px;
   height: 32px;
+  min-width: 32px;
   background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
   border-radius: var(--radius-md);
   display: flex;
@@ -369,6 +374,11 @@ html, body {
   color: #fff;
   font-size: 0.95rem;
   box-shadow: 0 4px 10px rgba(99, 102, 241, 0.35);
+}
+
+.brand-text {
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .brand-text h2 {
@@ -391,6 +401,103 @@ html, body {
   border-radius: var(--radius-sm);
   font-weight: 600;
   text-transform: uppercase;
+}
+
+/* Sidebar Burger Toggle Row (Below Logo) */
+.sidebar-toggle-row {
+  display: flex;
+  align-items: center;
+  margin-top: 0.1rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-burger-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.35rem 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-burger-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-heading);
+  border-color: var(--primary);
+}
+
+.sidebar-burger-btn i {
+  font-size: 0.88rem;
+  color: var(--primary);
+  width: 16px;
+  text-align: center;
+}
+
+/* Collapsed Sidebar Mode */
+.sidebar.collapsed {
+  width: 58px;
+  min-width: 58px;
+}
+
+.sidebar.collapsed .brand-text,
+.sidebar.collapsed .burger-label,
+.sidebar.collapsed .nav-section-title,
+.sidebar.collapsed .nav-item .nav-link span,
+.sidebar.collapsed .nav-badge,
+.sidebar.collapsed .project-selector-wrapper,
+.sidebar.collapsed .user-details {
+  display: none !important;
+}
+
+.sidebar.collapsed .sidebar-header {
+  padding: 0.75rem 0.5rem 0.4rem;
+  align-items: center;
+}
+
+.sidebar.collapsed .brand-logo {
+  justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-toggle-row {
+  justify-content: center;
+  width: 100%;
+}
+
+.sidebar.collapsed .sidebar-burger-btn {
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+.sidebar.collapsed .sidebar-nav {
+  padding: 0.35rem 0.35rem;
+}
+
+.sidebar.collapsed .nav-item .nav-link {
+  justify-content: center;
+  padding: 0.55rem 0;
+}
+
+.sidebar.collapsed .nav-item .nav-link i {
+  font-size: 1rem;
+}
+
+.sidebar.collapsed .sidebar-footer {
+  padding: 0.6rem 0.35rem;
+}
+
+.sidebar.collapsed .user-profile {
+  justify-content: center;
 }
 
 /* Project Selector */

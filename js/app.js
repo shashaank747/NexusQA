@@ -115,6 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Navigation & Shell
     sidebar: document.getElementById("sidebar"),
+    sidebarBurgerBtn: document.getElementById("sidebarBurgerBtn"),
     qaNavSection: document.getElementById("qaNavSection"),
     devNavSection: document.getElementById("devNavSection"),
     portalRoleBadge: document.getElementById("portalRoleBadge"),
@@ -479,8 +480,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   }
 
+  function initSidebarState() {
+    const isCollapsed = localStorage.getItem("nexusqa_sidebar_collapsed") === "true";
+    if (DOM.sidebar && isCollapsed) {
+      DOM.sidebar.classList.add("collapsed");
+      document.body.classList.add("sidebar-collapsed");
+    }
+  }
+
   function initRouting() {
     initTheme();
+    initSidebarState();
     const pathname = window.location.pathname.toLowerCase();
     const isLandingPage = document.body.classList.contains("page-landing-auth") || pathname.endsWith("index.html") || pathname === "/" || (!document.body.classList.contains("page-tester") && !document.body.classList.contains("page-dev") && !document.getElementById("viewViewport"));
 
@@ -1397,8 +1407,24 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   });
 
+  on(DOM.sidebarBurgerBtn, "click", () => {
+    if (DOM.sidebar) {
+      const isNowCollapsed = DOM.sidebar.classList.toggle("collapsed");
+      document.body.classList.toggle("sidebar-collapsed", isNowCollapsed);
+      localStorage.setItem("nexusqa_sidebar_collapsed", isNowCollapsed ? "true" : "false");
+    }
+  });
+
   on(DOM.menuToggleBtn, "click", () => {
-    if (DOM.sidebar) DOM.sidebar.classList.toggle("mobile-open");
+    if (DOM.sidebar) {
+      if (window.innerWidth <= 768) {
+        DOM.sidebar.classList.toggle("mobile-open");
+      } else {
+        const isNowCollapsed = DOM.sidebar.classList.toggle("collapsed");
+        document.body.classList.toggle("sidebar-collapsed", isNowCollapsed);
+        localStorage.setItem("nexusqa_sidebar_collapsed", isNowCollapsed ? "true" : "false");
+      }
+    }
   });
 
   document.addEventListener("keydown", (e) => {
