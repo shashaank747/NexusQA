@@ -86,22 +86,6 @@
           </li>
         </ul>
       </nav>
-
-      <!-- Sidebar User Footer -->
-      <div class="sidebar-footer">
-        <div class="user-profile-wrapper" id="userProfileToggle">
-          <div class="user-profile">
-            <div class="avatar-ring avatar-qa" id="userAvatarRing">
-              <span class="avatar-initials" id="userAvatarInitials">AM</span>
-            </div>
-            <div class="user-details">
-              <span class="user-name" id="userNameLabel">Alex Morgan</span>
-              <span class="user-role" id="userRoleLabel"><i class="fa-solid fa-circle status-dot-online"></i> QA Lead</span>
-            </div>
-          </div>
-          <button class="icon-btn-xs" id="switchUserQuickBtn" title="Sign Out & Return to Login"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-        </div>
-      </div>
     </aside>
 
     <!-- Main Workspace Container -->
@@ -145,9 +129,22 @@
             </button>
           </div>
 
-          <button class="icon-btn" id="logoutBtn" title="Sign Out & Return to Login">
-            <i class="fa-solid fa-arrow-right-from-bracket"></i>
-          </button>
+          <div class="topbar-divider"></div>
+
+          <!-- Topbar User Profile -->
+          <div class="user-profile-wrapper topbar-user-profile" id="userProfileToggle">
+            <div class="user-profile">
+              <div class="avatar-ring avatar-qa" id="userAvatarRing">
+                <span class="avatar-initials" id="userAvatarInitials">AM</span>
+              </div>
+              <div class="user-details">
+                <span class="user-name" id="userNameLabel">Alex Morgan</span>
+                <span class="user-role" id="userRoleLabel"><i class="fa-solid fa-circle status-dot-online"></i> QA Lead</span>
+              </div>
+            </div>
+            <button class="icon-btn-xs" id="logoutBtn" title="Sign Out & Return to Login"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+            <button class="icon-btn-xs" id="switchUserQuickBtn" title="Sign Out" style="display:none;"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+          </div>
         </div>
       </header>
 
