@@ -193,11 +193,14 @@ const StorageManager = {
   },
 
   /**
-   * Tester Registration (Step 1: Sign up & Generate Initial Email Verification OTP)
+   * Tester/Dev Registration (Step 1: Sign up & Generate Initial Email Verification OTP)
    */
   registerTester({ name, email, roleTitle }) {
     const users = this.getUsers();
     let existing = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+    const isDev = (roleTitle || "").toLowerCase().includes("dev");
+    const roleKey = isDev ? "dev" : "qa";
+    const displayRole = isDev ? "Dev" : "Tester";
 
     // Generate unique 6-digit verification code
     const otpCode = String(Math.floor(100000 + Math.random() * 900000));
@@ -209,8 +212,8 @@ const StorageManager = {
       }
       // Update existing pending user with new OTP
       existing.name = name || existing.name;
-      existing.role = "qa";
-      existing.roleTitle = roleTitle || existing.roleTitle || "QA Tester";
+      existing.role = roleKey;
+      existing.roleTitle = displayRole;
       existing.otpCode = otpCode;
       existing.otpExpiresAt = otpExpiresAt;
       this.saveUsers(users);
@@ -218,13 +221,13 @@ const StorageManager = {
     }
 
     const newUser = {
-      id: `user-qa-${Date.now()}`,
+      id: `user-${roleKey}-${Date.now()}`,
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      role: "qa",
-      roleTitle: roleTitle || "QA Test Engineer",
-      avatar: name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() || "QA",
-      color: "#6366f1",
+      role: roleKey,
+      roleTitle: displayRole,
+      avatar: name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() || (isDev ? "DEV" : "QA"),
+      color: isDev ? "#10b981" : "#6366f1",
       status: "pending_approval",
       emailVerified: false,
       otpCode: otpCode,
