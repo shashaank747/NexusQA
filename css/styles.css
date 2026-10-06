@@ -3892,6 +3892,95 @@ body.light-theme .sidebar-secondary-panel {
   flex: 1;
 }
 
+/* ==========================================================================
+   Test Case Reference Image Upload & Preview
+   ========================================================================== */
+.tc-image-upload-box {
+  background: var(--bg-card-subtle);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  transition: all var(--transition-fast);
+}
+
+.tc-image-upload-box:hover,
+.tc-image-upload-box.drag-over {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.tc-image-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 1rem;
+  text-align: center;
+}
+
+.tc-image-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.tc-image-preview-container {
+  position: relative;
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  background: var(--bg-card);
+}
+
+.tc-image-preview-img {
+  display: block;
+  max-height: 250px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.tc-image-preview-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(4px);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.tc-detail-image-box {
+  margin-top: 0.75rem;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card-subtle);
+  padding: 0.85rem;
+}
+
+.tc-detail-image-box img {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  margin: 0 auto;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.tc-detail-image-box img:hover {
+  transform: scale(1.015);
+}
+
 /* Detail Modal Styling */
 .detail-meta-grid {
   display: grid;

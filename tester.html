@@ -933,6 +933,49 @@
             <label for="tcTags">Tags (Comma-separated)</label>
             <input type="text" id="tcTags" class="nexus-input" placeholder="e.g. auth, security, smoke">
           </div>
+
+          <!-- Reference Image / Attachment Section -->
+          <div class="form-group mt-3">
+            <label class="d-flex justify-between align-center mb-1">
+              <span><i class="fa-solid fa-image text-primary"></i> Reference Screenshot / Image Attachment</span>
+              <span class="text-xs text-muted">Attach UI mockups, error screenshots, or expected states</span>
+            </label>
+            
+            <div class="tc-image-upload-box" id="tcImageUploadBox">
+              <!-- Empty Dropzone -->
+              <div class="tc-image-dropzone" id="tcImageDropzone">
+                <i class="fa-solid fa-cloud-arrow-up text-primary" style="font-size: 26px; margin-bottom: 6px;"></i>
+                <div class="text-sm font-semibold">Upload Image for this Test Case</div>
+                <p class="text-xs text-muted m-0 mt-1">Supports PNG, JPG, WEBP, GIF, SVG (Up to 5MB)</p>
+                <div class="d-flex gap-2 mt-3 align-center">
+                  <label class="btn btn-secondary btn-xs" style="cursor: pointer; margin: 0;" for="tcImageFileInput">
+                    <i class="fa-solid fa-folder-open"></i> Browse Files
+                  </label>
+                  <input type="file" id="tcImageFileInput" accept="image/*" style="display: none;">
+                  <span class="text-xs text-muted">or drag & drop here</span>
+                </div>
+              </div>
+
+              <!-- Attached Preview -->
+              <div class="tc-image-preview-wrap" id="tcImagePreviewWrap" style="display: none;">
+                <div class="tc-image-preview-container">
+                  <img id="tcImagePreview" src="" alt="Test Case Reference Image" class="tc-image-preview-img">
+                  <div class="tc-image-preview-overlay">
+                    <button type="button" class="btn btn-danger btn-xs" id="tcRemoveImageBtn" title="Remove attached image">
+                      <i class="fa-solid fa-trash-can"></i> Remove
+                    </button>
+                    <a id="tcViewImageFullBtn" href="#" target="_blank" class="btn btn-secondary btn-xs" title="View Full Resolution">
+                      <i class="fa-solid fa-up-right-from-square"></i> Full View
+                    </a>
+                  </div>
+                </div>
+                <div class="d-flex align-center gap-2 mt-2">
+                  <span class="badge badge-passed text-xs"><i class="fa-solid fa-check"></i> Image Attached</span>
+                  <span class="text-xs text-muted" id="tcImageFileName">screenshot.png</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
       <div class="modal-footer">

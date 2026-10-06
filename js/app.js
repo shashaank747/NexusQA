@@ -347,6 +347,14 @@ document.addEventListener("DOMContentLoaded", () => {
     saveTestCaseBtn: document.getElementById("saveTestCaseBtn"),
     closeTestCaseModalBtn: document.getElementById("closeTestCaseModalBtn"),
     cancelTestCaseModalBtn: document.getElementById("cancelTestCaseModalBtn"),
+    tcImageFileInput: document.getElementById("tcImageFileInput"),
+    tcImageUploadBox: document.getElementById("tcImageUploadBox"),
+    tcImageDropzone: document.getElementById("tcImageDropzone"),
+    tcImagePreviewWrap: document.getElementById("tcImagePreviewWrap"),
+    tcImagePreview: document.getElementById("tcImagePreview"),
+    tcRemoveImageBtn: document.getElementById("tcRemoveImageBtn"),
+    tcViewImageFullBtn: document.getElementById("tcViewImageFullBtn"),
+    tcImageFileName: document.getElementById("tcImageFileName"),
 
     testCaseDetailModal: document.getElementById("testCaseDetailModal"),
     viewDetailId: document.getElementById("viewDetailId"),
@@ -2545,7 +2553,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
             <span class="test-id-pill">${tc.id}</span>
           </td>
           <td class="col-title" onclick="window.viewTestCaseDetail('${tc.id}')">
-            <div class="test-title-cell">${escapeHtml(tc.title)}</div>
+            <div class="test-title-cell">
+              ${escapeHtml(tc.title)}
+              ${tc.image ? '<span class="badge badge-version" style="font-size:9px; margin-left:6px; vertical-align:middle;" title="Reference image attached"><i class="fa-solid fa-image"></i> Image</span>' : ''}
+            </div>
             <div class="test-tags-row">${tagsHtml}</div>
           </td>
           <td class="col-suite" onclick="window.viewTestCaseDetail('${tc.id}')">
@@ -2707,10 +2718,79 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
   on(DOM.addStepBtn, "click", () => addStepRow());
 
+  // Test Case Reference Image Attachment Controller
+  state.currentTcImage = "";
+
+  function setTestCaseImagePreview(dataUrl, fileName = "reference-screenshot.png") {
+    state.currentTcImage = dataUrl || "";
+    if (dataUrl) {
+      if (DOM.tcImagePreview) DOM.tcImagePreview.src = dataUrl;
+      if (DOM.tcViewImageFullBtn) DOM.tcViewImageFullBtn.href = dataUrl;
+      if (DOM.tcImageFileName) DOM.tcImageFileName.textContent = fileName;
+      if (DOM.tcImagePreviewWrap) DOM.tcImagePreviewWrap.style.display = "flex";
+      if (DOM.tcImageDropzone) DOM.tcImageDropzone.style.display = "none";
+    } else {
+      if (DOM.tcImagePreview) DOM.tcImagePreview.src = "";
+      if (DOM.tcImagePreviewWrap) DOM.tcImagePreviewWrap.style.display = "none";
+      if (DOM.tcImageDropzone) DOM.tcImageDropzone.style.display = "flex";
+      if (DOM.tcImageFileInput) DOM.tcImageFileInput.value = "";
+    }
+  }
+
+  if (DOM.tcImageFileInput) {
+    DOM.tcImageFileInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        showToast("Image size exceeds 5MB limit. Please choose a smaller file.", "error");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setTestCaseImagePreview(event.target.result, file.name);
+        showToast("Reference image attached to test case!", "success");
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (DOM.tcImageUploadBox) {
+    DOM.tcImageUploadBox.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      DOM.tcImageUploadBox.classList.add("drag-over");
+    });
+    DOM.tcImageUploadBox.addEventListener("dragleave", () => {
+      DOM.tcImageUploadBox.classList.remove("drag-over");
+    });
+    DOM.tcImageUploadBox.addEventListener("drop", (e) => {
+      e.preventDefault();
+      DOM.tcImageUploadBox.classList.remove("drag-over");
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file && file.type.startsWith("image/")) {
+        if (file.size > 5 * 1024 * 1024) {
+          showToast("Image size exceeds 5MB limit.", "error");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setTestCaseImagePreview(event.target.result, file.name);
+          showToast("Reference image attached!", "success");
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  on(DOM.tcRemoveImageBtn, "click", () => {
+    setTestCaseImagePreview("");
+    showToast("Attached image removed", "info");
+  });
+
   function openCreateTestCaseModal() {
     if (DOM.testCaseForm) DOM.testCaseForm.reset();
     if (DOM.editTestCaseId) DOM.editTestCaseId.value = "";
     if (DOM.testCaseModalTitle) DOM.testCaseModalTitle.textContent = "Create New Test Case";
+    setTestCaseImagePreview("");
     populateSuiteDropdowns();
     if (DOM.tcSuite && state.selectedSuiteId !== "all") DOM.tcSuite.value = state.selectedSuiteId;
     renderStepRows([
@@ -2727,6 +2807,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.editTestCaseId) DOM.editTestCaseId.value = tc.id;
     if (DOM.testCaseModalTitle) DOM.testCaseModalTitle.textContent = `Edit Test Case: ${tc.id}`;
     if (DOM.tcTitle) DOM.tcTitle.value = tc.title;
+    setTestCaseImagePreview(tc.image || "", (tc.id || "test") + "-reference.png");
     populateSuiteDropdowns();
     if (DOM.tcSuite) DOM.tcSuite.value = tc.suiteId;
     if (DOM.tcPriority) DOM.tcPriority.value = tc.priority;
@@ -2771,7 +2852,8 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       status: DOM.tcStatus ? DOM.tcStatus.value : "Untested",
       preconditions: DOM.tcPreconditions ? DOM.tcPreconditions.value.trim() : "",
       tags,
-      steps
+      steps,
+      image: state.currentTcImage || ""
     };
 
     const editId = DOM.editTestCaseId ? DOM.editTestCaseId.value : "";
@@ -2842,6 +2924,22 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           <label class="console-label"><i class="fa-solid fa-circle-info"></i> Preconditions</label>
           <div class="precondition-box">${escapeHtml(tc.preconditions || 'None specified.')}</div>
         </div>
+        ${tc.image ? `
+        <div class="mb-3">
+          <label class="console-label"><i class="fa-solid fa-image text-primary"></i> Reference Screenshot / Attached Mock</label>
+          <div class="tc-detail-image-box text-center">
+            <a href="${tc.image}" target="_blank" title="Click to view full image in new tab">
+              <img src="${tc.image}" alt="Reference image for ${escapeHtml(tc.id)}">
+            </a>
+            <div class="text-xs text-muted mt-2 d-flex justify-between align-center">
+              <span><i class="fa-solid fa-up-right-from-square"></i> Click image to open high-resolution view</span>
+              <a href="${tc.image}" download="${tc.id}-mockup.png" class="btn btn-ghost btn-xs text-primary">
+                <i class="fa-solid fa-download"></i> Download Image
+              </a>
+            </div>
+          </div>
+        </div>
+        ` : ''}
         <div class="mb-3">
           <label class="console-label"><i class="fa-solid fa-list-ol"></i> Step-by-Step Procedure (${(tc.steps || []).length} Steps)</label>
           <table class="detail-steps-table">
