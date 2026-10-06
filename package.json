@@ -1,0 +1,25 @@
+{
+  "name": "qa",
+  "version": "1.0.0",
+  "description": "NexusQA is a dual-role Quality Assurance and Developer collaboration platform backed by **Supabase PostgreSQL** and **Vercel**.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shashaank747/NexusQA.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/shashaank747/NexusQA/issues"
+  },
+  "homepage": "https://github.com/shashaank747/NexusQA#readme",
+  "dependencies": {
+    "@supabase/server": "^1.9.1",
+    "@supabase/supabase-js": "^2.117.2"
+  }
+}

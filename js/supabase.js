@@ -18,8 +18,8 @@ const SupabaseManager = {
       try { return JSON.parse(raw); } catch(e) {}
     }
     return {
-      url: "",
-      anonKey: "",
+      url: "https://tbwklqcundyvnnrwidmn.supabase.co",
+      anonKey: "sb_publishable_YKWeDIVSbs4MZrgcqHwlaw_TbV2BAeE",
       autoSync: true
     };
   },
