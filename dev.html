@@ -106,61 +106,96 @@
       </div>
     </header>
 
-    <!-- Workspace Body (Sidebar + Main Content below fixed topbar) -->
-    <div class="workspace-body">
-      <!-- Sidebar Navigation with Burger Icon directly below Logo -->
-      <aside class="sidebar" id="sidebar">
-        <div class="sidebar-top-control">
-          <button type="button" class="sidebar-burger-btn" id="sidebarBurgerBtn" title="Toggle Sidebar Navigation">
-            <i class="fa-solid fa-bars"></i>
-          </button>
-        </div>
-
-        <!-- Dynamic Sidebar Nav -->
-        <nav class="sidebar-nav">
-          <div id="devNavSection">
-            <div class="nav-section-title">DEVELOPER HUB</div>
-            <ul class="nav-list">
-              <li class="nav-item active" data-view="dev-dashboard">
-                <a href="javascript:void(0)" class="nav-link">
-                  <i class="fa-solid fa-laptop-code"></i>
-                  <span>Dev Defect Dashboard</span>
-                </a>
+      <!-- Dual Sidebar (App Sidebar 4 Pattern: Primary Icon Rail + Contextual Secondary Panel) -->
+      <aside class="dual-sidebar" id="sidebar">
+        <!-- 1. Primary Compact Icon Rail (Always Slim) -->
+        <div class="sidebar-primary-rail">
+          <div class="rail-top">
+            <button type="button" class="sidebar-burger-btn" id="sidebarBurgerBtn" title="Toggle Secondary Panel" aria-label="Toggle Secondary Panel">
+              <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="rail-divider"></div>
+            <ul class="rail-nav-list">
+              <li class="rail-nav-item active" data-view="dev-dashboard" title="Dev Defect Dashboard">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-laptop-code"></i></button>
               </li>
-              <li class="nav-item" data-view="dev-approvals">
-                <a href="javascript:void(0)" class="nav-link">
-                  <i class="fa-solid fa-user-shield text-amber"></i>
-                  <span>Tester Approvals</span>
-                  <span class="nav-badge badge-danger" id="devPendingApprovalsBadge">0</span>
-                </a>
+              <li class="rail-nav-item" data-view="dev-approvals" title="Tester Approvals">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-user-shield text-amber"></i></button>
               </li>
-              <li class="nav-item" data-view="dev-kanban">
-                <a href="javascript:void(0)" class="nav-link">
-                  <i class="fa-solid fa-table-columns"></i>
-                  <span>Bug Triage Kanban</span>
-                  <span class="nav-badge badge-danger" id="devAssignedBadge">2</span>
-                </a>
+              <li class="rail-nav-item" data-view="dev-kanban" title="Bug Triage Kanban">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-table-columns"></i></button>
               </li>
-              <li class="nav-item" data-view="dev-failures">
-                <a href="javascript:void(0)" class="nav-link">
-                  <i class="fa-solid fa-bug-slash"></i>
-                  <span>Failed Test Diagnostics</span>
-                  <span class="nav-badge badge-blocked" id="devFailedTestsBadge">2</span>
-                </a>
+              <li class="rail-nav-item" data-view="dev-failures" title="Failed Test Diagnostics">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-bug-slash"></i></button>
               </li>
             </ul>
           </div>
+          <div class="rail-bottom">
+            <ul class="rail-nav-list">
+              <li class="rail-nav-item" data-view="settings" title="Settings">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-sliders"></i></button>
+              </li>
+            </ul>
+          </div>
+        </div>
 
-          <div class="nav-section-title">PLATFORM</div>
-          <ul class="nav-list">
-            <li class="nav-item" data-view="settings">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-sliders"></i>
-                <span>Settings</span>
-              </a>
-            </li>
-          </ul>
-        </nav>
+        <!-- 2. Contextual Secondary Panel -->
+        <div class="sidebar-secondary-panel" id="secondaryPanel">
+          <div class="secondary-panel-header">
+            <div class="secondary-panel-title-group">
+              <span class="secondary-category-tag">DEV HUB</span>
+              <h3 class="secondary-panel-heading">Navigation</h3>
+            </div>
+            <button type="button" class="secondary-collapse-trigger" id="secondaryCollapseBtn" title="Collapse Panel">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+          </div>
+
+          <nav class="sidebar-nav">
+            <div id="devNavSection">
+              <div class="nav-section-title">DEVELOPER HUB</div>
+              <ul class="nav-list">
+                <li class="nav-item active" data-view="dev-dashboard">
+                  <a href="javascript:void(0)" class="nav-link">
+                    <i class="fa-solid fa-laptop-code"></i>
+                    <span>Dev Defect Dashboard</span>
+                  </a>
+                </li>
+                <li class="nav-item" data-view="dev-approvals">
+                  <a href="javascript:void(0)" class="nav-link">
+                    <i class="fa-solid fa-user-shield text-amber"></i>
+                    <span>Tester Approvals</span>
+                    <span class="nav-badge badge-danger" id="devPendingApprovalsBadge">0</span>
+                  </a>
+                </li>
+                <li class="nav-item" data-view="dev-kanban">
+                  <a href="javascript:void(0)" class="nav-link">
+                    <i class="fa-solid fa-table-columns"></i>
+                    <span>Bug Triage Kanban</span>
+                    <span class="nav-badge badge-danger" id="devAssignedBadge">2</span>
+                  </a>
+                </li>
+                <li class="nav-item" data-view="dev-failures">
+                  <a href="javascript:void(0)" class="nav-link">
+                    <i class="fa-solid fa-bug-slash"></i>
+                    <span>Failed Test Diagnostics</span>
+                    <span class="nav-badge badge-blocked" id="devFailedTestsBadge">2</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div class="nav-section-title">PLATFORM</div>
+            <ul class="nav-list">
+              <li class="nav-item" data-view="settings">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-sliders"></i>
+                  <span>Settings</span>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
       </aside>
 
       <!-- Main Workspace Container -->

@@ -1354,6 +1354,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       else item.classList.remove("active");
     });
 
+    document.querySelectorAll(".sidebar-primary-rail .rail-nav-item").forEach(item => {
+      if (item.getAttribute("data-view") === viewName) item.classList.add("active");
+      else item.classList.remove("active");
+    });
+
     if (DOM.viewPanels) {
       DOM.viewPanels.forEach(panel => {
         if (panel.id === `view-${viewName}`) panel.classList.add("active-view");
@@ -1392,7 +1397,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (viewName === "settings") updateSupabaseStatusUI();
   }
 
-  document.querySelectorAll(".sidebar-nav .nav-item").forEach(item => {
+  document.querySelectorAll(".sidebar-nav .nav-item, .sidebar-primary-rail .rail-nav-item").forEach(item => {
     item.addEventListener("click", () => {
       const view = item.getAttribute("data-view");
       if (view) switchView(view);
@@ -1410,13 +1415,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   });
 
-  on(DOM.sidebarBurgerBtn, "click", () => {
+  const toggleSidebarCollapse = () => {
     if (DOM.sidebar) {
       const isNowCollapsed = DOM.sidebar.classList.toggle("collapsed");
       document.body.classList.toggle("sidebar-collapsed", isNowCollapsed);
       localStorage.setItem("nexusqa_sidebar_collapsed", isNowCollapsed ? "true" : "false");
     }
-  });
+  };
+
+  on(DOM.sidebarBurgerBtn, "click", toggleSidebarCollapse);
+  const secondaryClose = document.getElementById("secondaryCollapseBtn");
+  if (secondaryClose) secondaryClose.addEventListener("click", toggleSidebarCollapse);
 
   on(DOM.menuToggleBtn, "click", () => {
     if (DOM.sidebar) {

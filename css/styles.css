@@ -729,36 +729,185 @@ html, body {
 }
 
 /* ==========================================================================
-   Sidebar Navigation (Below Topbar)
+   Dual Sidebar Component (React Bits App Sidebar 4 Pattern)
    ========================================================================== */
+.dual-sidebar,
 .sidebar {
-  width: 210px;
-  min-width: 210px;
+  display: flex;
+  height: 100%;
+  z-index: 50;
+  transition: all var(--transition-normal);
+  background: transparent;
+  border: none;
+}
+
+/* 1. Primary Compact Icon Rail (Always Slim) */
+.sidebar-primary-rail {
+  width: 58px;
+  min-width: 58px;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  height: 100%;
-  z-index: 50;
-  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.35rem;
+  z-index: 52;
+}
+
+.rail-top, .rail-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 0.4rem;
+}
+
+.rail-divider {
+  width: 28px;
+  height: 1px;
+  background: var(--border-color);
+  margin: 0.35rem 0;
+}
+
+.rail-nav-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.rail-nav-item {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.rail-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 0.95rem;
+}
+
+.rail-nav-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--primary);
+  border-color: var(--border-color);
+}
+
+.rail-nav-item.active .rail-nav-btn {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.18);
+}
+
+body.light-theme .rail-nav-btn {
+  color: #475569;
+}
+
+body.light-theme .rail-nav-btn:hover {
+  background: #f1f5f9;
+  color: #4f46e5;
+  border-color: #cbd5e1;
+}
+
+body.light-theme .rail-nav-item.active .rail-nav-btn {
+  background: #eef2ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+}
+
+/* 2. Contextual Secondary Panel */
+.sidebar-secondary-panel {
+  width: 200px;
+  min-width: 200px;
+  background-color: var(--bg-card-subtle);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, transform 0.25s ease;
+  overflow: hidden;
+  z-index: 51;
+}
+
+.secondary-panel-header {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 50px;
+}
+
+.secondary-panel-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.secondary-category-tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--primary);
+  letter-spacing: 0.05em;
+}
+
+.secondary-panel-heading {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1.2;
+}
+
+.secondary-collapse-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.secondary-collapse-trigger:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-main);
+  border-color: var(--border-color);
 }
 
 /* Sidebar Top Burger Control (Directly below Logo) */
 .sidebar-top-control {
-  padding: 0.65rem 1.25rem;
-  border-bottom: 1px solid var(--border-color);
+  padding: 0.2rem;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .sidebar-burger-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
   background: var(--bg-card-subtle);
   border: 1px solid var(--border-color);
   border-radius: 10px;
@@ -793,53 +942,24 @@ body.light-theme .sidebar-burger-btn:hover {
   color: #ffffff;
 }
 
-/* Collapsed Sidebar Mode */
-.sidebar.collapsed {
-  width: 56px;
-  min-width: 56px;
+/* Collapsed Dual Sidebar Mode */
+.dual-sidebar.collapsed .sidebar-secondary-panel,
+.sidebar.collapsed .sidebar-secondary-panel {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+  border-right: none;
 }
 
-.sidebar.collapsed .burger-label,
-.sidebar.collapsed .nav-section-title,
-.sidebar.collapsed .nav-item .nav-link span,
-.sidebar.collapsed .nav-badge,
-.sidebar.collapsed .project-selector-wrapper,
-.sidebar.collapsed .user-details {
-  display: none !important;
+body.light-theme .sidebar-primary-rail {
+  background-color: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
 }
 
-.sidebar.collapsed .sidebar-top-control {
-  justify-content: center;
-  padding: 0.65rem 0;
-}
-
-.sidebar.collapsed .sidebar-burger-btn {
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border-radius: 10px;
-}
-
-.sidebar.collapsed .sidebar-nav {
-  padding: 0.35rem 0.35rem;
-}
-
-.sidebar.collapsed .nav-item .nav-link {
-  justify-content: center;
-  padding: 0.55rem 0;
-}
-
-.sidebar.collapsed .nav-item .nav-link i {
-  font-size: 1rem;
-}
-
-.sidebar.collapsed .sidebar-footer {
-  padding: 0.6rem 0.35rem;
-}
-
-.sidebar.collapsed .user-profile {
-  justify-content: center;
+body.light-theme .sidebar-secondary-panel {
+  background-color: #f8fafc !important;
+  border-right: 1px solid #e2e8f0 !important;
 }
 
 /* Project Selector */

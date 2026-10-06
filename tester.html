@@ -111,72 +111,113 @@
       </div>
     </header>
 
-    <!-- Workspace Body (Sidebar + Main Content below fixed topbar) -->
-    <div class="workspace-body">
-      <!-- Sidebar Navigation with Burger Icon directly below Logo -->
-      <aside class="sidebar" id="sidebar">
-        <div class="sidebar-top-control">
-          <button type="button" class="sidebar-burger-btn" id="sidebarBurgerBtn" title="Toggle Sidebar Navigation">
-            <i class="fa-solid fa-bars"></i>
-          </button>
+      <!-- Dual Sidebar (App Sidebar 4 Pattern: Primary Icon Rail + Contextual Secondary Panel) -->
+      <aside class="dual-sidebar" id="sidebar">
+        <!-- 1. Primary Compact Icon Rail (Always Slim) -->
+        <div class="sidebar-primary-rail">
+          <div class="rail-top">
+            <button type="button" class="sidebar-burger-btn" id="sidebarBurgerBtn" title="Toggle Secondary Panel" aria-label="Toggle Secondary Panel">
+              <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="rail-divider"></div>
+            <ul class="rail-nav-list">
+              <li class="rail-nav-item active" data-view="dashboard" title="Quality Analytics">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-chart-pie"></i></button>
+              </li>
+              <li class="rail-nav-item" data-view="test-cases" title="Test Cases & Repo">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-flask-vial"></i></button>
+              </li>
+              <li class="rail-nav-item" data-view="executions" title="Live Test Runner">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-play"></i></button>
+              </li>
+              <li class="rail-nav-item" data-view="ai-generate" title="AI Test Studio">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-wand-magic-sparkles text-purple"></i></button>
+              </li>
+              <li class="rail-nav-item" data-view="defects" title="Defect Tracker">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-triangle-exclamation text-rose"></i></button>
+              </li>
+              <li class="rail-nav-item" data-view="suites" title="Suites & Plans">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-layer-group"></i></button>
+              </li>
+            </ul>
+          </div>
+          <div class="rail-bottom">
+            <ul class="rail-nav-list">
+              <li class="rail-nav-item" data-view="settings" title="Settings">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-sliders"></i></button>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <!-- Dynamic Sidebar Nav -->
-        <nav class="sidebar-nav" id="qaNavSection">
-          <div class="nav-section-title">CORE QA SUITE</div>
-          <ul class="nav-list">
-            <li class="nav-item active" data-view="dashboard">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-chart-pie"></i>
-                <span>Quality Analytics</span>
-              </a>
-            </li>
-            <li class="nav-item" data-view="test-cases">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-flask-vial"></i>
-                <span>Test Cases & Repo</span>
-                <span class="nav-badge" id="testCasesCountBadge">12</span>
-              </a>
-            </li>
-            <li class="nav-item" data-view="executions">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-play"></i>
-                <span>Live Test Runner</span>
-                <span class="nav-badge badge-active">Live</span>
-              </a>
-            </li>
-            <li class="nav-item" data-view="ai-generate">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-wand-magic-sparkles text-purple"></i>
-                <span>AI Test Studio</span>
-                <span class="nav-badge badge-ai">PRO</span>
-              </a>
-            </li>
-            <li class="nav-item" data-view="defects">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-triangle-exclamation text-rose"></i>
-                <span>Defect Tracker</span>
-                <span class="nav-badge badge-danger" id="activeDefectsBadge">4</span>
-              </a>
-            </li>
-            <li class="nav-item" data-view="suites">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-layer-group"></i>
-                <span>Suites & Plans</span>
-              </a>
-            </li>
-          </ul>
+        <!-- 2. Contextual Secondary Panel -->
+        <div class="sidebar-secondary-panel" id="secondaryPanel">
+          <div class="secondary-panel-header">
+            <div class="secondary-panel-title-group">
+              <span class="secondary-category-tag">QA PORTAL</span>
+              <h3 class="secondary-panel-heading">Navigation</h3>
+            </div>
+            <button type="button" class="secondary-collapse-trigger" id="secondaryCollapseBtn" title="Collapse Panel">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+          </div>
 
-          <div class="nav-section-title">PLATFORM</div>
-          <ul class="nav-list">
-            <li class="nav-item" data-view="settings">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-sliders"></i>
-                <span>Settings</span>
-              </a>
-            </li>
-          </ul>
-        </nav>
+          <nav class="sidebar-nav" id="qaNavSection">
+            <div class="nav-section-title">CORE QA SUITE</div>
+            <ul class="nav-list">
+              <li class="nav-item active" data-view="dashboard">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-chart-pie"></i>
+                  <span>Quality Analytics</span>
+                </a>
+              </li>
+              <li class="nav-item" data-view="test-cases">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-flask-vial"></i>
+                  <span>Test Cases & Repo</span>
+                  <span class="nav-badge" id="testCasesCountBadge">12</span>
+                </a>
+              </li>
+              <li class="nav-item" data-view="executions">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-play"></i>
+                  <span>Live Test Runner</span>
+                  <span class="nav-badge badge-active">Live</span>
+                </a>
+              </li>
+              <li class="nav-item" data-view="ai-generate">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-wand-magic-sparkles text-purple"></i>
+                  <span>AI Test Studio</span>
+                  <span class="nav-badge badge-ai">PRO</span>
+                </a>
+              </li>
+              <li class="nav-item" data-view="defects">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-triangle-exclamation text-rose"></i>
+                  <span>Defect Tracker</span>
+                  <span class="nav-badge badge-danger" id="activeDefectsBadge">4</span>
+                </a>
+              </li>
+              <li class="nav-item" data-view="suites">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-layer-group"></i>
+                  <span>Suites & Plans</span>
+                </a>
+              </li>
+            </ul>
+
+            <div class="nav-section-title">PLATFORM</div>
+            <ul class="nav-list">
+              <li class="nav-item" data-view="settings">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-sliders"></i>
+                  <span>Settings</span>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
       </aside>
 
       <!-- Main Workspace Container -->
