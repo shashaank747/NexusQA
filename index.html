@@ -19,15 +19,25 @@
 </head>
 <body class="dark-theme page-landing-auth">
 
-  <!-- Main Unified Gateway Container (React Bits Pro Auth 5 Block) -->
-  <div class="auth5-container">
-    <div class="auth5-glow-1"></div>
+  <!-- Background Decorative Aurora & Grid Effects -->
+  <div class="auth-bg-mesh">
+    <div class="auth-bg-orb auth-bg-orb-1"></div>
+    <div class="auth-bg-orb auth-bg-orb-2"></div>
+    <div class="auth-bg-orb auth-bg-orb-3"></div>
+    <div class="auth-grid-overlay"></div>
+    <div class="auth-vignette-overlay"></div>
+  </div>
 
+  <!-- Main Unified Gateway Container -->
+  <div class="auth5-container">
     <div class="auth5-card" id="auth5Card">
       <!-- 1. Header with Logo & Dynamic Titles -->
       <div class="auth5-header">
-        <div class="auth5-logo-badge">
-          <i class="fa-solid fa-shield-halved"></i>
+        <div class="auth-brand-badge">
+          <div class="auth5-logo-badge">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <span class="auth-brand-name">NEXUS<span class="brand-accent">QA</span></span>
         </div>
         <h1 class="auth5-title" id="auth5Title">Welcome to NexusQA</h1>
         <p class="auth5-subtitle" id="auth5Subtitle">Enter your work email to receive a secure 6-digit login OTP</p>
@@ -72,31 +82,37 @@
             </label>
             <div class="auth5-input-wrapper">
               <i class="fa-regular fa-envelope auth5-input-icon"></i>
-              <input type="email" id="testerLoginEmail" class="auth5-input" placeholder="e.g. alex.qa@nexusqa.io or marcus.dev@nexusqa.io" required>
+              <input type="email" id="testerLoginEmail" class="auth5-input" placeholder="e.g. alex.qa@nexusqa.io or marcus.dev@nexusqa.io" required autocomplete="email">
             </div>
           </div>
 
           <button type="submit" class="auth5-submit-btn" id="btnTesterLoginSubmit">
-            <i class="fa-solid fa-paper-plane"></i> Send 6-Digit Email OTP
+            <span>Send 6-Digit Email OTP</span>
+            <i class="fa-solid fa-paper-plane"></i>
           </button>
 
-          <p class="text-center text-muted text-xs mt-3">
-            New user? <a href="javascript:void(0)" onclick="window.switchAuthMode('signup')" class="text-primary font-bold">Create an account (Tester / Dev)</a>
-          </p>
+          <!-- Modern Redesigned Switcher Pill -->
+          <div class="auth-action-switcher">
+            <span class="auth-switcher-prompt">Need a new workspace account?</span>
+            <button type="button" class="btn-auth-switch" onclick="window.switchAuthMode('signup')">
+              <span>Create Account (Tester / Dev)</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
         </form>
 
         <!-- New Account Registration Form (ONLY place where Tester / Dev option is shown) -->
         <form id="testerSignupForm" class="auth5-form" style="display: none;">
           <div class="auth-info-banner mb-3">
-            <i class="fa-solid fa-circle-info text-cyan"></i>
-            <span class="text-xs">Step 1: Choose Role & Verify Email OTP ➔ Step 2: Senior Dev Approves Access.</span>
+            <i class="fa-solid fa-circle-info"></i>
+            <span><strong>Step 1:</strong> Select role & verify OTP ➔ <strong>Step 2:</strong> Senior Dev grants workspace access.</span>
           </div>
 
           <div class="auth5-form-group">
             <label class="auth5-label"><span>Full Name</span></label>
             <div class="auth5-input-wrapper">
               <i class="fa-regular fa-user auth5-input-icon"></i>
-              <input type="text" id="testerSignupName" class="auth5-input" placeholder="e.g. Jordan Hayes" required>
+              <input type="text" id="testerSignupName" class="auth5-input" placeholder="e.g. Jordan Hayes" required autocomplete="name">
             </div>
           </div>
 
@@ -104,25 +120,34 @@
             <label class="auth5-label"><span>Work Email</span></label>
             <div class="auth5-input-wrapper">
               <i class="fa-regular fa-envelope auth5-input-icon"></i>
-              <input type="email" id="testerSignupEmail" class="auth5-input" placeholder="e.g. jordan@company.com" required>
+              <input type="email" id="testerSignupEmail" class="auth5-input" placeholder="e.g. jordan@company.com" required autocomplete="email">
             </div>
           </div>
 
           <div class="auth5-form-group">
             <label class="auth5-label"><span>Account Role</span></label>
-            <select id="testerSignupRoleTitle" class="nexus-select w-100" style="padding: 0.65rem 0.75rem; border-radius: 12px; width: 100%;">
-              <option value="Tester">Tester</option>
-              <option value="Dev">Dev</option>
-            </select>
+            <div class="auth5-select-wrapper">
+              <select id="testerSignupRoleTitle" class="auth5-select">
+                <option value="Tester">QA Tester</option>
+                <option value="Dev">Developer Lead</option>
+              </select>
+              <i class="fa-solid fa-chevron-down auth5-select-caret"></i>
+            </div>
           </div>
 
           <button type="submit" class="auth5-submit-btn" id="btnTesterSendOtp">
-            <i class="fa-solid fa-paper-plane"></i> Register & Send 6-Digit Email OTP
+            <span>Register & Send Verification Code</span>
+            <i class="fa-solid fa-paper-plane"></i>
           </button>
 
-          <p class="text-center text-muted text-xs mt-3">
-            Already have an account? <a href="javascript:void(0)" onclick="window.switchAuthMode('login')" class="text-primary font-bold">Sign In here</a>
-          </p>
+          <!-- Modern Redesigned Switcher Pill -->
+          <div class="auth-action-switcher">
+            <span class="auth-switcher-prompt">Already have an active account?</span>
+            <button type="button" class="btn-auth-switch" onclick="window.switchAuthMode('login')">
+              <span>Sign In to Workspace</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
         </form>
       </div>
 
