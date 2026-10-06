@@ -2842,6 +2842,20 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     populateSuiteDropdowns();
   }
 
+  window.setAiPreset = function(presetKey) {
+    const promptEl = DOM.aiStoryPrompt || document.getElementById("aiStoryPrompt");
+    if (!promptEl) return;
+    
+    if (presetKey === "checkout") {
+      promptEl.value = "As a shopper checking out, when I apply promo coupon 'CYBER30' on orders above $100.00, apply 30% discount, compute tiered shipping fees, and trigger Stripe 3D-Secure 2.0 verification on cards with high risk scores.";
+    } else if (presetKey === "oauth") {
+      promptEl.value = "As a corporate enterprise user, when signing in via Google Workspace SSO or GitHub Enterprise OAuth2, exchange authorization code for JWT access token, enforce 15-minute refresh token expiry, and restrict access if user email domain is unauthorized.";
+    } else if (presetKey === "security") {
+      promptEl.value = "As an API consumer, all GraphQL/REST mutation endpoints must validate Bearer token authentication, rate limit to 60 requests per minute with HTTP 429 Too Many Requests response, and reject SQL injection or nested recursive query attacks.";
+    }
+    showToast("AI Prompt Preset loaded!");
+  };
+
   on(DOM.loadSampleStoryBtn, "click", () => {
     if (DOM.aiStoryPrompt) DOM.aiStoryPrompt.value = "As a customer, when I apply coupon 'SAVE20' on orders above $50.00, deduct 20% discount, recalculate sales tax accurately, and prevent checkout if expired.";
     showToast("Sample user story loaded!");

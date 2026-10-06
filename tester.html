@@ -654,20 +654,27 @@
           <div class="ai-workspace-grid">
             <div class="ai-input-card">
               <div class="card-header">
-                <h3><i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Requirement & User Story Prompt</h3>
-                <button class="btn btn-secondary btn-xs" id="loadSampleStoryBtn"><i class="fa-solid fa-lightbulb"></i> Load Sample Story</button>
+                <h3><i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Requirement & Story Prompt</h3>
+                <button class="btn btn-secondary btn-xs" id="loadSampleStoryBtn"><i class="fa-solid fa-lightbulb"></i> Load Sample</button>
               </div>
               <div class="card-body">
+                <div class="ai-preset-chips mb-3">
+                  <span class="preset-label text-xs text-muted">Quick Presets:</span>
+                  <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('checkout')"><i class="fa-solid fa-credit-card"></i> Stripe Checkout</button>
+                  <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('oauth')"><i class="fa-solid fa-key"></i> OAuth2 / SSO</button>
+                  <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('security')"><i class="fa-solid fa-shield-virus"></i> API Security</button>
+                </div>
+
                 <div class="form-group">
                   <label for="aiTargetSuiteSelect">Assign Generated Tests to Suite</label>
                   <select id="aiTargetSuiteSelect" class="nexus-select w-100"></select>
                 </div>
                 <div class="form-group">
                   <label for="aiStoryPrompt">User Story / Feature Spec Acceptance Criteria</label>
-                  <textarea id="aiStoryPrompt" class="nexus-textarea font-sans" rows="10" placeholder="As a customer, I want to apply a promo coupon code at checkout..."></textarea>
+                  <textarea id="aiStoryPrompt" class="nexus-textarea font-sans" rows="9" placeholder="As a user, I want to securely checkout with promo code discounts and automatic currency conversion..."></textarea>
                 </div>
-                <button class="btn btn-primary btn-block" id="generateAITestsBtn">
-                  <i class="fa-solid fa-sparkles"></i> Synthesize Test Cases with AI
+                <button class="btn btn-primary btn-block ai-generate-btn" id="generateAITestsBtn">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Synthesize Test Cases with AI
                 </button>
               </div>
             </div>
