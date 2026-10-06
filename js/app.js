@@ -75,6 +75,8 @@ document.addEventListener("DOMContentLoaded", () => {
     testerSignupPassword: document.getElementById("testerSignupPassword"),
     testerSignupRoleTitle: document.getElementById("testerSignupRoleTitle"),
     btnTesterSendOtp: document.getElementById("btnTesterSendOtp"),
+    authInlineAlert: document.getElementById("authInlineAlert"),
+    authInlineAlertText: document.getElementById("authInlineAlertText"),
 
     testerOtpForm: document.getElementById("testerOtpForm"),
     codeSlots: document.getElementById("otpCodeSlots"),
@@ -548,7 +550,25 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   state.auth5Mode = "login";  // 'login' | 'signup'
   state.resendCooldownInterval = null;
 
+  window.showAuthAlert = function(message) {
+    const alertEl = DOM.authInlineAlert || document.getElementById("authInlineAlert");
+    const textEl = DOM.authInlineAlertText || document.getElementById("authInlineAlertText");
+    if (alertEl && textEl) {
+      textEl.textContent = message;
+      alertEl.style.display = "flex";
+      alertEl.classList.remove("authAlertShake");
+      void alertEl.offsetWidth; // trigger reflow for animation restart
+      alertEl.classList.add("authAlertShake");
+    }
+  };
+
+  window.hideAuthAlert = function() {
+    const alertEl = DOM.authInlineAlert || document.getElementById("authInlineAlert");
+    if (alertEl) alertEl.style.display = "none";
+  };
+
   window.setAuth5Role = function(role) {
+    window.hideAuthAlert();
     state.auth5Role = role;
     const btnTester = DOM.btnRoleTester || document.getElementById("btnRoleTester");
     const btnDev = DOM.btnRoleDev || document.getElementById("btnRoleDev");
@@ -584,6 +604,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   };
 
   window.switchTesterAuthMode = function(mode) {
+    window.hideAuthAlert();
     state.auth5Mode = mode;
     const title = DOM.auth5Title || document.getElementById("auth5Title");
     const subtitle = DOM.auth5Subtitle || document.getElementById("auth5Subtitle");
@@ -998,6 +1019,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.testerLoginForm) {
       DOM.testerLoginForm.addEventListener("submit", (e) => {
         e.preventDefault();
+        window.hideAuthAlert();
         const email = DOM.testerLoginEmail.value.trim();
 
         try {
@@ -1014,6 +1036,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             showToast(`Unique login OTP dispatched to ${res.user.email}!`);
           }
         } catch (err) {
+          window.showAuthAlert(err.message);
           showToast(err.message, "error");
         }
       });
@@ -1023,6 +1046,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.testerSignupForm) {
       DOM.testerSignupForm.addEventListener("submit", (e) => {
         e.preventDefault();
+        window.hideAuthAlert();
         const name = DOM.testerSignupName.value.trim();
         const email = DOM.testerSignupEmail.value.trim();
         const roleTitle = DOM.testerSignupRoleTitle.value;
@@ -1046,6 +1070,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         } catch (err) {
           DOM.btnTesterSendOtp.disabled = false;
           DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Register & Send 6-Digit Email OTP`;
+          window.showAuthAlert(err.message);
           showToast(err.message, "error");
         }
       });
@@ -1055,6 +1080,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.devLoginForm) {
       DOM.devLoginForm.addEventListener("submit", (e) => {
         e.preventDefault();
+        window.hideAuthAlert();
         const email = DOM.devLoginEmail.value.trim();
 
         try {
@@ -1066,6 +1092,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           window.showInboxState(res.user.email, res.otpCode);
           showToast(`Unique login OTP dispatched to Developer ${res.user.email}!`);
         } catch (err) {
+          window.showAuthAlert(err.message);
           showToast(err.message, "error");
         }
       });
@@ -1486,10 +1513,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     else document.body.appendChild(toast);
     setTimeout(() => {
       toast.style.opacity = "0";
-      toast.style.transform = "translateX(100%)";
-      toast.style.transition = "all 0.3s ease";
-      setTimeout(() => toast.remove(), 300);
-    }, 3200);
+      toast.style.transform = "translateY(-24px) scale(0.94)";
+      toast.style.transition = "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)";
+      setTimeout(() => toast.remove(), 260);
+    }, 3400);
   }
 
   function checkRetestBanner() {
