@@ -19,262 +19,301 @@
 </head>
 <body class="dark-theme page-landing-auth">
 
-  <!-- Main Unified Gateway Container -->
-  <div class="landing-auth-wrapper">
-    <div class="auth-card landing-auth-card">
-      <div class="auth-header">
-        <div class="brand-logo justify-center">
-          <div class="logo-icon">
-            <i class="fa-solid fa-shield-halved"></i>
-          </div>
-          <div class="brand-text text-left">
-            <h2>Nexus<span>QA</span></h2>
-            <span class="badge badge-version">v2.5 Supabase Connected</span>
-          </div>
+  <!-- Main Unified Gateway Container (React Bits Pro Auth 5 Block) -->
+  <div class="auth5-container">
+    <div class="auth5-glow-1"></div>
+
+    <div class="auth5-card" id="auth5Card">
+      <!-- 1. Header with Logo & Dynamic Titles -->
+      <div class="auth5-header">
+        <div class="auth5-logo-badge">
+          <i class="fa-solid fa-shield-halved"></i>
         </div>
-        <p class="auth-subtitle mt-2" id="authGateSubtitle">Select your role to authenticate into your dedicated workspace</p>
+        <h1 class="auth5-title" id="auth5Title">Welcome back</h1>
+        <p class="auth5-subtitle" id="auth5Subtitle">Sign in with your QA Tester credentials to continue</p>
       </div>
 
-      <!-- Main Role Tabs (Tester vs Dev) -->
-      <div class="auth-nav-tabs" id="authNavTabs">
-        <button class="auth-tab-btn active" id="tabBtnTesterAuth" onclick="window.switchAuthTab('tester')">
-          <i class="fa-solid fa-vial"></i> QA Tester Portal
+      <!-- 2. Role Switcher (Tester vs Developer) -->
+      <div class="auth5-role-switch" id="auth5RoleSwitch">
+        <button type="button" class="auth5-role-btn active" data-role="tester" id="btnRoleTester" onclick="window.setAuth5Role('tester')">
+          <i class="fa-solid fa-vial"></i> QA Tester
         </button>
-        <button class="auth-tab-btn" id="tabBtnDevAuth" onclick="window.switchAuthTab('dev')">
-          <i class="fa-solid fa-code"></i> Developer Hub
+        <button type="button" class="auth5-role-btn" data-role="dev" id="btnRoleDev" onclick="window.setAuth5Role('dev')">
+          <i class="fa-solid fa-code"></i> Developer Lead
         </button>
       </div>
 
-      <!-- ========================================== -->
-      <!-- TESTER AUTHENTICATION CONTAINER -->
-      <!-- ========================================== -->
-      <div class="auth-section" id="testerAuthSection">
-        
-        <!-- Sub-Tabs: Sign In vs 1st-Time Sign Up -->
-        <div class="tester-sub-tabs mb-3" id="testerSubTabs">
-          <button class="tester-sub-tab active" id="subTabTesterLogin" onclick="window.switchTesterAuthView('login')">
-            <i class="fa-solid fa-right-to-bracket"></i> Tester Sign In
+      <!-- 3. STATE A: CREDENTIALS / SIGN IN / SIGN UP FORM -->
+      <div class="auth5-state-form" id="auth5StateForm">
+        <!-- OAuth Fallback Grid -->
+        <div class="auth5-oauth-grid">
+          <button type="button" class="auth5-oauth-btn" id="btnOAuthGithub" onclick="window.handleOAuthSignIn('github')">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"></path>
+            </svg>
+            GitHub
           </button>
-          <button class="tester-sub-tab" id="subTabTesterSignup" onclick="window.switchTesterAuthView('signup')">
-            <i class="fa-solid fa-user-plus"></i> 1st-Time Sign Up & OTP
+          <button type="button" class="auth5-oauth-btn" id="btnOAuthGoogle" onclick="window.handleOAuthSignIn('google')">
+            <svg viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"></path>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"></path>
+            </svg>
+            Google
           </button>
         </div>
 
-        <!-- 1. TESTER SIGN IN VIEW -->
-        <div class="auth-view-step" id="testerLoginView">
-          <form id="testerLoginForm" class="mt-2">
-            <div class="form-group">
-              <label><i class="fa-regular fa-envelope"></i> Tester Work Email</label>
-              <input type="email" id="testerLoginEmail" class="nexus-input" placeholder="e.g. alex.qa@nexusqa.io" required>
+        <div class="auth5-divider">
+          <span>or continue with work email</span>
+        </div>
+
+        <!-- QA Tester Login Form -->
+        <form id="testerLoginForm" class="auth5-form">
+          <div class="auth5-form-group">
+            <label class="auth5-label">
+              <span>Work Email</span>
+            </label>
+            <div class="auth5-input-wrapper">
+              <i class="fa-regular fa-envelope auth5-input-icon"></i>
+              <input type="email" id="testerLoginEmail" class="auth5-input" placeholder="alex.qa@nexusqa.io" required>
             </div>
-            <div class="form-group">
-              <label><i class="fa-solid fa-lock"></i> Password</label>
-              <input type="password" id="testerLoginPassword" class="nexus-input" placeholder="••••••••" required>
+          </div>
+          <div class="auth5-form-group">
+            <label class="auth5-label">
+              <span>Password</span>
+            </label>
+            <div class="auth5-input-wrapper">
+              <i class="fa-solid fa-lock auth5-input-icon"></i>
+              <input type="password" id="testerLoginPassword" class="auth5-input" placeholder="••••••••" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block">
-              <i class="fa-solid fa-arrow-right-to-bracket"></i> Authenticate & Enter QA Workspace
-            </button>
-          </form>
+          </div>
+
+          <button type="submit" class="auth5-submit-btn" id="btnTesterLoginSubmit">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to QA Portal
+          </button>
 
           <p class="text-center text-muted text-xs mt-3">
-            New tester? <a href="javascript:void(0)" onclick="window.switchTesterAuthView('signup')" class="text-primary font-bold">Create account & verify email OTP</a>
+            First time tester? <a href="javascript:void(0)" onclick="window.switchTesterAuthMode('signup')" class="text-primary font-bold">Register & verify email OTP</a>
           </p>
-        </div>
+        </form>
 
-        <!-- 2. TESTER 1ST TIME SIGN UP VIEW -->
-        <div class="auth-view-step" id="testerSignupView" style="display: none;">
-          <div class="auth-info-banner">
+        <!-- QA Tester 1st Time Sign Up Form (Generates OTP) -->
+        <form id="testerSignupForm" class="auth5-form" style="display: none;">
+          <div class="auth-info-banner mb-3">
             <i class="fa-solid fa-circle-info text-cyan"></i>
-            <span class="text-xs">First-time testers must verify their work email with a 6-digit OTP, followed by Developer Lead authorization.</span>
+            <span class="text-xs">First-time testers verify email via 6-digit OTP, then get approved by Developer Lead.</span>
           </div>
 
-          <form id="testerSignupForm" class="mt-3">
-            <div class="form-group">
-              <label><i class="fa-regular fa-user"></i> Full Name <span class="text-rose">*</span></label>
-              <input type="text" id="testerSignupName" class="nexus-input" placeholder="e.g. Jordan Hayes" required>
+          <div class="auth5-form-group">
+            <label class="auth5-label"><span>Full Name</span></label>
+            <div class="auth5-input-wrapper">
+              <i class="fa-regular fa-user auth5-input-icon"></i>
+              <input type="text" id="testerSignupName" class="auth5-input" placeholder="Jordan Hayes" required>
             </div>
-            <div class="form-group">
-              <label><i class="fa-regular fa-envelope"></i> Work Email (for OTP verification) <span class="text-rose">*</span></label>
-              <input type="email" id="testerSignupEmail" class="nexus-input" placeholder="e.g. jordan.qa@company.com" required>
-            </div>
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label><i class="fa-solid fa-lock"></i> Password <span class="text-rose">*</span></label>
-                <input type="password" id="testerSignupPassword" class="nexus-input" placeholder="••••••••" required>
-              </div>
-              <div class="form-group flex-1">
-                <label><i class="fa-solid fa-shield-virus"></i> Testing Specialty</label>
-                <select id="testerSignupRoleTitle" class="nexus-select w-100">
-                  <option value="QA Automation Engineer">QA Automation Engineer</option>
-                  <option value="Manual & Exploratory QA">Manual & Exploratory QA</option>
-                  <option value="Performance & API Tester">Performance & API Tester</option>
-                  <option value="Security & Compliance QA">Security & Compliance QA</option>
-                </select>
-              </div>
-            </div>
+          </div>
 
-            <button type="submit" class="btn btn-primary btn-block" id="btnTesterSendOtp">
-              <i class="fa-solid fa-paper-plane"></i> Register & Send 6-Digit Email OTP
-            </button>
-          </form>
+          <div class="auth5-form-group">
+            <label class="auth5-label"><span>Work Email (for OTP)</span></label>
+            <div class="auth5-input-wrapper">
+              <i class="fa-regular fa-envelope auth5-input-icon"></i>
+              <input type="email" id="testerSignupEmail" class="auth5-input" placeholder="jordan.qa@company.com" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="auth5-form-group flex-1">
+              <label class="auth5-label"><span>Password</span></label>
+              <div class="auth5-input-wrapper">
+                <i class="fa-solid fa-lock auth5-input-icon"></i>
+                <input type="password" id="testerSignupPassword" class="auth5-input" placeholder="••••••••" required>
+              </div>
+            </div>
+            <div class="auth5-form-group flex-1">
+              <label class="auth5-label"><span>Specialty</span></label>
+              <select id="testerSignupRoleTitle" class="nexus-select w-100" style="padding: 0.65rem 0.75rem; border-radius: 12px;">
+                <option value="QA Automation Engineer">QA Automation</option>
+                <option value="Manual & Exploratory QA">Manual QA</option>
+                <option value="Performance & API Tester">Performance QA</option>
+                <option value="Security & Compliance QA">Security QA</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="auth5-submit-btn" id="btnTesterSendOtp">
+            <i class="fa-solid fa-paper-plane"></i> Send 6-Digit Email OTP
+          </button>
 
           <p class="text-center text-muted text-xs mt-3">
-            Already have an approved account? <a href="javascript:void(0)" onclick="window.switchTesterAuthView('login')" class="text-primary font-bold">Sign In here</a>
+            Already registered? <a href="javascript:void(0)" onclick="window.switchTesterAuthMode('login')" class="text-primary font-bold">Sign In here</a>
           </p>
-        </div>
+        </form>
 
-        <!-- 3. TESTER OTP VERIFICATION SCREEN -->
-        <div class="auth-view-step" id="testerOtpView" style="display: none;">
-          <div class="otp-verification-card">
-            <div class="otp-icon-wrap">
-              <i class="fa-solid fa-envelope-circle-check"></i>
-            </div>
-            <h3 class="text-center mt-2 font-bold">Verify Your Email Address</h3>
-            <p class="text-center text-muted text-xs mt-1">
-              We sent a 6-digit one-time verification code to:<br>
-              <strong class="text-primary font-mono" id="otpRecipientEmailLabel">tester@company.com</strong>
-            </p>
-
-            <!-- CodeSlots Component Container -->
-            <form id="testerOtpForm" class="mt-4">
-              <div class="code-slots-wrapper">
-                <div class="code-slots" id="otpCodeSlots" style="--cs-accent: #6366f1; --cs-ink: #818cf8; --cs-slot: #131d31; --cs-digit: #ffffff; --cs-danger: #f43f5e; --cs-size: 48px; --cs-height: 56px; --cs-gap: 10px; --cs-radius: 12px; --cs-font: 24px;">
-                  <div class="code-slots__row" id="codeSlotsRow" data-status="idle" data-focused="">
-                    <input
-                      id="codeSlotsInput"
-                      class="code-slots__input"
-                      type="text"
-                      inputmode="numeric"
-                      autocomplete="one-time-code"
-                      pattern="[0-9]*"
-                      value=""
-                      maxlength="6"
-                      aria-label="One-time verification code"
-                      autofocus
-                    />
-                    <span class="code-slots__slot" data-active="" data-index="0">
-                      <span class="code-slots__fill"></span>
-                      <span class="code-slots__digit"></span>
-                    </span>
-                    <span class="code-slots__slot" data-index="1">
-                      <span class="code-slots__fill"></span>
-                      <span class="code-slots__digit"></span>
-                    </span>
-                    <span class="code-slots__slot" data-index="2">
-                      <span class="code-slots__fill"></span>
-                      <span class="code-slots__digit"></span>
-                    </span>
-                    <span class="code-slots__slot" data-index="3">
-                      <span class="code-slots__fill"></span>
-                      <span class="code-slots__digit"></span>
-                    </span>
-                    <span class="code-slots__slot" data-index="4">
-                      <span class="code-slots__fill"></span>
-                      <span class="code-slots__digit"></span>
-                    </span>
-                    <span class="code-slots__slot" data-index="5">
-                      <span class="code-slots__fill"></span>
-                      <span class="code-slots__digit"></span>
-                    </span>
-
-                    <span class="code-slots__wash" aria-hidden="true">
-                      <span class="code-slots__check">
-                        <svg class="cs-tick-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                      </span>
-                    </span>
-                    <span class="code-slots__caret" id="codeSlotsCaret" aria-hidden="true" data-show="">
-                      <span class="code-slots__caret-line"></span>
-                    </span>
-                  </div>
-                  <span id="codeSlotsSrCount" class="code-slots__sr" aria-live="polite">0 of 6 digits entered</span>
-                </div>
-              </div>
-
-              <div class="d-flex justify-between align-center mt-3 text-xs">
-                <span class="text-muted"><i class="fa-regular fa-clock"></i> Code expires in: <strong class="text-amber" id="otpTimerLabel">15:00</strong></span>
-                <button type="button" class="btn-link" id="btnResendOtp"><i class="fa-solid fa-rotate-right"></i> Resend Code</button>
-              </div>
-
-              <button type="submit" class="btn btn-primary btn-block mt-4" id="btnVerifyOtpSubmit">
-                <i class="fa-solid fa-shield-check"></i> Verify OTP & Submit Request to Dev
-              </button>
-
-              <button type="button" class="btn btn-ghost btn-sm btn-block mt-2" onclick="window.switchTesterAuthView('signup')">
-                <i class="fa-solid fa-arrow-left"></i> Back to Registration
-              </button>
-            </form>
-          </div>
-        </div>
-
-        <!-- 4. TESTER PENDING DEVELOPER APPROVAL SCREEN -->
-        <div class="auth-view-step" id="testerPendingApprovalView" style="display: none;">
-          <div class="pending-approval-box">
-            <div class="radar-pulse-container">
-              <div class="radar-circle circle-1"></div>
-              <div class="radar-circle circle-2"></div>
-              <div class="radar-circle circle-3"></div>
-              <div class="radar-icon">
-                <i class="fa-solid fa-user-clock text-amber"></i>
-              </div>
-            </div>
-
-            <h3 class="text-center mt-3 font-bold">Email Verified! Awaiting Developer Approval</h3>
-            <p class="text-center text-muted text-xs mt-2">
-              Your email <strong class="text-main" id="pendingUserEmailLabel">tester@company.com</strong> has been verified.
-            </p>
-
-            <div class="approval-status-card mt-3">
-              <div class="status-row">
-                <span class="status-badge-dot bg-emerald"></span>
-                <span>Email Verification: <strong>Completed (OTP Validated)</strong></span>
-              </div>
-              <div class="status-row mt-2">
-                <span class="status-badge-dot bg-amber pulse-anim"></span>
-                <span>Developer Authorization: <strong class="text-amber">Pending Approval</strong></span>
-              </div>
-              <div class="status-row mt-2">
-                <span class="status-badge-dot bg-cyan"></span>
-                <span>Assigned Approver: <strong>Marcus Vance (Dev Lead)</strong></span>
-              </div>
-            </div>
-
-            <div class="live-listener-banner mt-3">
-              <div class="sync-dot-pulse"></div>
-              <span class="text-xs">Listening in real time... When developer approves, this page will automatically enter tester.html!</span>
-            </div>
-
-            <div class="d-flex gap-2 mt-4">
-              <button class="btn btn-secondary btn-sm flex-1" onclick="window.switchAuthTab('dev')">
-                <i class="fa-solid fa-laptop-code"></i> Switch to Developer Hub to Approve (Demo)
-              </button>
-              <button class="btn btn-outline btn-sm" onclick="window.switchTesterAuthView('login')">
-                <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign In Another User
-              </button>
+        <!-- Developer Lead Login Form -->
+        <form id="devLoginForm" class="auth5-form" style="display: none;">
+          <div class="auth5-form-group">
+            <label class="auth5-label">
+              <span>Developer Lead Email</span>
+            </label>
+            <div class="auth5-input-wrapper">
+              <i class="fa-regular fa-envelope auth5-input-icon"></i>
+              <input type="email" id="devLoginEmail" class="auth5-input" placeholder="marcus.dev@nexusqa.io" required>
             </div>
           </div>
-        </div>
+          <div class="auth5-form-group">
+            <label class="auth5-label">
+              <span>Password</span>
+            </label>
+            <div class="auth5-input-wrapper">
+              <i class="fa-solid fa-lock auth5-input-icon"></i>
+              <input type="password" id="devLoginPassword" class="auth5-input" placeholder="••••••••" required>
+            </div>
+          </div>
 
+          <button type="submit" class="auth5-submit-btn dev-btn" id="btnDevLoginSubmit">
+            <i class="fa-solid fa-code"></i> Enter Developer Hub
+          </button>
+
+          <p class="text-center text-muted text-xs mt-3">
+            Authorized Dev Leads manage QA defect pipelines & review tester approvals.
+          </p>
+        </form>
       </div>
 
-      <!-- ========================================== -->
-      <!-- DEVELOPER AUTHENTICATION CONTAINER -->
-      <!-- ========================================== -->
-      <div class="auth-section" id="devAuthSection" style="display: none;">
-        <form id="devLoginForm" class="mt-2">
-          <div class="form-group">
-            <label><i class="fa-regular fa-envelope"></i> Developer Work Email</label>
-            <input type="email" id="devLoginEmail" class="nexus-input" placeholder="e.g. marcus.dev@nexusqa.io" required>
+      <!-- 4. STATE B: CHECK YOUR INBOX (State Swap with <CodeSlots /> & Resend Cooldown) -->
+      <div class="auth5-inbox-state" id="auth5InboxState" style="display: none;">
+        <div class="auth5-inbox-icon-wrap">
+          <i class="fa-solid fa-envelope-open-text"></i>
+        </div>
+        <h2 class="auth5-title">Check your inbox</h2>
+        <p class="auth5-subtitle">We sent a 6-digit verification code to</p>
+
+        <div class="auth5-email-chip">
+          <span id="otpRecipientEmailLabel">tester@company.com</span>
+          <button type="button" class="auth5-email-edit-btn" onclick="window.backToAuthForm()" title="Change email">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+        </div>
+
+        <!-- Integrated React Bits CodeSlots Component -->
+        <form id="testerOtpForm">
+          <div class="code-slots-wrapper">
+            <div class="code-slots" id="otpCodeSlots" style="--cs-accent: #6366f1; --cs-ink: #818cf8; --cs-slot: #131d31; --cs-digit: #ffffff; --cs-danger: #f43f5e; --cs-size: 48px; --cs-height: 56px; --cs-gap: 10px; --cs-radius: 12px; --cs-font: 24px;">
+              <div class="code-slots__row" id="codeSlotsRow" data-status="idle" data-focused="">
+                <input
+                  id="codeSlotsInput"
+                  class="code-slots__input"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  pattern="[0-9]*"
+                  value=""
+                  maxlength="6"
+                  aria-label="One-time verification code"
+                  autofocus
+                />
+                <span class="code-slots__slot" data-active="" data-index="0">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+                <span class="code-slots__slot" data-index="1">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+                <span class="code-slots__slot" data-index="2">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+                <span class="code-slots__slot" data-index="3">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+                <span class="code-slots__slot" data-index="4">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+                <span class="code-slots__slot" data-index="5">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+
+                <span class="code-slots__wash" aria-hidden="true">
+                  <span class="code-slots__check">
+                    <svg class="cs-tick-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </span>
+                </span>
+                <span class="code-slots__caret" id="codeSlotsCaret" aria-hidden="true" data-show="">
+                  <span class="code-slots__caret-line"></span>
+                </span>
+              </div>
+              <span id="codeSlotsSrCount" class="code-slots__sr" aria-live="polite">0 of 6 digits entered</span>
+            </div>
           </div>
-          <div class="form-group">
-            <label><i class="fa-solid fa-lock"></i> Password</label>
-            <input type="password" id="devLoginPassword" class="nexus-input" placeholder="••••••••" required>
+
+          <!-- Resend Cooldown Bar -->
+          <div class="auth5-resend-box">
+            <span class="text-muted"><i class="fa-regular fa-clock"></i> Expires: <strong class="text-amber" id="otpTimerLabel">15:00</strong></span>
+            <button type="button" class="auth5-resend-btn" id="btnResendOtp">
+              <i class="fa-solid fa-rotate-right"></i> Resend code (<span id="auth5ResendCountdown">60s</span>)
+            </button>
           </div>
-          <button type="submit" class="btn btn-success btn-block">
-            <i class="fa-solid fa-code"></i> Authenticate & Enter Developer Hub
+
+          <button type="submit" class="auth5-submit-btn" id="btnVerifyOtpSubmit">
+            <i class="fa-solid fa-shield-check"></i> Verify Code & Submit Request
           </button>
         </form>
+
+        <button type="button" class="auth5-back-btn" onclick="window.backToAuthForm()">
+          <i class="fa-solid fa-arrow-left"></i> Back to sign in
+        </button>
+      </div>
+
+      <!-- 5. STATE C: PENDING DEVELOPER APPROVAL -->
+      <div class="auth5-inbox-state" id="testerPendingApprovalView" style="display: none;">
+        <div class="radar-pulse-container">
+          <div class="radar-circle circle-1"></div>
+          <div class="radar-circle circle-2"></div>
+          <div class="radar-circle circle-3"></div>
+          <div class="radar-icon">
+            <i class="fa-solid fa-user-clock text-amber"></i>
+          </div>
+        </div>
+
+        <h2 class="auth5-title mt-3">Awaiting Dev Lead Approval</h2>
+        <p class="auth5-subtitle">
+          Email <strong class="text-main" id="pendingUserEmailLabel">tester@company.com</strong> verified.
+        </p>
+
+        <div class="approval-status-card mt-3 text-left">
+          <div class="status-row">
+            <span class="status-badge-dot bg-emerald"></span>
+            <span>Email Verification: <strong>Completed (OTP Validated)</strong></span>
+          </div>
+          <div class="status-row mt-2">
+            <span class="status-badge-dot bg-amber pulse-anim"></span>
+            <span>Developer Authorization: <strong class="text-amber">Pending Approval</strong></span>
+          </div>
+          <div class="status-row mt-2">
+            <span class="status-badge-dot bg-cyan"></span>
+            <span>Assigned Approver: <strong>Marcus Vance (Dev Lead)</strong></span>
+          </div>
+        </div>
+
+        <div class="live-listener-banner mt-3">
+          <div class="sync-dot-pulse"></div>
+          <span class="text-xs">Listening in real-time... Automatically unlocks tester.html when authorized.</span>
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+          <button type="button" class="btn btn-secondary btn-sm flex-1" onclick="window.setAuth5Role('dev')">
+            <i class="fa-solid fa-laptop-code"></i> Switch to Dev Hub to Approve
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="window.backToAuthForm()">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign In Another User
+          </button>
+        </div>
       </div>
 
     </div>

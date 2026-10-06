@@ -37,6 +37,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const DOM = {
     // Auth Gate & Dedicated Tester Verification
     authGateOverlay: document.getElementById("authGateOverlay"),
+    // React Bits Pro Auth 5 Elements
+    auth5Card: document.getElementById("auth5Card"),
+    auth5Title: document.getElementById("auth5Title"),
+    auth5Subtitle: document.getElementById("auth5Subtitle"),
+    auth5RoleSwitch: document.getElementById("auth5RoleSwitch"),
+    btnRoleTester: document.getElementById("btnRoleTester"),
+    btnRoleDev: document.getElementById("btnRoleDev"),
+    auth5StateForm: document.getElementById("auth5StateForm"),
+    auth5InboxState: document.getElementById("auth5InboxState"),
+    auth5ResendCountdown: document.getElementById("auth5ResendCountdown"),
+    btnTesterLoginSubmit: document.getElementById("btnTesterLoginSubmit"),
+    btnDevLoginSubmit: document.getElementById("btnDevLoginSubmit"),
+
     authGateSubtitle: document.getElementById("authGateSubtitle"),
     authNavTabs: document.getElementById("authNavTabs"),
     tabBtnTesterAuth: document.getElementById("tabBtnTesterAuth"),
@@ -514,44 +527,182 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.userAvatarRing) DOM.userAvatarRing.style.background = user.color || (user.role === 'dev' ? '#10b981' : '#6366f1');
   }
 
-  // --- Auth Modal Tab & View Switches ---
-  window.switchAuthTab = function(tab) {
-    if (tab === "dev") {
-      if (DOM.tabBtnDevAuth) DOM.tabBtnDevAuth.classList.add("active");
-      if (DOM.tabBtnTesterAuth) DOM.tabBtnTesterAuth.classList.remove("active");
-      if (DOM.devAuthSection) DOM.devAuthSection.style.display = "block";
-      if (DOM.testerAuthSection) DOM.testerAuthSection.style.display = "none";
-      if (DOM.authGateSubtitle) DOM.authGateSubtitle.textContent = "Developer Engineering Command Center & Access Approver";
+  // --- React Bits Pro Auth 5 State & Controllers ---
+  state.auth5Role = "tester"; // 'tester' | 'dev'
+  state.auth5Mode = "login";  // 'login' | 'signup'
+  state.resendCooldownInterval = null;
+
+  window.setAuth5Role = function(role) {
+    state.auth5Role = role;
+    const btnTester = DOM.btnRoleTester || document.getElementById("btnRoleTester");
+    const btnDev = DOM.btnRoleDev || document.getElementById("btnRoleDev");
+    const title = DOM.auth5Title || document.getElementById("auth5Title");
+    const subtitle = DOM.auth5Subtitle || document.getElementById("auth5Subtitle");
+    const formState = DOM.auth5StateForm || document.getElementById("auth5StateForm");
+    const inboxState = DOM.auth5InboxState || document.getElementById("auth5InboxState");
+    const pendingState = DOM.testerPendingApprovalView || document.getElementById("testerPendingApprovalView");
+    const roleSwitch = DOM.auth5RoleSwitch || document.getElementById("auth5RoleSwitch");
+
+    if (formState) formState.style.display = "block";
+    if (inboxState) inboxState.style.display = "none";
+    if (pendingState) pendingState.style.display = "none";
+    if (roleSwitch) roleSwitch.style.display = "grid";
+
+    if (role === "dev") {
+      if (btnDev) btnDev.classList.add("active");
+      if (btnTester) btnTester.classList.remove("active");
+      if (title) title.textContent = "Developer Hub Gateway";
+      if (subtitle) subtitle.textContent = "Sign in with Developer Lead credentials to manage QA approvals";
+      if (DOM.devLoginForm) DOM.devLoginForm.style.display = "block";
+      if (DOM.testerLoginForm) DOM.testerLoginForm.style.display = "none";
+      if (DOM.testerSignupForm) DOM.testerSignupForm.style.display = "none";
     } else {
-      if (DOM.tabBtnTesterAuth) DOM.tabBtnTesterAuth.classList.add("active");
-      if (DOM.tabBtnDevAuth) DOM.tabBtnDevAuth.classList.remove("active");
-      if (DOM.testerAuthSection) DOM.testerAuthSection.style.display = "block";
-      if (DOM.devAuthSection) DOM.devAuthSection.style.display = "none";
-      if (DOM.authGateSubtitle) DOM.authGateSubtitle.textContent = "Enterprise QA Testing Portal & Verification Gateway";
-      window.switchTesterAuthView("login");
+      if (btnTester) btnTester.classList.add("active");
+      if (btnDev) btnDev.classList.remove("active");
+      if (title) title.textContent = "Welcome back";
+      if (subtitle) subtitle.textContent = "Sign in with your QA Tester credentials to continue";
+      if (DOM.testerLoginForm) DOM.testerLoginForm.style.display = "block";
+      if (DOM.testerSignupForm) DOM.testerSignupForm.style.display = "none";
+      if (DOM.devLoginForm) DOM.devLoginForm.style.display = "none";
     }
   };
 
-  window.switchTesterAuthView = function(view) {
-    if (DOM.testerLoginView) DOM.testerLoginView.style.display = view === "login" ? "block" : "none";
-    if (DOM.testerSignupView) DOM.testerSignupView.style.display = view === "signup" ? "block" : "none";
-    if (DOM.testerOtpView) DOM.testerOtpView.style.display = view === "otp" ? "block" : "none";
-    if (DOM.testerPendingApprovalView) DOM.testerPendingApprovalView.style.display = view === "pending" ? "block" : "none";
+  window.switchTesterAuthMode = function(mode) {
+    state.auth5Mode = mode;
+    const title = DOM.auth5Title || document.getElementById("auth5Title");
+    const subtitle = DOM.auth5Subtitle || document.getElementById("auth5Subtitle");
 
-    if (DOM.testerSubTabs) DOM.testerSubTabs.style.display = (view === "login" || view === "signup") ? "flex" : "none";
-
-    if (view === "login") {
-      if (DOM.subTabTesterLogin) DOM.subTabTesterLogin.classList.add("active");
-      if (DOM.subTabTesterSignup) DOM.subTabTesterSignup.classList.remove("active");
-    } else if (view === "signup") {
-      if (DOM.subTabTesterSignup) DOM.subTabTesterSignup.classList.add("active");
-      if (DOM.subTabTesterLogin) DOM.subTabTesterLogin.classList.remove("active");
-    } else if (view === "otp") {
-      if (window.resetCodeSlots) window.resetCodeSlots();
-      setTimeout(() => {
-        if (DOM.codeSlotsInput) DOM.codeSlotsInput.focus();
-      }, 50);
+    if (mode === "signup") {
+      if (DOM.testerLoginForm) DOM.testerLoginForm.style.display = "none";
+      if (DOM.testerSignupForm) DOM.testerSignupForm.style.display = "block";
+      if (title) title.textContent = "Create Tester Account";
+      if (subtitle) subtitle.textContent = "Register with work email to receive your 6-digit OTP verification code";
+    } else {
+      if (DOM.testerSignupForm) DOM.testerSignupForm.style.display = "none";
+      if (DOM.testerLoginForm) DOM.testerLoginForm.style.display = "block";
+      if (title) title.textContent = "Welcome back";
+      if (subtitle) subtitle.textContent = "Sign in with your QA Tester credentials to continue";
     }
+  };
+
+  window.backToAuthForm = function() {
+    const formState = DOM.auth5StateForm || document.getElementById("auth5StateForm");
+    const inboxState = DOM.auth5InboxState || document.getElementById("auth5InboxState");
+    const pendingState = DOM.testerPendingApprovalView || document.getElementById("testerPendingApprovalView");
+    const roleSwitch = DOM.auth5RoleSwitch || document.getElementById("auth5RoleSwitch");
+
+    if (formState) formState.style.display = "block";
+    if (inboxState) inboxState.style.display = "none";
+    if (pendingState) pendingState.style.display = "none";
+    if (roleSwitch) roleSwitch.style.display = "grid";
+
+    window.setAuth5Role(state.auth5Role);
+  };
+
+  window.showInboxState = function(email, otpCode) {
+    const formState = DOM.auth5StateForm || document.getElementById("auth5StateForm");
+    const inboxState = DOM.auth5InboxState || document.getElementById("auth5InboxState");
+    const pendingState = DOM.testerPendingApprovalView || document.getElementById("testerPendingApprovalView");
+    const roleSwitch = DOM.auth5RoleSwitch || document.getElementById("auth5RoleSwitch");
+
+    if (formState) formState.style.display = "none";
+    if (inboxState) inboxState.style.display = "block";
+    if (pendingState) pendingState.style.display = "none";
+    if (roleSwitch) roleSwitch.style.display = "none";
+
+    if (DOM.otpRecipientEmailLabel) DOM.otpRecipientEmailLabel.textContent = email;
+    if (window.resetCodeSlots) window.resetCodeSlots();
+    setTimeout(() => {
+      if (DOM.codeSlotsInput) DOM.codeSlotsInput.focus();
+    }, 60);
+
+    startResendCooldown(60);
+    startOtpTimer(900);
+    window.showSimulatedEmail(email, otpCode);
+  };
+
+  window.showPendingState = function(email) {
+    const formState = DOM.auth5StateForm || document.getElementById("auth5StateForm");
+    const inboxState = DOM.auth5InboxState || document.getElementById("auth5InboxState");
+    const pendingState = DOM.testerPendingApprovalView || document.getElementById("testerPendingApprovalView");
+    const roleSwitch = DOM.auth5RoleSwitch || document.getElementById("auth5RoleSwitch");
+
+    if (formState) formState.style.display = "none";
+    if (inboxState) inboxState.style.display = "none";
+    if (pendingState) pendingState.style.display = "block";
+    if (roleSwitch) roleSwitch.style.display = "none";
+
+    if (DOM.pendingUserEmailLabel) DOM.pendingUserEmailLabel.textContent = email;
+  };
+
+  window.handleOAuthSignIn = function(provider) {
+    const providerName = provider === "github" ? "GitHub Enterprise" : "Google Workspace";
+    showToast(`Connecting to ${providerName} SSO...`, "info");
+
+    setTimeout(() => {
+      if (state.auth5Role === "dev") {
+        const devUser = StorageManager.getUsers().find(u => u.role === "dev") || {
+          id: "dev-lead-1",
+          name: "Marcus Vance",
+          email: "marcus.dev@nexusqa.io",
+          role: "dev",
+          roleTitle: "Lead Systems Architect & Approver"
+        };
+        StorageManager.setCurrentUser(devUser);
+        showToast(`Authenticated via ${providerName} as Developer Lead: ${devUser.name}!`);
+        setTimeout(() => { window.location.href = "dev.html"; }, 400);
+      } else {
+        const testerUser = StorageManager.getUsers().find(u => u.role === "tester" && u.approvedByDev) || {
+          id: "tester-1",
+          name: "Alex Morgan",
+          email: "alex.qa@nexusqa.io",
+          role: "tester",
+          roleTitle: "Lead QA Automation Engineer",
+          approvedByDev: true
+        };
+        StorageManager.setCurrentUser(testerUser);
+        showToast(`Authenticated via ${providerName} as QA Tester: ${testerUser.name}!`);
+        setTimeout(() => { window.location.href = "tester.html"; }, 400);
+      }
+    }, 450);
+  };
+
+  function startResendCooldown(durationSeconds = 60) {
+    if (state.resendCooldownInterval) clearInterval(state.resendCooldownInterval);
+    let seconds = durationSeconds;
+    const btnResend = DOM.btnResendOtp || document.getElementById("btnResendOtp");
+    const countdownEl = DOM.auth5ResendCountdown || document.getElementById("auth5ResendCountdown");
+
+    if (btnResend) {
+      btnResend.disabled = true;
+    }
+
+    function updateCooldown() {
+      if (countdownEl) countdownEl.textContent = `${seconds}s`;
+      if (seconds <= 0) {
+        clearInterval(state.resendCooldownInterval);
+        if (btnResend) {
+          btnResend.disabled = false;
+          btnResend.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Resend code now`;
+        }
+      }
+      seconds--;
+    }
+
+    updateCooldown();
+    state.resendCooldownInterval = setInterval(updateCooldown, 1000);
+  }
+
+  // Backward compatibility alias methods
+  window.switchAuthTab = function(tab) {
+    window.setAuth5Role(tab);
+  };
+
+  window.switchTesterAuthView = function(view) {
+    if (view === "login") window.switchTesterAuthMode("login");
+    else if (view === "signup") window.switchTesterAuthMode("signup");
+    else if (view === "otp") window.showInboxState(state.pendingRegistrationEmail || "tester@company.com", state.currentOtpCode);
+    else if (view === "pending") window.showPendingState(state.pendingRegistrationEmail || "tester@company.com");
   };
 
   // --- Simulated Email Client Popover ---
@@ -956,6 +1107,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           StorageManager.saveUsers(users);
           state.currentOtpCode = otpCode;
           window.showSimulatedEmail(user.email, otpCode);
+          startResendCooldown(60);
           startOtpTimer(900);
           showToast(`New verification code dispatched to ${user.email}`);
         }
