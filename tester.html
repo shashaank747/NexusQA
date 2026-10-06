@@ -76,13 +76,6 @@
                 <span class="nav-badge" id="testCaseCountBadge">24</span>
               </a>
             </li>
-            <li class="nav-item" data-view="test-runs">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-play"></i>
-                <span>Live Test Runner</span>
-                <span class="nav-badge badge-active" id="activeRunsBadge">1 Live</span>
-              </a>
-            </li>
             <li class="nav-item" data-view="defects">
               <a href="javascript:void(0)" class="nav-link">
                 <i class="fa-solid fa-bug"></i>
@@ -166,11 +159,6 @@
           <button class="btn btn-ai-voice btn-sm" id="topbarVoiceAiBtn" title="Launch Voice & Chat AI Test Studio">
             <i class="fa-solid fa-microphone text-cyan"></i>
             <span>Voice AI Studio</span>
-          </button>
-
-          <button class="btn btn-secondary btn-sm" id="quickRunBtn" title="Launch Active Test Run">
-            <i class="fa-solid fa-bolt text-amber"></i>
-            <span>Quick Run</span>
           </button>
           
           <button class="btn btn-primary btn-sm" id="createQuickBtn">
@@ -466,113 +454,7 @@
           </div>
         </section>
 
-        <!-- QA VIEW 3: LIVE RUNNER -->
-        <section class="view-panel" id="view-test-runs">
-          <div class="view-header">
-            <div>
-              <h1 class="view-title">Live Test Execution Runner</h1>
-              <p class="view-subtitle">Interactive step-by-step test execution with real-time pass/fail verdicts and bug creation.</p>
-            </div>
-            <div class="view-actions">
-              <button class="btn btn-primary btn-sm" id="startNewRunModalBtn"><i class="fa-solid fa-play"></i> Start New Test Run</button>
-            </div>
-          </div>
-
-          <div class="runner-active-banner">
-            <div class="runner-meta-main">
-              <span class="pulse-recording-dot"></span>
-              <div>
-                <h2 class="runner-active-title" id="activeRunTitle">Sprint 38 Regression & Security Cycle</h2>
-                <div class="runner-active-sub">
-                  <span><i class="fa-solid fa-server"></i> Environment: <strong id="activeRunEnv">Staging v3.8.0-rc2</strong></span>
-                  <span><i class="fa-solid fa-user"></i> Executed by: <strong id="activeRunAuthor">Alex Morgan</strong></span>
-                </div>
-              </div>
-            </div>
-
-            <div class="runner-timer-group">
-              <div class="runner-timer">
-                <i class="fa-solid fa-clock"></i>
-                <span class="timer-digits" id="timerDigits">04:32</span>
-              </div>
-              <button class="btn btn-secondary btn-sm" id="pauseRunBtn"><i class="fa-solid fa-pause"></i> Pause</button>
-              <button class="btn btn-success btn-sm" id="completeRunBtn"><i class="fa-solid fa-check-double"></i> Complete Run</button>
-            </div>
-          </div>
-
-          <div class="run-progress-container">
-            <div class="d-flex justify-between text-xs mb-1">
-              <span id="runProgressText">Completed 6 of 8 test cases (75%)</span>
-              <span class="text-emerald font-bold" id="runProgressPercent">75%</span>
-            </div>
-            <div class="run-progress-track">
-              <div class="run-progress-bar bg-emerald" id="runProgressBar" style="width: 75%;"></div>
-            </div>
-          </div>
-
-          <div class="runner-split-view">
-            <div class="runner-queue-panel">
-              <div class="panel-header">
-                <h3>Test Execution Queue (<span id="queueCount">8</span>)</h3>
-              </div>
-              <div class="runner-queue-list" id="runnerQueueList"></div>
-            </div>
-
-            <div class="runner-console-panel" id="runnerConsolePanel">
-              <div class="console-empty-notice" id="consoleEmptyNotice" style="display: none;">
-                <i class="fa-solid fa-list-check"></i>
-                <p>Select a test case from the queue to start execution</p>
-              </div>
-
-              <div class="console-active-content" id="consoleActiveContent">
-                <div class="console-test-header">
-                  <div>
-                    <span class="test-id-pill" id="consoleTestId">TC-104</span>
-                    <h2 class="console-test-title" id="consoleTestTitle">Verify Stripe Webhook processes successful payment token</h2>
-                  </div>
-                  <div class="console-badges" id="consoleTestBadges">
-                    <span class="badge badge-critical">P0 - Critical</span>
-                    <span class="badge badge-untested">API</span>
-                  </div>
-                </div>
-
-                <div class="console-preconditions">
-                  <strong>Preconditions:</strong>
-                  <p id="consolePreconditions">Stripe CLI mock webhook server is listening on port 4242 with test secret key configured.</p>
-                </div>
-
-                <div class="console-steps-section">
-                  <h3>Test Steps & Action Verifications</h3>
-                  <div class="console-step-list" id="consoleStepList"></div>
-                </div>
-
-                <div class="console-verdict-actions">
-                  <div class="verdict-buttons">
-                    <button class="btn btn-success btn-lg" id="btnVerdictPass"><i class="fa-solid fa-circle-check"></i> Pass Test</button>
-                    <button class="btn btn-danger btn-lg" id="btnVerdictFail"><i class="fa-solid fa-circle-xmark"></i> Fail Test</button>
-                    <button class="btn btn-amber btn-lg" id="btnVerdictBlock"><i class="fa-solid fa-ban"></i> Blocked</button>
-                    <button class="btn btn-secondary btn-lg" id="btnVerdictSkip"><i class="fa-solid fa-forward-step"></i> Skip</button>
-                  </div>
-                  
-                  <div class="form-group mt-3">
-                    <label for="runnerExecutionNotes">Execution Notes / Diagnostic Failure Output</label>
-                    <textarea id="runnerExecutionNotes" class="nexus-textarea" rows="2" placeholder="Record actual result, response payload, or error trace..."></textarea>
-                  </div>
-
-                  <div class="d-flex justify-between align-center mt-3">
-                    <button class="btn btn-danger btn-sm" id="runnerFileBugBtn"><i class="fa-solid fa-bug"></i> File Defect for this Test</button>
-                    <div class="d-flex gap-2">
-                      <button class="btn btn-secondary btn-sm" id="prevTestInQueueBtn"><i class="fa-solid fa-arrow-left"></i> Previous</button>
-                      <button class="btn btn-secondary btn-sm" id="nextTestInQueueBtn">Next <i class="fa-solid fa-arrow-right"></i></button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- QA VIEW 4: DEFECTS -->
+        <!-- QA VIEW 3: DEFECTS -->
         <section class="view-panel" id="view-defects">
           <div class="view-header">
             <div>

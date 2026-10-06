@@ -1352,7 +1352,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     } else {
       if (state.currentView === "dashboard") renderDashboard();
       if (state.currentView === "test-cases") renderRepository();
-      if (state.currentView === "test-runs") renderTestRunner();
       if (state.currentView === "defects") renderDefects();
     }
   }
@@ -1383,9 +1382,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const titles = {
       dashboard: "Quality Analytics",
       "test-cases": "Test Repository",
-      "test-runs": "Live Test Runner",
       defects: "Defects & Bug Tracking",
-      "ai-generator": "AI Test Generator",
+      "ai-generator": "Voice & AI Chat Studio",
       suites: "Suites & Modules",
       "dev-dashboard": "Dev Defect Command Center",
       "dev-approvals": "Tester Approvals & Access Control",
@@ -1398,7 +1396,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     if (viewName === "dashboard") renderDashboard();
     if (viewName === "test-cases") renderRepository();
-    if (viewName === "test-runs") renderTestRunner();
     if (viewName === "defects") renderDefects();
     if (viewName === "ai-generator") renderAIGeneratorSuiteDropdown();
     if (viewName === "suites") renderSuitesView();
@@ -1416,8 +1413,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     });
   });
 
-  on(DOM.gotoTestRunsBtn, "click", () => switchView("test-runs"));
-  on(DOM.quickRunBtn, "click", () => switchView("test-runs"));
+  on(DOM.gotoTestRunsBtn, "click", () => switchView("test-cases"));
   on(DOM.gotoDevKanbanBtn, "click", () => switchView("dev-kanban"));
 
   on(DOM.createQuickBtn, "click", () => {
@@ -1901,7 +1897,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       let statusBadge = run.status === "Completed" ? `<span class="badge badge-passed">Completed</span>` : `<span class="badge badge-active">In Progress</span>`;
 
       return `
-        <tr onclick="document.querySelector('[data-view=test-runs]').click()">
+        <tr onclick="switchView('test-cases')">
           <td>
             <strong>${run.name}</strong>
             <div class="text-muted text-xs">${run.id} • ${run.date}</div>
@@ -2204,8 +2200,8 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (selectedIds.length === 0) return;
     const run = StorageManager.createTestRun(`Custom Execution (${selectedIds.length} Tests)`, "Staging", selectedIds);
     state.selectedTestCaseIds.clear();
-    switchView("test-runs");
-    showToast(`Test Run ${run.id} started with ${selectedIds.length} tests!`);
+    renderTestCaseTable();
+    showToast(`Test Run ${run.id} created with ${selectedIds.length} tests!`);
   });
 
   on(DOM.batchPassBtn, "click", () => {
@@ -2436,13 +2432,13 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
   on(DOM.closeDetailModalBtn, "click", () => { if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none"; });
 
-  // Runner
+  // Single test execution
   window.launchSingleTestRun = function(testCaseId) {
     const tc = StorageManager.getTestCaseById(testCaseId);
     if (!tc) return;
-    const run = StorageManager.createTestRun(`Ad-hoc Execution: ${tc.id}`, "Staging (ad-hoc)", [testCaseId]);
-    switchView("test-runs");
-    showToast(`Test runner initialized for ${tc.id}!`);
+    StorageManager.updateTestCase({ ...tc, status: "Passed", lastRun: "Just now" });
+    renderTestCaseTable();
+    showToast(`Test ${tc.id} marked as Passed!`);
   };
 
   function renderTestRunner() {
