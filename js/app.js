@@ -994,33 +994,24 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   // Setup Auth Form Listeners
   function setupAuthListeners() {
-    // 1. Tester Sign In
+    // 1. Tester Everyday Login (Email -> Unique OTP)
     if (DOM.testerLoginForm) {
       DOM.testerLoginForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const email = DOM.testerLoginEmail.value.trim();
-        const password = DOM.testerLoginPassword.value;
 
         try {
-          const res = StorageManager.loginTester(email, password);
-          if (res.status === "active") {
-            showToast(`Welcome back, ${res.user.name}! Redirecting to QA Portal...`);
-            setTimeout(() => {
-              window.location.href = "tester.html";
-            }, 500);
-          } else if (res.status === "pending_approval") {
-            state.pendingRegistrationEmail = res.user.email;
-            if (DOM.pendingUserEmailLabel) DOM.pendingUserEmailLabel.textContent = res.user.email;
-            window.switchTesterAuthView("pending");
-            showToast("Your tester account is awaiting Developer approval.", "info");
-          } else if (res.status === "unverified") {
-            state.pendingRegistrationEmail = res.user.email;
+          const res = StorageManager.requestLoginOtp(email, "qa");
+          state.pendingRegistrationEmail = res.user.email;
+          state.isRegistrationFlow = false;
+
+          if (res.status === "pending_approval") {
+            window.showPendingState(res.user.email);
+            showToast("Your tester account is awaiting Senior Dev approval.", "info");
+          } else if (res.status === "otp_sent") {
             state.currentOtpCode = res.otpCode;
-            if (DOM.otpRecipientEmailLabel) DOM.otpRecipientEmailLabel.textContent = res.user.email;
-            window.switchTesterAuthView("otp");
-            window.showSimulatedEmail(res.user.email, res.otpCode);
-            startOtpTimer(900);
-            showToast("Verification code dispatched. Check inbox notification!", "info");
+            window.showInboxState(res.user.email, res.otpCode);
+            showToast(`Unique login OTP dispatched to ${res.user.email}!`);
           }
         } catch (err) {
           showToast(err.message, "error");
@@ -1028,33 +1019,30 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       });
     }
 
-    // 2. Tester Sign Up (1st time account creation -> Send OTP)
+    // 2. Tester 1st-Time Sign Up (Generates Initial OTP)
     if (DOM.testerSignupForm) {
       DOM.testerSignupForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const name = DOM.testerSignupName.value.trim();
         const email = DOM.testerSignupEmail.value.trim();
-        const password = DOM.testerSignupPassword.value;
         const roleTitle = DOM.testerSignupRoleTitle.value;
 
         try {
           DOM.btnTesterSendOtp.disabled = true;
-          DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Dispatching OTP Code...`;
+          DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Dispatching OTP...`;
 
           setTimeout(() => {
             DOM.btnTesterSendOtp.disabled = false;
             DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Register & Send 6-Digit Email OTP`;
 
-            const { user, otpCode } = StorageManager.registerTester({ name, email, password, roleTitle });
+            const { user, otpCode } = StorageManager.registerTester({ name, email, roleTitle });
             state.pendingRegistrationEmail = email;
             state.currentOtpCode = otpCode;
+            state.isRegistrationFlow = true;
 
-            if (DOM.otpRecipientEmailLabel) DOM.otpRecipientEmailLabel.textContent = email;
-            window.switchTesterAuthView("otp");
-            window.showSimulatedEmail(email, otpCode);
-            startOtpTimer(900);
+            window.showInboxState(email, otpCode);
             showToast(`Verification code sent to ${email}!`);
-          }, 400);
+          }, 350);
         } catch (err) {
           DOM.btnTesterSendOtp.disabled = false;
           DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Register & Send 6-Digit Email OTP`;
@@ -1063,7 +1051,27 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       });
     }
 
-    // 3. Tester OTP Verification Submit with CodeSlots Animations
+    // 3. Developer Lead Everyday Login (Email -> Unique OTP)
+    if (DOM.devLoginForm) {
+      DOM.devLoginForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const email = DOM.devLoginEmail.value.trim();
+
+        try {
+          const res = StorageManager.requestLoginOtp(email, "dev");
+          state.pendingRegistrationEmail = res.user.email;
+          state.currentOtpCode = res.otpCode;
+          state.isRegistrationFlow = false;
+
+          window.showInboxState(res.user.email, res.otpCode);
+          showToast(`Unique login OTP dispatched to Developer ${res.user.email}!`);
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
+    }
+
+    // 4. OTP Verification Submit with CodeSlots Animations
     if (DOM.testerOtpForm) {
       DOM.testerOtpForm.addEventListener("submit", (e) => {
         e.preventDefault();
@@ -1081,30 +1089,47 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
           setTimeout(() => {
             try {
-              const user = StorageManager.verifyTesterOtp(state.pendingRegistrationEmail, enteredOtp);
-              
-              // Trigger CodeSlots Success Wash and Tick
-              setCodeSlotsStatus("success");
-              DOM.btnVerifyOtpSubmit.disabled = false;
-              DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Code Verified!`;
+              if (state.isRegistrationFlow) {
+                // 1st Time Registration Flow -> Verify Email & Submit to Senior Dev
+                const user = StorageManager.verifyTesterOtp(state.pendingRegistrationEmail, enteredOtp);
+                setCodeSlotsStatus("success");
+                DOM.btnVerifyOtpSubmit.disabled = false;
+                DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Code Verified!`;
 
-              setTimeout(() => {
-                if (DOM.pendingUserEmailLabel) DOM.pendingUserEmailLabel.textContent = user.email;
-                window.switchTesterAuthView("pending");
-                window.dismissSimulatedEmail();
-                showToast("Email verified! Access request sent to Developer Lead.");
-                DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify OTP & Submit Request to Dev`;
-              }, 700);
+                setTimeout(() => {
+                  window.showPendingState(user.email);
+                  window.dismissSimulatedEmail();
+                  showToast("Email verified! Access request sent to Senior Developer Lead.");
+                  DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify Code & Submit Request`;
+                }, 600);
+              } else {
+                // Everyday Login Flow -> Authenticate & Enter Workspace
+                const { user } = StorageManager.verifyLoginOtp(state.pendingRegistrationEmail, enteredOtp);
+                setCodeSlotsStatus("success");
+                DOM.btnVerifyOtpSubmit.disabled = false;
+                DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Welcome Back, ${user.name}!`;
+
+                setTimeout(() => {
+                  window.dismissSimulatedEmail();
+                  if (user.role === "dev") {
+                    showToast(`Authenticated as Developer Lead: ${user.name}. Entering Dev Hub...`);
+                    window.location.href = "dev.html";
+                  } else {
+                    showToast(`Authenticated as QA Tester: ${user.name}. Entering QA Portal...`);
+                    window.location.href = "tester.html";
+                  }
+                }, 600);
+              }
             } catch (err) {
               DOM.btnVerifyOtpSubmit.disabled = false;
-              DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify OTP & Submit Request to Dev`;
+              DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify Code & Submit Request`;
               setCodeSlotsStatus("error");
               showToast(err.message, "error");
             }
           }, 350);
         } catch (err) {
           DOM.btnVerifyOtpSubmit.disabled = false;
-          DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify OTP & Submit Request to Dev`;
+          DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify Code & Submit Request`;
           setCodeSlotsStatus("error");
           showToast(err.message, "error");
         }
@@ -1120,6 +1145,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         if (user) {
           const otpCode = String(Math.floor(100000 + Math.random() * 900000));
           user.otpCode = otpCode;
+          user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
           StorageManager.saveUsers(users);
           state.currentOtpCode = otpCode;
           window.showSimulatedEmail(user.email, otpCode);
@@ -1127,20 +1153,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           startOtpTimer(900);
           showToast(`New verification code dispatched to ${user.email}`);
         }
-      });
-    }
-
-    // 4. Developer Login Form
-    if (DOM.devLoginForm) {
-      DOM.devLoginForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const email = DOM.devLoginEmail.value.trim();
-        const password = DOM.devLoginPassword.value;
-        const res = StorageManager.loginDev(email, password);
-        showToast(`Signed in as Developer Lead: ${res.user.name}. Redirecting to Developer Hub...`);
-        setTimeout(() => {
-          window.location.href = "dev.html";
-        }, 500);
       });
     }
   }

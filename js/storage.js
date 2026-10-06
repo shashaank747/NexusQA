@@ -137,15 +137,71 @@ const StorageManager = {
   },
 
   /**
-   * Tester Registration (Step 1: Sign up & Generate OTP)
+  /**
+   * Everyday Passwordless Login (Step 1: Request 6-digit Email OTP)
    */
-  registerTester({ name, email, password, roleTitle }) {
+  requestLoginOtp(email, role = null) {
+    const users = this.getUsers();
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+
+    if (!user) {
+      throw new Error("No user registered with this email. Please create a new account first.");
+    }
+
+    if (role && user.role !== role) {
+      const targetRole = role === "dev" ? "Developer Lead" : "QA Tester";
+      const userRole = user.role === "dev" ? "Developer" : "QA Tester";
+      throw new Error(`This email is registered as a ${userRole}. Please select ${userRole} to authenticate.`);
+    }
+
+    if (user.status === "rejected") {
+      throw new Error("Your access request was rejected by Senior Dev Lead. Please contact engineering.");
+    }
+
+    if (user.role === "qa" && user.status === "pending_approval") {
+      return { status: "pending_approval", user };
+    }
+
+    // Generate unique 6-digit OTP
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    user.otpCode = otpCode;
+    user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    this.saveUsers(users);
+
+    return { status: "otp_sent", user, otpCode };
+  },
+
+  /**
+   * Everyday Passwordless Login (Step 2: Verify OTP & Enter Portal)
+   */
+  verifyLoginOtp(email, otp) {
+    const users = this.getUsers();
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+
+    if (!user) {
+      throw new Error("User account not found. Please register first.");
+    }
+
+    if (!user.otpCode || user.otpCode !== otp.trim()) {
+      throw new Error("Invalid verification code. Please check your email and try again.");
+    }
+
+    user.otpCode = null;
+    this.saveUsers(users);
+    this.setCurrentUser(user);
+    return { status: "success", user };
+  },
+
+  /**
+   * Tester Registration (Step 1: Sign up & Generate Initial Email Verification OTP)
+   */
+  registerTester({ name, email, roleTitle }) {
     const users = this.getUsers();
     let existing = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
 
-    // Generate random 6-digit verification code
+    // Generate unique 6-digit verification code
     const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins expiry
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
     if (existing) {
       if (existing.status === "active") {
@@ -154,8 +210,7 @@ const StorageManager = {
       // Update existing pending user with new OTP
       existing.name = name || existing.name;
       existing.role = "qa";
-      existing.roleTitle = roleTitle || "QA Tester";
-      existing.password = password || existing.password;
+      existing.roleTitle = roleTitle || existing.roleTitle || "QA Tester";
       existing.otpCode = otpCode;
       existing.otpExpiresAt = otpExpiresAt;
       this.saveUsers(users);
@@ -166,7 +221,6 @@ const StorageManager = {
       id: `user-qa-${Date.now()}`,
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      password: password,
       role: "qa",
       roleTitle: roleTitle || "QA Test Engineer",
       avatar: name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() || "QA",
@@ -184,7 +238,7 @@ const StorageManager = {
   },
 
   /**
-   * Tester Email Verification (Step 2: Check OTP)
+   * Tester Email Verification (Step 2: Check OTP -> Submit to Dev for Approval)
    */
   verifyTesterOtp(email, otp) {
     const users = this.getUsers();
@@ -194,7 +248,7 @@ const StorageManager = {
       throw new Error("Account not found. Please register first.");
     }
 
-    if (user.otpCode !== otp.trim()) {
+    if (!user.otpCode || user.otpCode !== otp.trim()) {
       throw new Error("Invalid verification code. Please check your email and try again.");
     }
 
@@ -203,13 +257,13 @@ const StorageManager = {
     user.status = "pending_approval";
     this.saveUsers(users);
 
-    // Notify Developers in real time
+    // Notify Senior Developers in real time
     this.broadcast("TESTER_APPROVAL_REQUESTED", { user });
     return user;
   },
 
   /**
-   * Developer Approves a Tester (Step 3: Dev Approval)
+   * Senior Developer Approves a Tester (Step 3: Dev Approval -> Stored in DB permanently)
    */
   approveTesterRequest(userId, approverName = "Marcus Vance (Dev Lead)") {
     const users = this.getUsers();
@@ -241,7 +295,7 @@ const StorageManager = {
   },
 
   getPendingTesterRequests() {
-    return this.getUsers().filter(u => u.role === "qa" && u.status === "pending_approval");
+    return this.getUsers().filter(u => u.role === "qa" && u.status === "pending_approval" && u.emailVerified);
   },
 
   login(email, role) {
@@ -266,73 +320,12 @@ const StorageManager = {
     return user;
   },
 
-  /**
-   * Dedicated Tester Login validator
-   */
   loginTester(email, password) {
-    const users = this.getUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
-
-    if (!user) {
-      throw new Error("No tester account found with this email. Please sign up for 1st-time access.");
-    }
-
-    if (user.role !== "qa") {
-      throw new Error("This email is registered with a Developer role. Please use the Developer Hub.");
-    }
-
-    if (user.password && password && user.password !== password) {
-      throw new Error("Invalid password. Please verify and try again.");
-    }
-
-    if (user.status === "rejected") {
-      throw new Error("Your access request was rejected by the Developer Lead. Please contact engineering support.");
-    }
-
-    if (!user.emailVerified) {
-      // Need OTP verification
-      const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-      user.otpCode = otpCode;
-      this.saveUsers(users);
-      return { status: "unverified", user, otpCode };
-    }
-
-    if (user.status === "pending_approval") {
-      return { status: "pending_approval", user };
-    }
-
-    // Active tester
-    this.setCurrentUser(user);
-    return { status: "active", user };
+    return this.requestLoginOtp(email, "qa");
   },
 
-  /**
-   * Dedicated Developer Login validator
-   */
   loginDev(email, password) {
-    const users = this.getUsers();
-    let user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
-
-    if (!user) {
-      user = {
-        id: `user-dev-${Date.now()}`,
-        name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-        email: email,
-        password: password || "password",
-        role: "dev",
-        roleTitle: "Full-Stack Developer & QA Approver",
-        avatar: email.substring(0, 2).toUpperCase(),
-        color: "#10b981",
-        status: "active",
-        emailVerified: true,
-        createdAt: new Date().toISOString().replace("T", " ").substring(0, 16)
-      };
-      users.push(user);
-      this.saveUsers(users);
-    }
-
-    this.setCurrentUser(user);
-    return { status: "active", user };
+    return this.requestLoginOtp(email, "dev");
   },
 
   // -------------------------------------------------------------
