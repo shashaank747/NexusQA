@@ -62,39 +62,7 @@
 
         <!-- 1. TESTER SIGN IN VIEW -->
         <div class="auth-view-step" id="testerLoginView">
-          <!-- Quick Persona Fast Login -->
-          <div class="persona-selection-grid mb-3">
-            <div class="persona-card card-qa" onclick="window.quickLoginPersona('user-qa-1')">
-              <div class="persona-badge badge-qa"><i class="fa-solid fa-bolt"></i> 1-Click QA Access</div>
-              <div class="persona-avatar-wrap">
-                <div class="avatar-ring avatar-qa">AM</div>
-                <div>
-                  <div class="persona-name">Alex Morgan</div>
-                  <div class="persona-role">Lead QA Automation</div>
-                </div>
-              </div>
-              <button class="btn btn-primary btn-xs btn-block mt-2">
-                <span>Enter as Alex (Approved QA)</span> <i class="fa-solid fa-arrow-right"></i>
-              </button>
-            </div>
-            <div class="persona-card card-qa" onclick="window.quickLoginPersona('user-qa-2')">
-              <div class="persona-badge badge-qa"><i class="fa-solid fa-bolt"></i> 1-Click QA Access</div>
-              <div class="persona-avatar-wrap">
-                <div class="avatar-ring avatar-qa">SL</div>
-                <div>
-                  <div class="persona-name">Sarah Lin</div>
-                  <div class="persona-role">Senior Performance Tester</div>
-                </div>
-              </div>
-              <button class="btn btn-primary btn-xs btn-block mt-2">
-                <span>Enter as Sarah (Approved QA)</span> <i class="fa-solid fa-arrow-right"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="auth-divider"><span>or sign in with tester credentials</span></div>
-
-          <form id="testerLoginForm" class="mt-3">
+          <form id="testerLoginForm" class="mt-2">
             <div class="form-group">
               <label><i class="fa-regular fa-envelope"></i> Tester Work Email</label>
               <input type="email" id="testerLoginEmail" class="nexus-input" placeholder="e.g. alex.qa@nexusqa.io" required>
@@ -104,7 +72,7 @@
               <input type="password" id="testerLoginPassword" class="nexus-input" placeholder="••••••••" required>
             </div>
             <button type="submit" class="btn btn-primary btn-block">
-              <i class="fa-solid fa-arrow-right-to-bracket"></i> Authenticate & Enter QA Workspace (tester.html)
+              <i class="fa-solid fa-arrow-right-to-bracket"></i> Authenticate & Enter QA Workspace
             </button>
           </form>
 
@@ -248,36 +216,17 @@
       <!-- DEVELOPER AUTHENTICATION CONTAINER -->
       <!-- ========================================== -->
       <div class="auth-section" id="devAuthSection" style="display: none;">
-        <div class="persona-selection-grid mb-3">
-          <div class="persona-card card-dev" onclick="window.quickLoginPersona('user-dev-1')">
-            <div class="persona-badge badge-dev"><i class="fa-solid fa-code"></i> 1-Click Dev Lead Access</div>
-            <div class="persona-avatar-wrap">
-              <div class="avatar-ring avatar-dev">MV</div>
-              <div>
-                <div class="persona-name">Marcus Vance</div>
-                <div class="persona-role">Lead Full-Stack Developer & QA Approver</div>
-              </div>
-            </div>
-            <p class="persona-desc">Approve tester access requests, triage defects, inspect test failures, and deploy code patches.</p>
-            <button class="btn btn-success btn-sm btn-block mt-2">
-              <span>Enter as Marcus (Dev Lead)</span> <i class="fa-solid fa-arrow-right"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="auth-divider"><span>or sign in with developer credentials</span></div>
-
-        <form id="devLoginForm" class="mt-3">
+        <form id="devLoginForm" class="mt-2">
           <div class="form-group">
             <label><i class="fa-regular fa-envelope"></i> Developer Work Email</label>
-            <input type="email" id="devLoginEmail" class="nexus-input" placeholder="e.g. marcus.dev@nexusqa.io" value="marcus.dev@nexusqa.io" required>
+            <input type="email" id="devLoginEmail" class="nexus-input" placeholder="e.g. marcus.dev@nexusqa.io" required>
           </div>
           <div class="form-group">
             <label><i class="fa-solid fa-lock"></i> Password</label>
-            <input type="password" id="devLoginPassword" class="nexus-input" placeholder="••••••••" value="password" required>
+            <input type="password" id="devLoginPassword" class="nexus-input" placeholder="••••••••" required>
           </div>
           <button type="submit" class="btn btn-success btn-block">
-            <i class="fa-solid fa-code"></i> Authenticate & Enter Developer Hub (dev.html)
+            <i class="fa-solid fa-code"></i> Authenticate & Enter Developer Hub
           </button>
         </form>
       </div>
