@@ -50,41 +50,10 @@ CREATE TABLE IF NOT EXISTS public.nexus_defects (
   updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4. Test Execution Runs
-CREATE TABLE IF NOT EXISTS public.nexus_test_runs (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  environment TEXT DEFAULT 'Staging',
-  date TEXT,
-  test_case_ids TEXT[] DEFAULT ARRAY[]::TEXT[],
-  results JSONB DEFAULT '{}'::jsonb,
-  status TEXT DEFAULT 'In Progress',
-  author TEXT,
-  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 5. Team Users & Access Control
-CREATE TABLE IF NOT EXISTS public.nexus_users (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  role TEXT DEFAULT 'qa',
-  role_title TEXT DEFAULT 'QA Tester',
-  avatar TEXT,
-  color TEXT,
-  status TEXT DEFAULT 'active',
-  email_verified BOOLEAN DEFAULT true,
-  approved_by TEXT,
-  approved_at TEXT,
-  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
 -- Enable Row Level Security (Public Read/Write for Platform Demo)
 ALTER TABLE public.nexus_suites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nexus_test_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nexus_defects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.nexus_test_runs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.nexus_users ENABLE ROW LEVEL SECURITY;
 
 -- Allow anonymous read/write access for frontend client
 DO $$
@@ -98,13 +67,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public Access nexus_defects') THEN
     CREATE POLICY "Public Access nexus_defects" ON public.nexus_defects FOR ALL USING (true) WITH CHECK (true);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public Access nexus_test_runs') THEN
-    CREATE POLICY "Public Access nexus_test_runs" ON public.nexus_test_runs FOR ALL USING (true) WITH CHECK (true);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public Access nexus_users') THEN
-    CREATE POLICY "Public Access nexus_users" ON public.nexus_users FOR ALL USING (true) WITH CHECK (true);
-  END IF;
 END $$;
 
 -- Enable Realtime publication for nexus tables
-ALTER PUBLICATION supabase_realtime ADD TABLE public.nexus_suites, public.nexus_test_cases, public.nexus_defects, public.nexus_test_runs;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.nexus_suites, public.nexus_test_cases, public.nexus_defects;

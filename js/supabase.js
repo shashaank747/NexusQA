@@ -88,9 +88,6 @@ const SupabaseManager = {
       .on("postgres_changes", { event: "*", schema: "public", table: "nexus_defects" }, (payload) => {
         this.handleRemoteDefectChange(payload);
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "nexus_test_runs" }, (payload) => {
-        this.handleRemoteTestRunChange(payload);
-      })
       .on("postgres_changes", { event: "*", schema: "public", table: "nexus_suites" }, (payload) => {
         this.handleRemoteSuiteChange(payload);
       })
@@ -287,12 +284,10 @@ const SupabaseManager = {
     if (!this.client || !this.isConnected) return false;
 
     try {
-      const [suitesRes, testCasesRes, defectsRes, runsRes, usersRes] = await Promise.all([
+      const [suitesRes, testCasesRes, defectsRes] = await Promise.all([
         this.client.from("nexus_suites").select("*"),
         this.client.from("nexus_test_cases").select("*"),
-        this.client.from("nexus_defects").select("*").order("created_at", { ascending: false }),
-        this.client.from("nexus_test_runs").select("*").order("created_at", { ascending: false }),
-        this.client.from("nexus_users").select("*")
+        this.client.from("nexus_defects").select("*").order("created_at", { ascending: false })
       ]);
 
       if (suitesRes.data && suitesRes.data.length > 0) {
@@ -305,10 +300,6 @@ const SupabaseManager = {
       if (defectsRes.data && defectsRes.data.length > 0) {
         const mapped = defectsRes.data.map(d => this.mapDefectFromDB(d));
         StorageManager.saveDefects(mapped, false);
-      }
-      if (runsRes.data && runsRes.data.length > 0) {
-        const mapped = runsRes.data.map(r => this.mapTestRunFromDB(r));
-        StorageManager.saveTestRuns(mapped, false);
       }
 
       return true;
@@ -325,14 +316,10 @@ const SupabaseManager = {
       const suites = StorageManager.getSuites();
       const testCases = StorageManager.getTestCases().map(tc => this.mapTestCaseToDB(tc));
       const defects = StorageManager.getDefects().map(d => this.mapDefectToDB(d));
-      const runs = StorageManager.getTestRuns().map(r => this.mapTestRunToDB(r));
-      const users = StorageManager.getUsers();
 
       if (suites.length > 0) await this.client.from("nexus_suites").upsert(suites);
       if (testCases.length > 0) await this.client.from("nexus_test_cases").upsert(testCases);
       if (defects.length > 0) await this.client.from("nexus_defects").upsert(defects);
-      if (runs.length > 0) await this.client.from("nexus_test_runs").upsert(runs);
-      if (users.length > 0) await this.client.from("nexus_users").upsert(users);
 
       return true;
     } catch (err) {

@@ -451,11 +451,9 @@ document.addEventListener("DOMContentLoaded", () => {
 CREATE TABLE IF NOT EXISTS nexus_suites (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, icon TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS nexus_test_cases (id TEXT PRIMARY KEY, title TEXT NOT NULL, suite_id TEXT, priority TEXT, type TEXT, status TEXT, author TEXT, last_run TEXT, preconditions TEXT, tags JSONB, steps JSONB, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS nexus_defects (id TEXT PRIMARY KEY, summary TEXT NOT NULL, linked_test_case_id TEXT, severity TEXT, priority TEXT, assignee TEXT, reported_by TEXT, status TEXT, description TEXT, dev_notes TEXT, pr_link TEXT, git_branch TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
-CREATE TABLE IF NOT EXISTS nexus_test_runs (id TEXT PRIMARY KEY, name TEXT NOT NULL, environment TEXT, author TEXT, date TEXT, duration TEXT, status TEXT, test_case_ids JSONB, results JSONB, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
-CREATE TABLE IF NOT EXISTS nexus_users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, role TEXT, role_title TEXT, avatar TEXT, color TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
-ALTER PUBLICATION supabase_realtime ADD TABLE nexus_suites, nexus_test_cases, nexus_defects, nexus_test_runs, nexus_users;
-ALTER TABLE nexus_suites ENABLE ROW LEVEL SECURITY; ALTER TABLE nexus_test_cases ENABLE ROW LEVEL SECURITY; ALTER TABLE nexus_defects ENABLE ROW LEVEL SECURITY; ALTER TABLE nexus_test_runs ENABLE ROW LEVEL SECURITY; ALTER TABLE nexus_users ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "Anon all" ON nexus_test_cases FOR ALL USING (true); CREATE POLICY "Anon all" ON nexus_defects FOR ALL USING (true); CREATE POLICY "Anon all" ON nexus_test_runs FOR ALL USING (true); CREATE POLICY "Anon all" ON nexus_users FOR ALL USING (true);`;
+ALTER PUBLICATION supabase_realtime ADD TABLE nexus_suites, nexus_test_cases, nexus_defects;
+ALTER TABLE nexus_suites ENABLE ROW LEVEL SECURITY; ALTER TABLE nexus_test_cases ENABLE ROW LEVEL SECURITY; ALTER TABLE nexus_defects ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "Anon all" ON nexus_test_cases FOR ALL USING (true); CREATE POLICY "Anon all" ON nexus_defects FOR ALL USING (true);`;
     
     navigator.clipboard.writeText(sqlSchema).then(() => {
       showToast("Copied Supabase SQL Schema to clipboard! Paste in Supabase SQL Editor.");
