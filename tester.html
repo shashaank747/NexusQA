@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusQA - QA Tester Workspace</title>
+  <meta name="description" content="Dedicated QA Tester Portal for test authoring, live test execution, automated test generation, and bug reporting with Supabase synchronization.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="dark-theme page-tester">
+
+  <!-- ============================================== -->
+  <!-- MAIN TESTER WORKSPACE LAYOUT -->
+  <!-- ============================================== -->
+  <div id="app" class="app-layout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <div class="logo-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div class="brand-text">
+            <h2>Nexus<span>QA</span></h2>
+            <span class="badge badge-version">QA Tester Portal</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-selector-wrapper">
+        <label class="section-label">Active Project</label>
+        <div class="project-selector" id="projectSelectorDropdown">
+          <div class="project-info">
+            <span class="project-avatar"><i class="fa-solid fa-layer-group"></i></span>
+            <div class="project-meta">
+              <span class="project-title" id="currentProjectTitle">OmniStore eCommerce</span>
+              <span class="project-subtitle">Release v3.8.0-rc2</span>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+        </div>
+      </div>
+
+      <!-- Real-Time Sync Pulse Indicator -->
+      <div class="sync-status-strip" id="syncStatusStrip">
+        <span class="sync-dot" id="syncDotIndicator"></span>
+        <span class="sync-text" id="syncTextLabel">Live Sync Active</span>
+      </div>
+
+      <!-- Dynamic Sidebar Nav -->
+      <nav class="sidebar-nav">
+        <div id="qaNavSection">
+          <div class="nav-section-title">QA WORKSPACE</div>
+          <ul class="nav-list">
+            <li class="nav-item active" data-view="dashboard">
+              <a href="javascript:void(0)" class="nav-link">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Quality Analytics</span>
+              </a>
+            </li>
+            <li class="nav-item" data-view="test-cases">
+              <a href="javascript:void(0)" class="nav-link">
+                <i class="fa-solid fa-list-check"></i>
+                <span>Test Repository</span>
+                <span class="nav-badge" id="testCaseCountBadge">24</span>
+              </a>
+            </li>
+            <li class="nav-item" data-view="test-runs">
+              <a href="javascript:void(0)" class="nav-link">
+                <i class="fa-solid fa-play"></i>
+                <span>Live Test Runner</span>
+                <span class="nav-badge badge-active" id="activeRunsBadge">1 Live</span>
+              </a>
+            </li>
+            <li class="nav-item" data-view="defects">
+              <a href="javascript:void(0)" class="nav-link">
+                <i class="fa-solid fa-bug"></i>
+                <span>Defects & Bugs</span>
+                <span class="nav-badge badge-danger" id="defectCountBadge">5</span>
+              </a>
+            </li>
+            <li class="nav-item" data-view="ai-generator">
+              <a href="javascript:void(0)" class="nav-link">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>AI Test Generator</span>
+                <span class="nav-badge badge-ai">PRO</span>
+              </a>
+            </li>
+          </ul>
+
+          <div class="nav-section-title">MANAGEMENT</div>
+          <ul class="nav-list">
+            <li class="nav-item" data-view="suites">
+              <a href="javascript:void(0)" class="nav-link">
+                <i class="fa-solid fa-folder-tree"></i>
+                <span>Suites & Modules</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="nav-section-title">PLATFORM</div>
+        <ul class="nav-list">
+          <li class="nav-item" data-view="settings">
+            <a href="javascript:void(0)" class="nav-link">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Settings & Supabase</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Sidebar User Footer -->
+      <div class="sidebar-footer">
+        <div class="user-profile-wrapper" id="userProfileToggle">
+          <div class="user-profile">
+            <div class="avatar-ring avatar-qa" id="userAvatarRing">
+              <span class="avatar-initials" id="userAvatarInitials">AM</span>
+            </div>
+            <div class="user-details">
+              <span class="user-name" id="userNameLabel">Alex Morgan</span>
+              <span class="user-role" id="userRoleLabel"><i class="fa-solid fa-circle status-dot-online"></i> QA Lead</span>
+            </div>
+          </div>
+          <button class="icon-btn-xs" id="switchUserQuickBtn" title="Sign Out & Return to Login"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Container -->
+    <main class="main-content" id="mainContent">
+      
+      <!-- Top Workspace Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-btn mobile-menu-toggle" id="menuToggleBtn" title="Toggle Navigation">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="breadcrumb" id="breadcrumb">
+            <span class="crumb-root" id="portalCrumbRoot">NexusQA Tester</span>
+            <i class="fa-solid fa-chevron-right crumb-sep"></i>
+            <span class="crumb-current" id="currentCrumb">Quality Analytics</span>
+          </div>
+        </div>
+
+        <div class="topbar-center">
+          <div class="global-search-bar">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="globalSearchInput" placeholder="Search test cases, bugs, suites, runs (Press '/' to focus)...">
+            <kbd class="search-shortcut">/</kbd>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <button class="btn btn-secondary btn-sm" id="quickRunBtn" title="Launch Active Test Run">
+            <i class="fa-solid fa-bolt text-amber"></i>
+            <span>Quick Run</span>
+          </button>
+          
+          <button class="btn btn-primary btn-sm" id="createQuickBtn">
+            <i class="fa-solid fa-plus"></i>
+            <span id="createQuickBtnLabel">New Test Case</span>
+          </button>
+
+          <div class="theme-toggle-wrapper">
+            <button class="icon-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+              <i class="fa-solid fa-moon"></i>
+            </button>
+          </div>
+
+          <button class="icon-btn" id="logoutBtn" title="Sign Out & Return to Login">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- View Containers -->
+      <div class="view-viewport" id="viewViewport">
+        
+        <!-- QA VIEW 1: DASHBOARD -->
+        <section class="view-panel active-view" id="view-dashboard">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">QA Quality & Health Analytics</h1>
+              <p class="view-subtitle">Real-time test execution metrics, automated coverage, and defect tracking.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-secondary btn-sm" id="refreshMetricsBtn">
+                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+              </button>
+              <button class="btn btn-outline btn-sm" id="exportDashboardReportBtn">
+                <i class="fa-solid fa-file-export"></i> Export Report
+              </button>
+            </div>
+          </div>
+
+          <div class="retest-alert-banner" id="retestAlertBanner" style="display: none;">
+            <div class="d-flex align-center gap-2">
+              <i class="fa-solid fa-bell text-amber"></i>
+              <span><strong id="retestAlertCount">1 bug</strong> has been marked as <strong>Fixed & Ready for QA</strong> by developers!</span>
+            </div>
+            <button class="btn btn-secondary btn-xs" id="viewRetestBugsBtn">Review & Re-Verify</button>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card card-glow-indigo">
+              <div class="kpi-header">
+                <span class="kpi-title">Total Test Cases</span>
+                <span class="kpi-icon-badge icon-indigo"><i class="fa-solid fa-vials"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value" id="kpiTotalTests">0</span>
+                <span class="kpi-trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i> +12% this cycle</span>
+              </div>
+              <div class="kpi-progress-bar">
+                <div class="kpi-progress-fill bg-indigo" id="kpiTotalTestsProgress" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-emerald">
+              <div class="kpi-header">
+                <span class="kpi-title">Pass Rate</span>
+                <span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-circle-check"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-emerald" id="kpiPassRate">0%</span>
+                <span class="kpi-trend trend-up" id="kpiPassRateSub">Target: 95%</span>
+              </div>
+              <div class="kpi-progress-bar">
+                <div class="kpi-progress-fill bg-emerald" id="kpiPassRateProgress" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-cyan">
+              <div class="kpi-header">
+                <span class="kpi-title">Automation Ratio</span>
+                <span class="kpi-icon-badge icon-cyan"><i class="fa-solid fa-robot"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-cyan" id="kpiAutomationRate">0%</span>
+                <span class="kpi-trend trend-neutral" id="kpiAutoCount">0 Automated</span>
+              </div>
+              <div class="kpi-progress-bar">
+                <div class="kpi-progress-fill bg-cyan" id="kpiAutoProgress" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-rose">
+              <div class="kpi-header">
+                <span class="kpi-title">Active Defects</span>
+                <span class="kpi-icon-badge icon-rose"><i class="fa-solid fa-triangle-exclamation"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-rose" id="kpiDefectsCount">0</span>
+                <span class="kpi-trend trend-down" id="kpiCriticalDefects">0 Critical</span>
+              </div>
+              <div class="kpi-progress-bar">
+                <div class="kpi-progress-fill bg-rose" id="kpiDefectsProgress" style="width: 35%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid-2col">
+            <div class="dashboard-card chart-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h3><i class="fa-solid fa-chart-pie"></i> Test Execution Status Distribution</h3>
+                  <p class="card-subtitle">Breakdown across all test cases in current test cycle</p>
+                </div>
+              </div>
+              <div class="card-body chart-flex">
+                <div class="donut-chart-wrapper">
+                  <div class="donut-chart" id="testStatusDonut"></div>
+                  <div class="donut-center-stat">
+                    <span class="donut-center-val" id="donutCenterVal">100%</span>
+                    <span class="donut-center-label">Coverage</span>
+                  </div>
+                </div>
+                <div class="chart-legend" id="statusLegend"></div>
+              </div>
+            </div>
+
+            <div class="dashboard-card chart-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h3><i class="fa-solid fa-layer-group"></i> Module Health & Coverage</h3>
+                  <p class="card-subtitle">Pass rates and test counts grouped by functional suite</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="module-health-list" id="moduleHealthList"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid-2col mt-4">
+            <div class="dashboard-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Test Execution Runs</h3>
+                  <p class="card-subtitle">Latest automated and manual validation cycles</p>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="gotoTestRunsBtn">View All <i class="fa-solid fa-arrow-right"></i></button>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="nexus-table">
+                    <thead>
+                      <tr>
+                        <th>Run Name</th>
+                        <th>Environment</th>
+                        <th>Status</th>
+                        <th>Executed</th>
+                        <th>Pass Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recentRunsTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h3><i class="fa-solid fa-layer-group"></i> Test Priority Breakdown</h3>
+                  <p class="card-subtitle">Coverage by critical path, smoke, and regression</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="priority-breakdown" id="priorityBreakdown"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- QA VIEW 2: REPOSITORY -->
+        <section class="view-panel" id="view-test-cases">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Test Repository & Specifications</h1>
+              <p class="view-subtitle">Author, manage, categorize, and batch-execute structured test cases.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-outline btn-sm" id="importTestsBtn"><i class="fa-solid fa-file-import"></i> Import JSON</button>
+              <button class="btn btn-outline btn-sm" id="exportTestsBtn"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+              <button class="btn btn-primary btn-sm" id="createNewTestCaseBtn"><i class="fa-solid fa-plus"></i> Create Test Case</button>
+            </div>
+          </div>
+
+          <div class="repository-layout">
+            <aside class="suites-sidebar">
+              <div class="suites-sidebar-header">
+                <h3>Test Suites</h3>
+                <button class="icon-btn-xs" id="addNewSuiteBtn" title="Create New Suite"><i class="fa-solid fa-plus"></i></button>
+              </div>
+              <div class="suites-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="suiteSearchInput" placeholder="Filter suites...">
+              </div>
+              <div class="suites-nav-list" id="suiteNavList"></div>
+            </aside>
+
+            <div class="repository-main">
+              <div class="repo-filter-bar">
+                <div class="search-box">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="testCaseSearchInput" placeholder="Search by title, ID, tag...">
+                </div>
+
+                <div class="filter-group">
+                  <select id="filterStatus" class="nexus-select">
+                    <option value="all">All Statuses</option>
+                    <option value="Passed">Passed</option>
+                    <option value="Failed">Failed</option>
+                    <option value="Blocked">Blocked</option>
+                    <option value="Untested">Untested</option>
+                  </select>
+
+                  <select id="filterPriority" class="nexus-select">
+                    <option value="all">All Priorities</option>
+                    <option value="P0 - Critical">P0 - Critical</option>
+                    <option value="P1 - High">P1 - High</option>
+                    <option value="P2 - Medium">P2 - Medium</option>
+                    <option value="P3 - Low">P3 - Low</option>
+                  </select>
+
+                  <select id="filterType" class="nexus-select">
+                    <option value="all">All Test Types</option>
+                    <option value="Manual">Manual</option>
+                    <option value="Automated">Automated</option>
+                    <option value="API">API</option>
+                    <option value="E2E">E2E</option>
+                    <option value="Security">Security</option>
+                    <option value="Performance">Performance</option>
+                  </select>
+
+                  <button class="btn btn-ghost btn-sm" id="resetFiltersBtn" title="Reset Filters"><i class="fa-solid fa-filter-circle-xmark"></i></button>
+                </div>
+              </div>
+
+              <!-- Batch Action Bar -->
+              <div class="batch-action-bar" id="batchActionBar" style="display: none;">
+                <div class="batch-info">
+                  <span class="selected-count-badge" id="selectedCountBadge">0</span>
+                  <span>test cases selected</span>
+                </div>
+                <div class="batch-buttons">
+                  <button class="btn btn-secondary btn-xs" id="batchRunBtn"><i class="fa-solid fa-play"></i> Execute Selected</button>
+                  <button class="btn btn-success btn-xs" id="batchPassBtn"><i class="fa-solid fa-check"></i> Mark Passed</button>
+                  <button class="btn btn-danger btn-xs" id="batchFailBtn"><i class="fa-solid fa-xmark"></i> Mark Failed</button>
+                  <button class="btn btn-danger btn-xs" id="batchDeleteBtn"><i class="fa-solid fa-trash"></i> Delete</button>
+                </div>
+              </div>
+
+              <div class="table-card">
+                <div class="table-responsive">
+                  <table class="nexus-table">
+                    <thead>
+                      <tr>
+                        <th width="40"><input type="checkbox" id="selectAllCheckbox"></th>
+                        <th width="110">Test ID</th>
+                        <th>Test Case Title</th>
+                        <th width="140">Suite</th>
+                        <th width="110">Priority</th>
+                        <th width="100">Type</th>
+                        <th width="110">Status</th>
+                        <th width="100">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="testCasesTableBody"></tbody>
+                  </table>
+                </div>
+
+                <div class="empty-state" id="testCaseEmptyState" style="display: none;">
+                  <div class="empty-icon"><i class="fa-solid fa-vials"></i></div>
+                  <h3>No test cases found</h3>
+                  <p>Try adjusting your search query, status filters, or create a new test case.</p>
+                  <button class="btn btn-primary btn-sm mt-3" id="emptyCreateBtn"><i class="fa-solid fa-plus"></i> Create New Test Case</button>
+                </div>
+
+                <div class="table-footer">
+                  <div class="table-stats">
+                    Showing <span id="showingCount">0</span> of <span id="totalTestsCount">0</span> test cases
+                    (<span class="text-emerald" id="statPassed">0 Passed</span>, <span class="text-rose" id="statFailed">0 Failed</span>, <span class="text-amber" id="statBlocked">0 Blocked</span>, <span id="statUntested">0 Untested</span>)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- QA VIEW 3: LIVE RUNNER -->
+        <section class="view-panel" id="view-test-runs">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Live Test Execution Runner</h1>
+              <p class="view-subtitle">Interactive step-by-step test execution with real-time pass/fail verdicts and bug creation.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-primary btn-sm" id="startNewRunModalBtn"><i class="fa-solid fa-play"></i> Start New Test Run</button>
+            </div>
+          </div>
+
+          <div class="runner-active-banner">
+            <div class="runner-meta-main">
+              <span class="pulse-recording-dot"></span>
+              <div>
+                <h2 class="runner-active-title" id="activeRunTitle">Sprint 38 Regression & Security Cycle</h2>
+                <div class="runner-active-sub">
+                  <span><i class="fa-solid fa-server"></i> Environment: <strong id="activeRunEnv">Staging v3.8.0-rc2</strong></span>
+                  <span><i class="fa-solid fa-user"></i> Executed by: <strong id="activeRunAuthor">Alex Morgan</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="runner-timer-group">
+              <div class="runner-timer">
+                <i class="fa-solid fa-clock"></i>
+                <span class="timer-digits" id="timerDigits">04:32</span>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="pauseRunBtn"><i class="fa-solid fa-pause"></i> Pause</button>
+              <button class="btn btn-success btn-sm" id="completeRunBtn"><i class="fa-solid fa-check-double"></i> Complete Run</button>
+            </div>
+          </div>
+
+          <div class="run-progress-container">
+            <div class="d-flex justify-between text-xs mb-1">
+              <span id="runProgressText">Completed 6 of 8 test cases (75%)</span>
+              <span class="text-emerald font-bold" id="runProgressPercent">75%</span>
+            </div>
+            <div class="run-progress-track">
+              <div class="run-progress-bar bg-emerald" id="runProgressBar" style="width: 75%;"></div>
+            </div>
+          </div>
+
+          <div class="runner-split-view">
+            <div class="runner-queue-panel">
+              <div class="panel-header">
+                <h3>Test Execution Queue (<span id="queueCount">8</span>)</h3>
+              </div>
+              <div class="runner-queue-list" id="runnerQueueList"></div>
+            </div>
+
+            <div class="runner-console-panel" id="runnerConsolePanel">
+              <div class="console-empty-notice" id="consoleEmptyNotice" style="display: none;">
+                <i class="fa-solid fa-list-check"></i>
+                <p>Select a test case from the queue to start execution</p>
+              </div>
+
+              <div class="console-active-content" id="consoleActiveContent">
+                <div class="console-test-header">
+                  <div>
+                    <span class="test-id-pill" id="consoleTestId">TC-104</span>
+                    <h2 class="console-test-title" id="consoleTestTitle">Verify Stripe Webhook processes successful payment token</h2>
+                  </div>
+                  <div class="console-badges" id="consoleTestBadges">
+                    <span class="badge badge-critical">P0 - Critical</span>
+                    <span class="badge badge-untested">API</span>
+                  </div>
+                </div>
+
+                <div class="console-preconditions">
+                  <strong>Preconditions:</strong>
+                  <p id="consolePreconditions">Stripe CLI mock webhook server is listening on port 4242 with test secret key configured.</p>
+                </div>
+
+                <div class="console-steps-section">
+                  <h3>Test Steps & Action Verifications</h3>
+                  <div class="console-step-list" id="consoleStepList"></div>
+                </div>
+
+                <div class="console-verdict-actions">
+                  <div class="verdict-buttons">
+                    <button class="btn btn-success btn-lg" id="btnVerdictPass"><i class="fa-solid fa-circle-check"></i> Pass Test</button>
+                    <button class="btn btn-danger btn-lg" id="btnVerdictFail"><i class="fa-solid fa-circle-xmark"></i> Fail Test</button>
+                    <button class="btn btn-amber btn-lg" id="btnVerdictBlock"><i class="fa-solid fa-ban"></i> Blocked</button>
+                    <button class="btn btn-secondary btn-lg" id="btnVerdictSkip"><i class="fa-solid fa-forward-step"></i> Skip</button>
+                  </div>
+                  
+                  <div class="form-group mt-3">
+                    <label for="runnerExecutionNotes">Execution Notes / Diagnostic Failure Output</label>
+                    <textarea id="runnerExecutionNotes" class="nexus-textarea" rows="2" placeholder="Record actual result, response payload, or error trace..."></textarea>
+                  </div>
+
+                  <div class="d-flex justify-between align-center mt-3">
+                    <button class="btn btn-danger btn-sm" id="runnerFileBugBtn"><i class="fa-solid fa-bug"></i> File Defect for this Test</button>
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-secondary btn-sm" id="prevTestInQueueBtn"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+                      <button class="btn btn-secondary btn-sm" id="nextTestInQueueBtn">Next <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- QA VIEW 4: DEFECTS -->
+        <section class="view-panel" id="view-defects">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Defects & Bug Tracking</h1>
+              <p class="view-subtitle">Monitor defect lifecycles, assignees, and real-time developer re-test updates.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-danger btn-sm" id="createNewBugBtn"><i class="fa-solid fa-plus"></i> Report New Defect</button>
+            </div>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card card-glow-rose">
+              <div class="kpi-header"><span class="kpi-title">Open Defects</span><span class="kpi-icon-badge icon-rose"><i class="fa-solid fa-bug"></i></span></div>
+              <div class="kpi-body"><span class="kpi-value text-rose" id="openBugsCount">0</span><span class="kpi-trend trend-down">Needs Resolution</span></div>
+            </div>
+            <div class="kpi-card card-glow-amber">
+              <div class="kpi-header"><span class="kpi-title">Critical Blockers</span><span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-fire"></i></span></div>
+              <div class="kpi-body"><span class="kpi-value text-amber" id="criticalBugsCount">0</span><span class="kpi-trend trend-neutral">P0 Severity</span></div>
+            </div>
+            <div class="kpi-card card-glow-indigo">
+              <div class="kpi-header"><span class="kpi-title">Ready for QA Re-Test</span><span class="kpi-icon-badge icon-indigo"><i class="fa-solid fa-flask"></i></span></div>
+              <div class="kpi-body"><span class="kpi-value text-primary" id="readyForRetestCount">0</span><span class="kpi-trend trend-up">Fixed by Dev</span></div>
+            </div>
+            <div class="kpi-card card-glow-emerald">
+              <div class="kpi-header"><span class="kpi-title">Resolved & Verified</span><span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-circle-check"></i></span></div>
+              <div class="kpi-body"><span class="kpi-value text-emerald" id="resolvedBugsCount">0</span><span class="kpi-trend trend-up">Closed</span></div>
+            </div>
+          </div>
+
+          <div class="repo-filter-bar mt-4">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="bugSearchInput" placeholder="Search defects by title, ID, assignee...">
+            </div>
+            <div class="filter-group">
+              <select id="filterBugSeverity" class="nexus-select">
+                <option value="all">All Severities</option>
+                <option value="Critical">Critical</option>
+                <option value="Major">Major</option>
+                <option value="Medium">Medium</option>
+                <option value="Minor">Minor</option>
+              </select>
+              <select id="filterBugStatus" class="nexus-select">
+                <option value="all">All Statuses</option>
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Fixed - Ready for QA">Fixed - Ready for QA</option>
+                <option value="Resolved & Verified">Resolved & Verified</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-card mt-3">
+            <div class="table-responsive">
+              <table class="nexus-table">
+                <thead>
+                  <tr>
+                    <th width="100">Bug ID</th>
+                    <th>Summary</th>
+                    <th width="110">Severity</th>
+                    <th width="110">Priority</th>
+                    <th width="120">Linked Test</th>
+                    <th width="150">Assignee</th>
+                    <th width="150">Status</th>
+                    <th width="100">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="defectsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- QA VIEW 5: AI GENERATOR -->
+        <section class="view-panel" id="view-ai-generator">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">AI Test Case Generator</h1>
+              <p class="view-subtitle">Generate complete, step-by-step test suites, edge cases, and preconditions from user stories.</p>
+            </div>
+          </div>
+
+          <div class="ai-workspace-grid">
+            <div class="ai-input-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Requirement & User Story Prompt</h3>
+                <button class="btn btn-secondary btn-xs" id="loadSampleStoryBtn"><i class="fa-solid fa-lightbulb"></i> Load Sample Story</button>
+              </div>
+              <div class="card-body">
+                <div class="form-group">
+                  <label for="aiTargetSuiteSelect">Assign Generated Tests to Suite</label>
+                  <select id="aiTargetSuiteSelect" class="nexus-select w-100"></select>
+                </div>
+                <div class="form-group">
+                  <label for="aiStoryPrompt">User Story / Feature Spec Acceptance Criteria</label>
+                  <textarea id="aiStoryPrompt" class="nexus-textarea font-sans" rows="10" placeholder="As a customer, I want to apply a promo coupon code at checkout..."></textarea>
+                </div>
+                <button class="btn btn-primary btn-block" id="generateAITestsBtn">
+                  <i class="fa-solid fa-sparkles"></i> Synthesize Test Cases with AI
+                </button>
+              </div>
+            </div>
+
+            <div class="ai-output-card">
+              <div class="output-header">
+                <h3><i class="fa-solid fa-microchip"></i> Generated Test Specifications</h3>
+                <button class="btn btn-success btn-sm" id="importAllAITestsBtn" style="display: none;">
+                  <i class="fa-solid fa-file-import"></i> Save All to Test Suite (<span id="aiGeneratedCount">0</span>)
+                </button>
+              </div>
+
+              <div class="ai-results-viewport" id="aiResultsViewport">
+                <div class="ai-idle-placeholder" id="aiIdlePlaceholder">
+                  <div class="ai-placeholder-icon"><i class="fa-solid fa-brain"></i></div>
+                  <h4>Ready to Generate Tests</h4>
+                  <p>Enter a user story on the left and click "Synthesize Test Cases".</p>
+                </div>
+
+                <div class="ai-generating-loader" id="aiGeneratingLoader" style="display: none;">
+                  <div class="spinner-pulse"></div>
+                  <h4>Synthesizing test scenarios & edge cases...</h4>
+                </div>
+
+                <div class="generated-cards-list" id="generatedCardsList" style="display: none;"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- QA VIEW 6: SUITES -->
+        <section class="view-panel" id="view-suites">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Test Suites & Feature Modules</h1>
+              <p class="view-subtitle">Organize your test repository into hierarchical test suites and feature domains.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-primary btn-sm" id="createSuiteModalBtn"><i class="fa-solid fa-folder-plus"></i> Create New Suite</button>
+            </div>
+          </div>
+          <div class="suites-grid-cards" id="suitesGridCards"></div>
+        </section>
+
+        <!-- VIEW: SETTINGS & SUPABASE -->
+        <section class="view-panel" id="view-settings">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Settings, Supabase & Sync Configuration</h1>
+              <p class="view-subtitle">Configure Supabase PostgreSQL database connection, real-time sync channel, and backups.</p>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <div class="settings-card">
+              <div class="d-flex justify-between align-center mb-2">
+                <h3><i class="fa-solid fa-database text-emerald"></i> Supabase Cloud Database</h3>
+                <span class="badge badge-untested" id="supabaseConnectionBadge"><i class="fa-solid fa-circle" style="font-size:6px;"></i> Local Mode</span>
+              </div>
+              <p class="text-muted text-sm mb-3">Connect your free Supabase project to sync all test cases, runs, and bugs across multiple devices & portals in real-time.</p>
+              
+              <form id="supabaseConfigForm">
+                <div class="form-group">
+                  <label for="supabaseUrlInput">Supabase Project URL</label>
+                  <input type="url" id="supabaseUrlInput" class="nexus-input" placeholder="https://xyzcompany.supabase.co">
+                </div>
+
+                <div class="form-group">
+                  <label for="supabaseKeyInput">Supabase anon public API Key</label>
+                  <input type="password" id="supabaseKeyInput" class="nexus-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                </div>
+
+                <div class="d-flex gap-2 mt-3">
+                  <button type="button" class="btn btn-primary btn-sm flex-1" id="saveSupabaseConfigBtn">
+                    <i class="fa-solid fa-plug"></i> Connect & Sync
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="pushDataToSupabaseBtn" title="Push Demo Data to Supabase">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Upload Data
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" id="copySqlSchemaBtn" title="Copy SQL Schema Script">
+                    <i class="fa-solid fa-copy"></i> SQL Schema
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div class="settings-card">
+              <h3><i class="fa-solid fa-arrows-rotate text-cyan"></i> Real-time Sync & Ping</h3>
+              <p class="text-muted text-sm mb-3">BroadcastChannel & Supabase Realtime synchronization engine.</p>
+              
+              <div class="settings-action-row">
+                <div>
+                  <strong>Broadcast Ping Test</strong>
+                  <p class="text-muted text-xs">Sends a test heartbeat packet across all tabs</p>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="broadcastPingBtn">
+                  <i class="fa-solid fa-satellite-dish"></i> Ping Portals
+                </button>
+              </div>
+
+              <div class="settings-action-row mt-3">
+                <div>
+                  <strong>Workspace Snapshot Export</strong>
+                  <p class="text-muted text-xs">Download complete workspace JSON</p>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="exportFullBackupBtn">
+                  <i class="fa-solid fa-download"></i> Export JSON
+                </button>
+              </div>
+
+              <div class="settings-action-row mt-3">
+                <div>
+                  <strong>Reset Seed Data</strong>
+                  <p class="text-muted text-xs">Reload default demo test suites & runs</p>
+                </div>
+                <button class="btn btn-danger btn-sm" id="resetSeedDataBtn">
+                  <i class="fa-solid fa-trash-can-arrow-up"></i> Reset Demo Data
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODALS -->
+  <!-- ============================================== -->
+
+  <!-- MODAL: TEST CASE -->
+  <div class="modal-backdrop" id="testCaseModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group"><i class="fa-solid fa-vial modal-icon"></i><h2 id="testCaseModalTitle">Create Test Case</h2></div>
+        <button class="icon-btn close-modal-btn" id="closeTestCaseModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="testCaseForm">
+          <input type="hidden" id="editTestCaseId">
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label for="tcTitle">Test Case Title <span class="text-rose">*</span></label>
+              <input type="text" id="tcTitle" class="nexus-input" placeholder="e.g. Verify password reset link expires after 15 minutes" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="tcSuite">Test Suite / Module <span class="text-rose">*</span></label>
+              <select id="tcSuite" class="nexus-select w-100" required></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="tcPriority">Priority</label>
+              <select id="tcPriority" class="nexus-select w-100">
+                <option value="P0 - Critical">P0 - Critical (Blocker)</option>
+                <option value="P1 - High" selected>P1 - High</option>
+                <option value="P2 - Medium">P2 - Medium</option>
+                <option value="P3 - Low">P3 - Low</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="tcType">Test Type</label>
+              <select id="tcType" class="nexus-select w-100">
+                <option value="Manual">Manual</option>
+                <option value="Automated">Automated</option>
+                <option value="API">API</option>
+                <option value="E2E">E2E</option>
+                <option value="Security">Security</option>
+                <option value="Performance">Performance</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="tcStatus">Current Status</label>
+              <select id="tcStatus" class="nexus-select w-100">
+                <option value="Untested">Untested</option>
+                <option value="Passed">Passed</option>
+                <option value="Failed">Failed</option>
+                <option value="Blocked">Blocked</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="tcPreconditions">Preconditions & Environment Setup</label>
+            <textarea id="tcPreconditions" class="nexus-textarea" rows="2" placeholder="e.g. User account exists with verified email."></textarea>
+          </div>
+          <div class="form-group">
+            <div class="d-flex justify-between align-center mb-2">
+              <label class="m-0"><strong>Test Steps & Expected Results</strong></label>
+              <button type="button" class="btn btn-secondary btn-xs" id="addStepBtn"><i class="fa-solid fa-plus"></i> Add Step</button>
+            </div>
+            <div class="steps-builder-container" id="stepsBuilderList"></div>
+          </div>
+          <div class="form-group">
+            <label for="tcTags">Tags (Comma-separated)</label>
+            <input type="text" id="tcTags" class="nexus-input" placeholder="e.g. auth, security, smoke">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelTestCaseModalBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveTestCaseBtn"><i class="fa-solid fa-floppy-disk"></i> Save Test Case</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: VIEW DETAILS -->
+  <div class="modal-backdrop" id="testCaseDetailModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group"><span class="test-id-pill" id="viewDetailId">TC-101</span><h2 id="viewDetailTitle">Test Case Details</h2></div>
+        <button class="icon-btn close-modal-btn" id="closeDetailModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" id="viewDetailBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="editDetailTestCaseBtn"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+        <button type="button" class="btn btn-primary" id="runDetailTestCaseBtn"><i class="fa-solid fa-play"></i> Execute Test</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE DEFECT -->
+  <div class="modal-backdrop" id="defectModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group"><i class="fa-solid fa-bug text-rose modal-icon"></i><h2 id="defectModalTitle">Report New Defect</h2></div>
+        <button class="icon-btn close-modal-btn" id="closeDefectModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="defectForm">
+          <input type="hidden" id="editDefectId">
+          <div class="form-group">
+            <label for="bugSummary">Defect Summary <span class="text-rose">*</span></label>
+            <input type="text" id="bugSummary" class="nexus-input" placeholder="e.g. Checkout fails with 500 error" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="bugSeverity">Severity</label>
+              <select id="bugSeverity" class="nexus-select w-100">
+                <option value="Critical">Critical</option>
+                <option value="Major" selected>Major</option>
+                <option value="Medium">Medium</option>
+                <option value="Minor">Minor</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="bugPriority">Priority</label>
+              <select id="bugPriority" class="nexus-select w-100">
+                <option value="P0 - Urgent">P0 - Urgent</option>
+                <option value="P1 - High" selected>P1 - High</option>
+                <option value="P2 - Medium">P2 - Medium</option>
+                <option value="P3 - Low">P3 - Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="bugLinkedTest">Linked Test Case ID</label>
+              <input type="text" id="bugLinkedTest" class="nexus-input" placeholder="e.g. TC-104">
+            </div>
+            <div class="form-group flex-1">
+              <label for="bugAssignee">Assignee (Developer)</label>
+              <input type="text" id="bugAssignee" class="nexus-input" placeholder="e.g. Marcus Vance">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bugDescription">Steps to Reproduce</label>
+            <textarea id="bugDescription" class="nexus-textarea" rows="4" placeholder="1. Go to cart..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelDefectModalBtn">Cancel</button>
+        <button type="button" class="btn btn-danger" id="saveDefectBtn"><i class="fa-solid fa-bug"></i> Save & Broadcast Defect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SUITE -->
+  <div class="modal-backdrop" id="suiteModal" style="display: none;">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-header">
+        <div class="modal-title-group"><i class="fa-solid fa-folder-plus modal-icon"></i><h2>New Test Suite</h2></div>
+        <button class="icon-btn close-modal-btn" id="closeSuiteModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="suiteForm">
+          <div class="form-group">
+            <label for="newSuiteName">Suite / Module Name <span class="text-rose">*</span></label>
+            <input type="text" id="newSuiteName" class="nexus-input" placeholder="e.g. Payment Gateway" required>
+          </div>
+          <div class="form-group">
+            <label for="newSuiteDescription">Description</label>
+            <textarea id="newSuiteDescription" class="nexus-textarea" rows="3" placeholder="Scope and functional boundaries..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="newSuiteIcon">Icon</label>
+            <select id="newSuiteIcon" class="nexus-select w-100">
+              <option value="fa-solid fa-folder">Folder</option>
+              <option value="fa-solid fa-lock">Security / Auth</option>
+              <option value="fa-solid fa-credit-card">Payments</option>
+              <option value="fa-solid fa-code">API</option>
+              <option value="fa-solid fa-cart-shopping">Shopping Cart</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelSuiteModalBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveSuiteBtn">Save Suite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+  <input type="file" id="importJsonFileInput" accept=".json" style="display: none;">
+  <button id="exportCsvBtn" style="display: none;"></button>
+
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "name": "nexus-qa-platform",
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/tester", "destination": "/tester.html" },
+    { "source": "/qa", "destination": "/tester.html" },
+    { "source": "/dev", "destination": "/dev.html" },
+    { "source": "/developer", "destination": "/dev.html" },
+    { "source": "/login", "destination": "/index.html" },
+    { "source": "/", "destination": "/index.html" }
+  ]
+}

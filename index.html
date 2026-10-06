@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusQA - Unified QA & Developer Gateway</title>
+  <meta name="description" content="Unified single-link entrance for QA Testers and Developers. Features dedicated tester authentication with 6-digit email OTP verification and developer access approvals.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="dark-theme page-landing-auth">
+
+  <!-- Main Unified Gateway Container -->
+  <div class="landing-auth-wrapper">
+    <div class="auth-card landing-auth-card">
+      <div class="auth-header">
+        <div class="brand-logo justify-center">
+          <div class="logo-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div class="brand-text text-left">
+            <h2>Nexus<span>QA</span></h2>
+            <span class="badge badge-version">v2.5 Supabase Connected</span>
+          </div>
+        </div>
+        <p class="auth-subtitle mt-2" id="authGateSubtitle">Select your role to authenticate into your dedicated workspace</p>
+      </div>
+
+      <!-- Main Role Tabs (Tester vs Dev) -->
+      <div class="auth-nav-tabs" id="authNavTabs">
+        <button class="auth-tab-btn active" id="tabBtnTesterAuth" onclick="window.switchAuthTab('tester')">
+          <i class="fa-solid fa-vial"></i> QA Tester Portal
+        </button>
+        <button class="auth-tab-btn" id="tabBtnDevAuth" onclick="window.switchAuthTab('dev')">
+          <i class="fa-solid fa-code"></i> Developer Hub
+        </button>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- TESTER AUTHENTICATION CONTAINER -->
+      <!-- ========================================== -->
+      <div class="auth-section" id="testerAuthSection">
+        
+        <!-- Sub-Tabs: Sign In vs 1st-Time Sign Up -->
+        <div class="tester-sub-tabs mb-3" id="testerSubTabs">
+          <button class="tester-sub-tab active" id="subTabTesterLogin" onclick="window.switchTesterAuthView('login')">
+            <i class="fa-solid fa-right-to-bracket"></i> Tester Sign In
+          </button>
+          <button class="tester-sub-tab" id="subTabTesterSignup" onclick="window.switchTesterAuthView('signup')">
+            <i class="fa-solid fa-user-plus"></i> 1st-Time Sign Up & OTP
+          </button>
+        </div>
+
+        <!-- 1. TESTER SIGN IN VIEW -->
+        <div class="auth-view-step" id="testerLoginView">
+          <!-- Quick Persona Fast Login -->
+          <div class="persona-selection-grid mb-3">
+            <div class="persona-card card-qa" onclick="window.quickLoginPersona('user-qa-1')">
+              <div class="persona-badge badge-qa"><i class="fa-solid fa-bolt"></i> 1-Click QA Access</div>
+              <div class="persona-avatar-wrap">
+                <div class="avatar-ring avatar-qa">AM</div>
+                <div>
+                  <div class="persona-name">Alex Morgan</div>
+                  <div class="persona-role">Lead QA Automation</div>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-xs btn-block mt-2">
+                <span>Enter as Alex (Approved QA)</span> <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+            <div class="persona-card card-qa" onclick="window.quickLoginPersona('user-qa-2')">
+              <div class="persona-badge badge-qa"><i class="fa-solid fa-bolt"></i> 1-Click QA Access</div>
+              <div class="persona-avatar-wrap">
+                <div class="avatar-ring avatar-qa">SL</div>
+                <div>
+                  <div class="persona-name">Sarah Lin</div>
+                  <div class="persona-role">Senior Performance Tester</div>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-xs btn-block mt-2">
+                <span>Enter as Sarah (Approved QA)</span> <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-divider"><span>or sign in with tester credentials</span></div>
+
+          <form id="testerLoginForm" class="mt-3">
+            <div class="form-group">
+              <label><i class="fa-regular fa-envelope"></i> Tester Work Email</label>
+              <input type="email" id="testerLoginEmail" class="nexus-input" placeholder="e.g. alex.qa@nexusqa.io" required>
+            </div>
+            <div class="form-group">
+              <label><i class="fa-solid fa-lock"></i> Password</label>
+              <input type="password" id="testerLoginPassword" class="nexus-input" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i> Authenticate & Enter QA Workspace (tester.html)
+            </button>
+          </form>
+
+          <p class="text-center text-muted text-xs mt-3">
+            New tester? <a href="javascript:void(0)" onclick="window.switchTesterAuthView('signup')" class="text-primary font-bold">Create account & verify email OTP</a>
+          </p>
+        </div>
+
+        <!-- 2. TESTER 1ST TIME SIGN UP VIEW -->
+        <div class="auth-view-step" id="testerSignupView" style="display: none;">
+          <div class="auth-info-banner">
+            <i class="fa-solid fa-circle-info text-cyan"></i>
+            <span class="text-xs">First-time testers must verify their work email with a 6-digit OTP, followed by Developer Lead authorization.</span>
+          </div>
+
+          <form id="testerSignupForm" class="mt-3">
+            <div class="form-group">
+              <label><i class="fa-regular fa-user"></i> Full Name <span class="text-rose">*</span></label>
+              <input type="text" id="testerSignupName" class="nexus-input" placeholder="e.g. Jordan Hayes" required>
+            </div>
+            <div class="form-group">
+              <label><i class="fa-regular fa-envelope"></i> Work Email (for OTP verification) <span class="text-rose">*</span></label>
+              <input type="email" id="testerSignupEmail" class="nexus-input" placeholder="e.g. jordan.qa@company.com" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label><i class="fa-solid fa-lock"></i> Password <span class="text-rose">*</span></label>
+                <input type="password" id="testerSignupPassword" class="nexus-input" placeholder="••••••••" required>
+              </div>
+              <div class="form-group flex-1">
+                <label><i class="fa-solid fa-shield-virus"></i> Testing Specialty</label>
+                <select id="testerSignupRoleTitle" class="nexus-select w-100">
+                  <option value="QA Automation Engineer">QA Automation Engineer</option>
+                  <option value="Manual & Exploratory QA">Manual & Exploratory QA</option>
+                  <option value="Performance & API Tester">Performance & API Tester</option>
+                  <option value="Security & Compliance QA">Security & Compliance QA</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="btnTesterSendOtp">
+              <i class="fa-solid fa-paper-plane"></i> Register & Send 6-Digit Email OTP
+            </button>
+          </form>
+
+          <p class="text-center text-muted text-xs mt-3">
+            Already have an approved account? <a href="javascript:void(0)" onclick="window.switchTesterAuthView('login')" class="text-primary font-bold">Sign In here</a>
+          </p>
+        </div>
+
+        <!-- 3. TESTER OTP VERIFICATION SCREEN -->
+        <div class="auth-view-step" id="testerOtpView" style="display: none;">
+          <div class="otp-verification-card">
+            <div class="otp-icon-wrap">
+              <i class="fa-solid fa-envelope-circle-check"></i>
+            </div>
+            <h3 class="text-center mt-2 font-bold">Verify Your Email Address</h3>
+            <p class="text-center text-muted text-xs mt-1">
+              We sent a 6-digit one-time verification code to:<br>
+              <strong class="text-primary font-mono" id="otpRecipientEmailLabel">tester@company.com</strong>
+            </p>
+
+            <!-- 6 PIN Digit Input Blocks -->
+            <form id="testerOtpForm" class="mt-4">
+              <div class="otp-inputs-grid" id="otpInputsGrid">
+                <input type="text" class="otp-digit" maxlength="1" data-index="0" autofocus>
+                <input type="text" class="otp-digit" maxlength="1" data-index="1">
+                <input type="text" class="otp-digit" maxlength="1" data-index="2">
+                <input type="text" class="otp-digit" maxlength="1" data-index="3">
+                <input type="text" class="otp-digit" maxlength="1" data-index="4">
+                <input type="text" class="otp-digit" maxlength="1" data-index="5">
+              </div>
+
+              <div class="d-flex justify-between align-center mt-3 text-xs">
+                <span class="text-muted"><i class="fa-regular fa-clock"></i> Code expires in: <strong class="text-amber" id="otpTimerLabel">15:00</strong></span>
+                <button type="button" class="btn-link" id="btnResendOtp"><i class="fa-solid fa-rotate-right"></i> Resend Code</button>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block mt-4" id="btnVerifyOtpSubmit">
+                <i class="fa-solid fa-shield-check"></i> Verify OTP & Submit Request to Dev
+              </button>
+
+              <button type="button" class="btn btn-ghost btn-sm btn-block mt-2" onclick="window.switchTesterAuthView('signup')">
+                <i class="fa-solid fa-arrow-left"></i> Back to Registration
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 4. TESTER PENDING DEVELOPER APPROVAL SCREEN -->
+        <div class="auth-view-step" id="testerPendingApprovalView" style="display: none;">
+          <div class="pending-approval-box">
+            <div class="radar-pulse-container">
+              <div class="radar-circle circle-1"></div>
+              <div class="radar-circle circle-2"></div>
+              <div class="radar-circle circle-3"></div>
+              <div class="radar-icon">
+                <i class="fa-solid fa-user-clock text-amber"></i>
+              </div>
+            </div>
+
+            <h3 class="text-center mt-3 font-bold">Email Verified! Awaiting Developer Approval</h3>
+            <p class="text-center text-muted text-xs mt-2">
+              Your email <strong class="text-main" id="pendingUserEmailLabel">tester@company.com</strong> has been verified.
+            </p>
+
+            <div class="approval-status-card mt-3">
+              <div class="status-row">
+                <span class="status-badge-dot bg-emerald"></span>
+                <span>Email Verification: <strong>Completed (OTP Validated)</strong></span>
+              </div>
+              <div class="status-row mt-2">
+                <span class="status-badge-dot bg-amber pulse-anim"></span>
+                <span>Developer Authorization: <strong class="text-amber">Pending Approval</strong></span>
+              </div>
+              <div class="status-row mt-2">
+                <span class="status-badge-dot bg-cyan"></span>
+                <span>Assigned Approver: <strong>Marcus Vance (Dev Lead)</strong></span>
+              </div>
+            </div>
+
+            <div class="live-listener-banner mt-3">
+              <div class="sync-dot-pulse"></div>
+              <span class="text-xs">Listening in real time... When developer approves, this page will automatically enter tester.html!</span>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+              <button class="btn btn-secondary btn-sm flex-1" onclick="window.switchAuthTab('dev')">
+                <i class="fa-solid fa-laptop-code"></i> Switch to Developer Hub to Approve (Demo)
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="window.switchTesterAuthView('login')">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign In Another User
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================== -->
+      <!-- DEVELOPER AUTHENTICATION CONTAINER -->
+      <!-- ========================================== -->
+      <div class="auth-section" id="devAuthSection" style="display: none;">
+        <div class="persona-selection-grid mb-3">
+          <div class="persona-card card-dev" onclick="window.quickLoginPersona('user-dev-1')">
+            <div class="persona-badge badge-dev"><i class="fa-solid fa-code"></i> 1-Click Dev Lead Access</div>
+            <div class="persona-avatar-wrap">
+              <div class="avatar-ring avatar-dev">MV</div>
+              <div>
+                <div class="persona-name">Marcus Vance</div>
+                <div class="persona-role">Lead Full-Stack Developer & QA Approver</div>
+              </div>
+            </div>
+            <p class="persona-desc">Approve tester access requests, triage defects, inspect test failures, and deploy code patches.</p>
+            <button class="btn btn-success btn-sm btn-block mt-2">
+              <span>Enter as Marcus (Dev Lead)</span> <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="auth-divider"><span>or sign in with developer credentials</span></div>
+
+        <form id="devLoginForm" class="mt-3">
+          <div class="form-group">
+            <label><i class="fa-regular fa-envelope"></i> Developer Work Email</label>
+            <input type="email" id="devLoginEmail" class="nexus-input" placeholder="e.g. marcus.dev@nexusqa.io" value="marcus.dev@nexusqa.io" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-lock"></i> Password</label>
+            <input type="password" id="devLoginPassword" class="nexus-input" placeholder="••••••••" value="password" required>
+          </div>
+          <button type="submit" class="btn btn-success btn-block">
+            <i class="fa-solid fa-code"></i> Authenticate & Enter Developer Hub (dev.html)
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- SIMULATED EMAIL INBOX NOTIFICATION POPOVER -->
+  <!-- ============================================== -->
+  <div class="simulated-email-toast" id="simulatedEmailToast" style="display: none;">
+    <div class="email-toast-header">
+      <div class="d-flex align-center gap-2">
+        <span class="email-toast-icon"><i class="fa-solid fa-envelope"></i></span>
+        <div>
+          <span class="email-toast-title">Simulated Mail Server (Inbox)</span>
+          <span class="email-toast-subtitle">Received 1 new security email</span>
+        </div>
+      </div>
+      <button class="icon-btn-xs" onclick="window.dismissSimulatedEmail()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="email-toast-body">
+      <div class="email-meta-line">
+        <strong>From:</strong> <span>NexusQA Security &lt;auth@nexusqa.io&gt;</span>
+      </div>
+      <div class="email-meta-line">
+        <strong>To:</strong> <span id="simulatedEmailToLabel">tester@company.com</span>
+      </div>
+      <div class="email-subject-line">
+        <strong>Subject:</strong> <span>Your NexusQA Email Verification Code</span>
+      </div>
+      <div class="email-body-content">
+        <p>Use the following 6-digit one-time passcode (OTP) to complete your NexusQA Tester registration:</p>
+        <div class="email-otp-display">
+          <span class="otp-code-highlight font-mono" id="simulatedEmailOtpCode">------</span>
+          <button class="btn btn-primary btn-xs" id="btnAutoFillOtp">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fill OTP
+          </button>
+        </div>
+        <p class="email-footer-note">This code will expire in 15 minutes. Once verified, your access request will be sent to Developer Marcus Vance for workspace approval.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

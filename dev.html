@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusQA - Developer Command Center</title>
+  <meta name="description" content="Dedicated Developer Hub for bug triage, tester access authorizations, failed test diagnostics, and code patch management connected with Supabase.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="dark-theme page-dev">
+
+  <!-- ============================================== -->
+  <!-- MAIN DEVELOPER WORKSPACE LAYOUT -->
+  <!-- ============================================== -->
+  <div id="app" class="app-layout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <div class="logo-icon">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div class="brand-text">
+            <h2>Nexus<span>QA</span></h2>
+            <span class="badge badge-version badge-dev">Developer Hub</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="project-selector-wrapper">
+        <label class="section-label">Active Project</label>
+        <div class="project-selector" id="projectSelectorDropdown">
+          <div class="project-info">
+            <span class="project-avatar"><i class="fa-solid fa-layer-group"></i></span>
+            <div class="project-meta">
+              <span class="project-title" id="currentProjectTitle">OmniStore eCommerce</span>
+              <span class="project-subtitle">Release v3.8.0-rc2</span>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+        </div>
+      </div>
+
+      <!-- Real-Time Sync Pulse Indicator -->
+      <div class="sync-status-strip" id="syncStatusStrip">
+        <span class="sync-dot" id="syncDotIndicator" style="background: var(--emerald);"></span>
+        <span class="sync-text" id="syncTextLabel">Live Dev Sync Active</span>
+      </div>
+
+      <!-- Dynamic Sidebar Nav -->
+      <nav class="sidebar-nav">
+        <div id="devNavSection">
+          <div class="nav-section-title">DEVELOPER HUB</div>
+          <ul class="nav-list">
+            <li class="nav-item active" data-view="dev-dashboard">
+              <a href="javascript:void(0)" class="nav-link">
+                <i class="fa-solid fa-laptop-code"></i>
+                <span>Dev Defect Dashboard</span>
+              </a>
+            </li>
+            <li class="nav-item" data-view="dev-approvals">
+              <a href="javascript:void(0)" class="nav-link">
+                <i class="fa-solid fa-user-shield text-amber"></i>
+                <span>Tester Approvals</span>
+                <span class="nav-badge badge-danger" id="devPendingApprovalsBadge">0</span>
+              </a>
+            </li>
+            <li class="nav-item" data-view="dev-kanban">
+              <a href="javascript:void(0)" class="nav-link">
+                <i class="fa-solid fa-table-columns"></i>
+                <span>Bug Triage Kanban</span>
+                <span class="nav-badge badge-danger" id="devAssignedBadge">2</span>
+              </a>
+            </li>
+            <li class="nav-item" data-view="dev-failures">
+              <a href="javascript:void(0)" class="nav-link">
+                <i class="fa-solid fa-bug-slash"></i>
+                <span>Failed Test Diagnostics</span>
+                <span class="nav-badge badge-blocked" id="devFailedTestsBadge">2</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="nav-section-title">PLATFORM</div>
+        <ul class="nav-list">
+          <li class="nav-item" data-view="settings">
+            <a href="javascript:void(0)" class="nav-link">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Settings & Supabase</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Sidebar User Footer -->
+      <div class="sidebar-footer">
+        <div class="user-profile-wrapper" id="userProfileToggle">
+          <div class="user-profile">
+            <div class="avatar-ring avatar-dev" id="userAvatarRing">
+              <span class="avatar-initials" id="userAvatarInitials">MV</span>
+            </div>
+            <div class="user-details">
+              <span class="user-name" id="userNameLabel">Marcus Vance</span>
+              <span class="user-role" id="userRoleLabel"><i class="fa-solid fa-circle status-dot-online"></i> Dev Lead</span>
+            </div>
+          </div>
+          <button class="icon-btn-xs" id="switchUserQuickBtn" title="Sign Out & Return to Login"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Container -->
+    <main class="main-content" id="mainContent">
+      
+      <!-- Top Workspace Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-btn mobile-menu-toggle" id="menuToggleBtn" title="Toggle Navigation">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="breadcrumb" id="breadcrumb">
+            <span class="crumb-root" id="portalCrumbRoot">NexusQA Developer</span>
+            <i class="fa-solid fa-chevron-right crumb-sep"></i>
+            <span class="crumb-current" id="currentCrumb">Dev Defect Dashboard</span>
+          </div>
+        </div>
+
+        <div class="topbar-center">
+          <div class="global-search-bar">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="globalSearchInput" placeholder="Search bugs, test cases, branches, PRs (Press '/' to focus)...">
+            <kbd class="search-shortcut">/</kbd>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <button class="btn btn-primary btn-sm" id="createQuickBtn">
+            <i class="fa-solid fa-plus"></i>
+            <span id="createQuickBtnLabel">New Bug Ticket</span>
+          </button>
+
+          <div class="theme-toggle-wrapper">
+            <button class="icon-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+              <i class="fa-solid fa-moon"></i>
+            </button>
+          </div>
+
+          <button class="icon-btn" id="logoutBtn" title="Sign Out & Return to Login">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- View Containers -->
+      <div class="view-viewport" id="viewViewport">
+        
+        <!-- DEVELOPER VIEW 1: DEV DASHBOARD -->
+        <section class="view-panel active-view" id="view-dev-dashboard">
+          <div class="view-header">
+            <div>
+              <div class="dev-header-badge"><i class="fa-solid fa-code"></i> Developer Portal</div>
+              <h1 class="view-title">Engineering Defect & Triage Command Center</h1>
+              <p class="view-subtitle">Live sync with QA testers & Supabase: diagnose test failures, inspect reproduction steps, and submit code fixes.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-secondary btn-sm" id="refreshDevMetricsBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Feed</button>
+            </div>
+          </div>
+
+          <!-- Pending Tester Approvals Alert Banner for Devs -->
+          <div class="dev-approval-alert-banner" id="devApprovalAlertBanner" style="display: none;">
+            <div class="d-flex align-center gap-2">
+              <i class="fa-solid fa-user-shield text-amber"></i>
+              <span><strong id="devApprovalAlertCount">1 Tester</strong> has verified their email via OTP and is <strong>waiting for Developer Approval</strong> to enter QA!</span>
+            </div>
+            <button class="btn btn-secondary btn-xs" id="btnGoToApprovals"><i class="fa-solid fa-user-check"></i> Review & Approve Now</button>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card card-glow-rose">
+              <div class="kpi-header">
+                <span class="kpi-title">Critical Blockers (P0)</span>
+                <span class="kpi-icon-badge icon-rose"><i class="fa-solid fa-fire"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-rose" id="devKpiCritical">0</span>
+                <span class="kpi-trend trend-down">Requires Immediate Fix</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-amber">
+              <div class="kpi-header">
+                <span class="kpi-title">Assigned to My Team</span>
+                <span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-user-check"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-amber" id="devKpiAssigned">0</span>
+                <span class="kpi-trend trend-neutral" id="devKpiAssignedSub">In Progress</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-indigo">
+              <div class="kpi-header">
+                <span class="kpi-title">Ready for QA Re-Test</span>
+                <span class="kpi-icon-badge icon-indigo"><i class="fa-solid fa-clipboard-check"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-primary" id="devKpiReadyRetest">0</span>
+                <span class="kpi-trend trend-up">Awaiting QA Signoff</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-emerald">
+              <div class="kpi-header">
+                <span class="kpi-title">Resolved & Verified</span>
+                <span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-circle-check"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-emerald" id="devKpiVerified">0</span>
+                <span class="kpi-trend trend-up"><i class="fa-solid fa-check"></i> Clean Build</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid-2col mt-4">
+            <div class="dashboard-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h3><i class="fa-solid fa-bug text-rose"></i> Active Defects Awaiting Code Fix</h3>
+                  <p class="card-subtitle">Reported directly by QA testers during test runs</p>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="gotoDevKanbanBtn">View Kanban <i class="fa-solid fa-arrow-right"></i></button>
+              </div>
+              <div class="card-body p-0">
+                <div class="dev-defect-feed" id="devActiveDefectsList"></div>
+              </div>
+            </div>
+
+            <div class="dashboard-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h3><i class="fa-solid fa-code-pull-request text-emerald"></i> Recent PR Fixes & Branches</h3>
+                  <p class="card-subtitle">Bug patches deployed for verification</p>
+                </div>
+              </div>
+              <div class="card-body p-0">
+                <div class="dev-pr-feed" id="devRecentPrFeed"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- DEVELOPER VIEW: TESTER APPROVALS -->
+        <section class="view-panel" id="view-dev-approvals">
+          <div class="view-header">
+            <div>
+              <div class="dev-header-badge"><i class="fa-solid fa-user-shield"></i> Access Control</div>
+              <h1 class="view-title">QA Tester Access Authorization & Approvals</h1>
+              <p class="view-subtitle">Review new tester accounts after email OTP verification. Authorize or reject workspace access in real time.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-secondary btn-sm" id="refreshApprovalsBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Requests</button>
+            </div>
+          </div>
+
+          <!-- Approvals KPI summary -->
+          <div class="kpi-grid mb-4">
+            <div class="kpi-card card-glow-amber">
+              <div class="kpi-header">
+                <span class="kpi-title">Pending Approvals</span>
+                <span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-clock-rotate-left"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-amber" id="kpiPendingApprovalsCount">0</span>
+                <span class="kpi-trend trend-neutral">Awaiting Dev Signoff</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-emerald">
+              <div class="kpi-header">
+                <span class="kpi-title">Active QA Testers</span>
+                <span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-user-check"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-emerald" id="kpiActiveTestersCount">2</span>
+                <span class="kpi-trend trend-up">Authorized Access</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-cyan">
+              <div class="kpi-header">
+                <span class="kpi-title">Email OTP Verified</span>
+                <span class="kpi-icon-badge icon-cyan"><i class="fa-solid fa-envelope-circle-check"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-cyan" id="kpiOtpVerifiedCount">100%</span>
+                <span class="kpi-trend trend-up">Security Guaranteed</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Requests Container -->
+          <div class="dashboard-card mb-4">
+            <div class="card-header">
+              <div class="card-title-group">
+                <h3><i class="fa-solid fa-user-clock text-amber"></i> Pending Tester Authorization Requests</h3>
+                <p class="card-subtitle">Testers who completed email OTP verification and require Developer Lead authorization</p>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div id="pendingApprovalsListContainer"></div>
+            </div>
+          </div>
+
+          <!-- Authorized Team Roster -->
+          <div class="dashboard-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <h3><i class="fa-solid fa-users text-primary"></i> QA Team Roster & Authorization History</h3>
+                <p class="card-subtitle">All registered testers and their current access status</p>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="nexus-table">
+                  <thead>
+                    <tr>
+                      <th>Tester</th>
+                      <th>Email</th>
+                      <th>Specialty</th>
+                      <th>OTP Status</th>
+                      <th>Workspace Access</th>
+                      <th>Approved By</th>
+                    </tr>
+                  </thead>
+                  <tbody id="authorizedTestersTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- DEVELOPER VIEW 2: KANBAN -->
+        <section class="view-panel" id="view-dev-kanban">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Defect Resolution Kanban Board</h1>
+              <p class="view-subtitle">Manage defect triage workflow between Development and QA teams in real-time.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-secondary btn-sm" id="filterMyBugsBtn"><i class="fa-solid fa-filter"></i> Show My Assigned Only</button>
+            </div>
+          </div>
+
+          <div class="kanban-board">
+            <div class="kanban-column" data-status="Open">
+              <div class="kanban-column-header col-open">
+                <span><i class="fa-solid fa-circle-exclamation"></i> Open / New Bugs</span>
+                <span class="badge badge-danger" id="kanbanOpenCount">0</span>
+              </div>
+              <div class="kanban-cards-container" id="kanbanColOpen"></div>
+            </div>
+
+            <div class="kanban-column" data-status="In Progress">
+              <div class="kanban-column-header col-progress">
+                <span><i class="fa-solid fa-code"></i> In Development / Investigating</span>
+                <span class="badge badge-blocked" id="kanbanProgressCount">0</span>
+              </div>
+              <div class="kanban-cards-container" id="kanbanColProgress"></div>
+            </div>
+
+            <div class="kanban-column" data-status="Fixed - Ready for QA">
+              <div class="kanban-column-header col-retest">
+                <span><i class="fa-solid fa-flask"></i> Fixed - Ready for QA</span>
+                <span class="badge badge-indigo" id="kanbanRetestCount">0</span>
+              </div>
+              <div class="kanban-cards-container" id="kanbanColRetest"></div>
+            </div>
+
+            <div class="kanban-column" data-status="Resolved & Verified">
+              <div class="kanban-column-header col-verified">
+                <span><i class="fa-solid fa-circle-check"></i> Verified & Closed by QA</span>
+                <span class="badge badge-passed" id="kanbanVerifiedCount">0</span>
+              </div>
+              <div class="kanban-cards-container" id="kanbanColVerified"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- DEVELOPER VIEW 3: DIAGNOSTICS -->
+        <section class="view-panel" id="view-dev-failures">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Failed Test Diagnostics & Repro Engine</h1>
+              <p class="view-subtitle">Inspect exact test step failures, expected vs actual values, and execution notes recorded by QA.</p>
+            </div>
+          </div>
+          <div class="dev-failures-container" id="devFailuresContainer"></div>
+        </section>
+
+        <!-- VIEW: SETTINGS & SUPABASE -->
+        <section class="view-panel" id="view-settings">
+          <div class="view-header">
+            <div>
+              <h1 class="view-title">Settings, Supabase & Sync Configuration</h1>
+              <p class="view-subtitle">Configure Supabase PostgreSQL database connection, real-time sync channel, and backups.</p>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <div class="settings-card">
+              <div class="d-flex justify-between align-center mb-2">
+                <h3><i class="fa-solid fa-database text-emerald"></i> Supabase Cloud Database</h3>
+                <span class="badge badge-untested" id="supabaseConnectionBadge"><i class="fa-solid fa-circle" style="font-size:6px;"></i> Local Mode</span>
+              </div>
+              <p class="text-muted text-sm mb-3">Connect your free Supabase project to sync all test cases, runs, and bugs across multiple devices & portals in real-time.</p>
+              
+              <form id="supabaseConfigForm">
+                <div class="form-group">
+                  <label for="supabaseUrlInput">Supabase Project URL</label>
+                  <input type="url" id="supabaseUrlInput" class="nexus-input" placeholder="https://xyzcompany.supabase.co">
+                </div>
+
+                <div class="form-group">
+                  <label for="supabaseKeyInput">Supabase anon public API Key</label>
+                  <input type="password" id="supabaseKeyInput" class="nexus-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                </div>
+
+                <div class="d-flex gap-2 mt-3">
+                  <button type="button" class="btn btn-primary btn-sm flex-1" id="saveSupabaseConfigBtn">
+                    <i class="fa-solid fa-plug"></i> Connect & Sync
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="pushDataToSupabaseBtn" title="Push Demo Data to Supabase">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Upload Data
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" id="copySqlSchemaBtn" title="Copy SQL Schema Script">
+                    <i class="fa-solid fa-copy"></i> SQL Schema
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div class="settings-card">
+              <h3><i class="fa-solid fa-arrows-rotate text-cyan"></i> Real-time Sync & Ping</h3>
+              <p class="text-muted text-sm mb-3">BroadcastChannel & Supabase Realtime synchronization engine.</p>
+              
+              <div class="settings-action-row">
+                <div>
+                  <strong>Broadcast Ping Test</strong>
+                  <p class="text-muted text-xs">Sends a test heartbeat packet across all tabs</p>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="broadcastPingBtn">
+                  <i class="fa-solid fa-satellite-dish"></i> Ping Portals
+                </button>
+              </div>
+
+              <div class="settings-action-row mt-3">
+                <div>
+                  <strong>Workspace Snapshot Export</strong>
+                  <p class="text-muted text-xs">Download complete workspace JSON</p>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="exportFullBackupBtn">
+                  <i class="fa-solid fa-download"></i> Export JSON
+                </button>
+              </div>
+
+              <div class="settings-action-row mt-3">
+                <div>
+                  <strong>Reset Seed Data</strong>
+                  <p class="text-muted text-xs">Reload default demo test suites & runs</p>
+                </div>
+                <button class="btn btn-danger btn-sm" id="resetSeedDataBtn">
+                  <i class="fa-solid fa-trash-can-arrow-up"></i> Reset Demo Data
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODALS -->
+  <!-- ============================================== -->
+
+  <!-- MODAL: DEVELOPER FIX BUG -->
+  <div class="modal-backdrop" id="devFixModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group"><i class="fa-solid fa-code-pull-request text-emerald modal-icon"></i><h2>Deploy Code Fix & Retest: <span id="devFixModalBugId">BUG-401</span></h2></div>
+        <button class="icon-btn close-modal-btn" id="closeDevFixModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="devFixForm">
+          <input type="hidden" id="devFixBugId">
+          <div class="defect-summary-box mb-3">
+            <h4 id="devFixBugSummary">Summary</h4>
+            <p id="devFixBugDescription" class="text-muted text-xs mt-1"></p>
+            <div class="d-flex gap-2 mt-2">
+              <span class="badge badge-danger" id="devFixBugSeverity">Critical</span>
+              <span class="badge badge-untested" id="devFixBugLinkedTest">Linked: TC-104</span>
+              <span class="badge badge-untested" id="devFixBugReporter">Reported by Alex</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="devFixBranchInput">Git Working Branch <span class="text-rose">*</span></label>
+            <input type="text" id="devFixBranchInput" class="nexus-input font-mono" placeholder="e.g. fix/stripe-webhook-500" required>
+          </div>
+
+          <div class="form-group">
+            <label for="devFixPrInput">GitHub / GitLab PR Link</label>
+            <input type="url" id="devFixPrInput" class="nexus-input" placeholder="https://github.com/company/repo/pull/124">
+          </div>
+
+          <div class="form-group">
+            <label for="devFixNotesInput">Developer Root Cause Analysis & Fix Notes</label>
+            <textarea id="devFixNotesInput" class="nexus-textarea" rows="3" placeholder="Explain the root cause and why this patch fixes the test failure..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="devFixStatusSelect">Update Lifecycle Status</label>
+              <select id="devFixStatusSelect" class="nexus-select w-100">
+                <option value="Fixed - Ready for QA" selected>Fixed - Ready for QA Re-Test</option>
+                <option value="In Progress">In Progress (Investigating)</option>
+                <option value="Open">Open (Deferred)</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="devFixAssigneeSelect">Assignee</label>
+              <input type="text" id="devFixAssigneeSelect" class="nexus-input" value="Marcus Vance">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelDevFixModalBtn">Cancel</button>
+        <button type="button" class="btn btn-success" id="saveDevFixBtn"><i class="fa-solid fa-code-commit"></i> Save Fix & Notify QA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE DEFECT -->
+  <div class="modal-backdrop" id="defectModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group"><i class="fa-solid fa-bug text-rose modal-icon"></i><h2 id="defectModalTitle">Report New Defect</h2></div>
+        <button class="icon-btn close-modal-btn" id="closeDefectModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="defectForm">
+          <input type="hidden" id="editDefectId">
+          <div class="form-group">
+            <label for="bugSummary">Defect Summary <span class="text-rose">*</span></label>
+            <input type="text" id="bugSummary" class="nexus-input" placeholder="e.g. Checkout fails with 500 error" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="bugSeverity">Severity</label>
+              <select id="bugSeverity" class="nexus-select w-100">
+                <option value="Critical">Critical</option>
+                <option value="Major" selected>Major</option>
+                <option value="Medium">Medium</option>
+                <option value="Minor">Minor</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="bugPriority">Priority</label>
+              <select id="bugPriority" class="nexus-select w-100">
+                <option value="P0 - Urgent">P0 - Urgent</option>
+                <option value="P1 - High" selected>P1 - High</option>
+                <option value="P2 - Medium">P2 - Medium</option>
+                <option value="P3 - Low">P3 - Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="bugLinkedTest">Linked Test Case ID</label>
+              <input type="text" id="bugLinkedTest" class="nexus-input" placeholder="e.g. TC-104">
+            </div>
+            <div class="form-group flex-1">
+              <label for="bugAssignee">Assignee (Developer)</label>
+              <input type="text" id="bugAssignee" class="nexus-input" placeholder="e.g. Marcus Vance">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="bugDescription">Steps to Reproduce</label>
+            <textarea id="bugDescription" class="nexus-textarea" rows="4" placeholder="1. Go to cart..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelDefectModalBtn">Cancel</button>
+        <button type="button" class="btn btn-danger" id="saveDefectBtn"><i class="fa-solid fa-bug"></i> Save & Broadcast Defect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: VIEW DETAILS -->
+  <div class="modal-backdrop" id="testCaseDetailModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group"><span class="test-id-pill" id="viewDetailId">TC-101</span><h2 id="viewDetailTitle">Test Case Details</h2></div>
+        <button class="icon-btn close-modal-btn" id="closeDetailModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" id="viewDetailBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="editDetailTestCaseBtn"><i class="fa-solid fa-pen-to-square"></i> Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+  <input type="file" id="importJsonFileInput" accept=".json" style="display: none;">
+  <button id="exportCsvBtn" style="display: none;"></button>
+
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
