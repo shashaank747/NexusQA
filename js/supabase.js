@@ -422,6 +422,9 @@ const SupabaseManager = {
   async syncTestRunUpsert(testRun) {
     if (this.client && this.isConnected) {
       try {
+        await this.client.from("nexus_test_runs").upsert(this.mapTestRunToDB(testRun));
+      } catch(e) { console.warn("Supabase test run upsert error:", e); }
+    }
   }
 };
 

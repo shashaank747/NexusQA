@@ -5749,9 +5749,18 @@ body.light-theme .sidebar-secondary-panel {
   overflow: hidden;
 }
 
+body.light-theme.page-tester,
+body.light-theme.page-dev,
+body.light-theme {
+  background-color: var(--bg-app) !important;
+  background-image: none !important;
+  color: var(--text-main) !important;
+}
+
 /* App Layout & Glassmorphism Sidebar */
 .app-layout {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
