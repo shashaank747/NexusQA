@@ -3583,6 +3583,157 @@ body.light-theme .sidebar-secondary-panel {
 }
 
 /* ==========================================================================
+   User Profile & Identity Card View
+   ========================================================================== */
+.profile-settings-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 0.95fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .profile-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profile-card-main,
+.profile-preview-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon .input-icon {
+  position: absolute;
+  left: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.input-with-icon .nexus-input,
+.input-with-icon .nexus-select {
+  padding-left: 2.35rem !important;
+}
+
+.profile-id-card-display {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+  transition: all var(--transition-fast);
+}
+
+.profile-id-card-display:hover {
+  border-color: var(--primary);
+  box-shadow: 0 12px 30px -5px rgba(99, 102, 241, 0.2);
+}
+
+.id-card-banner {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(6, 182, 212, 0.15));
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.id-card-company {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-heading);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.id-card-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.id-card-avatar-wrap {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.id-card-avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 800;
+  border: 3px solid var(--bg-card);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+.id-card-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 0.35rem;
+}
+
+.id-card-designation-wrap {
+  margin-bottom: 1.25rem;
+}
+
+.id-card-details-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  text-align: left;
+}
+
+.id-card-detail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.id-card-detail-item .detail-label {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.id-card-detail-item .detail-val {
+  color: var(--text-heading);
+  font-weight: 600;
+}
+
+/* ==========================================================================
    Modals & Form Components
    ========================================================================== */
 .modal-backdrop {

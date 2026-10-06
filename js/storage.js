@@ -172,6 +172,19 @@ const StorageManager = {
       }
     });
 
+    // Ensure users have phone property if missing
+    let phoneUpdated = false;
+    users.forEach(u => {
+      if (!u.phone) {
+        const seed = SEED_USERS.find(s => s.id === u.id);
+        u.phone = (seed && seed.phone) ? seed.phone : "9876543210";
+        phoneUpdated = true;
+      }
+    });
+    if (phoneUpdated) {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    }
+
     return users;
   },
 
@@ -211,6 +224,12 @@ const StorageManager = {
     }
 
     this.saveUsers(users);
+
+    const cur = this.getCurrentUser();
+    if (cur && cur.id === userId) {
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(users[index]));
+    }
+
     this.broadcast("USER_UPDATED", { user: users[index] });
     return users[index];
   },

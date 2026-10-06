@@ -383,7 +383,38 @@ document.addEventListener("DOMContentLoaded", () => {
     exportCsvBtn: document.getElementById("exportCsvBtn"),
     resetSeedDataBtn: document.getElementById("resetSeedDataBtn"),
 
-    toastContainer: document.getElementById("toastContainer")
+    toastContainer: document.getElementById("toastContainer"),
+
+    // User Profile & Account Settings
+    profileFormAvatarPreview: document.getElementById("profileFormAvatarPreview"),
+    profileFormAvatarInitials: document.getElementById("profileFormAvatarInitials"),
+    profileFormHeaderName: document.getElementById("profileFormHeaderName"),
+    profileRoleBadgeHeader: document.getElementById("profileRoleBadgeHeader"),
+    profileLargeAvatar: document.getElementById("profileLargeAvatar"),
+    profileLargeInitials: document.getElementById("profileLargeInitials"),
+    profileLargeImg: document.getElementById("profileLargeImg"),
+    profilePhotoInput: document.getElementById("profilePhotoInput"),
+    profileRemovePhotoBtn: document.getElementById("profileRemovePhotoBtn"),
+    userProfileForm: document.getElementById("userProfileForm"),
+    profileNameInput: document.getElementById("profileNameInput"),
+    profileEmailInput: document.getElementById("profileEmailInput"),
+    profilePhoneInput: document.getElementById("profilePhoneInput"),
+    profilePhoneError: document.getElementById("profilePhoneError"),
+    profilePhoneValid: document.getElementById("profilePhoneValid"),
+    profilePhoneHint: document.getElementById("profilePhoneHint"),
+    profileDesignationSelect: document.getElementById("profileDesignationSelect"),
+    saveProfileBtn: document.getElementById("saveProfileBtn"),
+    resetProfileFormBtn: document.getElementById("resetProfileFormBtn"),
+    previewAccessBadge: document.getElementById("previewAccessBadge"),
+    previewCardAvatar: document.getElementById("previewCardAvatar"),
+    previewCardInitials: document.getElementById("previewCardInitials"),
+    previewCardImg: document.getElementById("previewCardImg"),
+    previewCardName: document.getElementById("previewCardName"),
+    previewCardDesignationBadge: document.getElementById("previewCardDesignationBadge"),
+    previewCardEmail: document.getElementById("previewCardEmail"),
+    previewCardPhone: document.getElementById("previewCardPhone"),
+    previewCardUserId: document.getElementById("previewCardUserId"),
+    userProfileToggle: document.getElementById("userProfileToggle")
   };
 
   // Safe Event Listener Helper
@@ -476,6 +507,268 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     navigator.clipboard.writeText(sqlSchema).then(() => {
       showToast("Copied Supabase SQL Schema to clipboard! Paste in Supabase SQL Editor.");
     });
+  });
+
+  // =========================================================================
+  // USER PROFILE & ACCOUNT MANAGEMENT
+  // =========================================================================
+  state.tempProfilePhoto = "";
+
+  function renderProfilePhotoPreview(photoUrl) {
+    if (photoUrl) {
+      if (DOM.profileLargeImg) {
+        DOM.profileLargeImg.src = photoUrl;
+        DOM.profileLargeImg.style.display = "block";
+      }
+      if (DOM.profileLargeInitials) DOM.profileLargeInitials.style.display = "none";
+      if (DOM.previewCardImg) {
+        DOM.previewCardImg.src = photoUrl;
+        DOM.previewCardImg.style.display = "block";
+      }
+      if (DOM.previewCardInitials) DOM.previewCardInitials.style.display = "none";
+      if (DOM.profileFormAvatarPreview) {
+        DOM.profileFormAvatarPreview.style.backgroundImage = `url("${photoUrl}")`;
+      }
+      if (DOM.profileFormAvatarInitials) DOM.profileFormAvatarInitials.style.display = "none";
+      if (DOM.profileRemovePhotoBtn) DOM.profileRemovePhotoBtn.style.display = "inline-flex";
+    } else {
+      if (DOM.profileLargeImg) DOM.profileLargeImg.style.display = "none";
+      if (DOM.profileLargeInitials) DOM.profileLargeInitials.style.display = "inline";
+      if (DOM.previewCardImg) DOM.previewCardImg.style.display = "none";
+      if (DOM.previewCardInitials) DOM.previewCardInitials.style.display = "inline";
+      if (DOM.profileFormAvatarPreview) {
+        DOM.profileFormAvatarPreview.style.backgroundImage = "";
+      }
+      if (DOM.profileFormAvatarInitials) DOM.profileFormAvatarInitials.style.display = "inline";
+      if (DOM.profileRemovePhotoBtn) DOM.profileRemovePhotoBtn.style.display = "none";
+    }
+  }
+
+  function validateProfilePhone() {
+    if (!DOM.profilePhoneInput) return false;
+    const val = DOM.profilePhoneInput.value.trim();
+    if (val.length === 0) {
+      if (DOM.profilePhoneError) DOM.profilePhoneError.style.display = "none";
+      if (DOM.profilePhoneValid) DOM.profilePhoneValid.style.display = "none";
+      if (DOM.profilePhoneHint) DOM.profilePhoneHint.style.display = "inline";
+      DOM.profilePhoneInput.style.borderColor = "var(--border-color)";
+      return false;
+    }
+    if (/^\d{10}$/.test(val)) {
+      if (DOM.profilePhoneError) DOM.profilePhoneError.style.display = "none";
+      if (DOM.profilePhoneValid) DOM.profilePhoneValid.style.display = "inline";
+      if (DOM.profilePhoneHint) DOM.profilePhoneHint.style.display = "none";
+      DOM.profilePhoneInput.style.borderColor = "var(--emerald)";
+      return true;
+    } else {
+      if (DOM.profilePhoneError) DOM.profilePhoneError.style.display = "inline";
+      if (DOM.profilePhoneValid) DOM.profilePhoneValid.style.display = "none";
+      if (DOM.profilePhoneHint) DOM.profilePhoneHint.style.display = "none";
+      DOM.profilePhoneInput.style.borderColor = "var(--rose)";
+      return false;
+    }
+  }
+
+  function updateProfilePreviewBadge() {
+    const name = DOM.profileNameInput ? DOM.profileNameInput.value.trim() || "User Name" : "User Name";
+    const email = DOM.profileEmailInput ? DOM.profileEmailInput.value.trim() || "user@nexusqa.io" : "user@nexusqa.io";
+    const phone = DOM.profilePhoneInput ? DOM.profilePhoneInput.value.trim() || "9876543210" : "9876543210";
+    const designation = DOM.profileDesignationSelect ? DOM.profileDesignationSelect.value : "Senior Developer";
+    const user = state.currentUser || {};
+
+    if (DOM.profileFormHeaderName) DOM.profileFormHeaderName.textContent = name;
+    if (DOM.previewCardName) DOM.previewCardName.textContent = name;
+    if (DOM.previewCardEmail) DOM.previewCardEmail.textContent = email;
+    if (DOM.previewCardPhone) DOM.previewCardPhone.textContent = phone;
+    if (DOM.previewCardUserId) DOM.previewCardUserId.textContent = user.id || "user-current";
+
+    // Designation badge styling
+    if (DOM.previewCardDesignationBadge) {
+      DOM.previewCardDesignationBadge.textContent = designation;
+      if (designation === "Senior Developer") {
+        DOM.previewCardDesignationBadge.className = "badge badge-passed";
+      } else if (designation === "Junior Developer") {
+        DOM.previewCardDesignationBadge.className = "badge badge-ai";
+      } else if (designation === "Senior Tester") {
+        DOM.previewCardDesignationBadge.className = "badge badge-version";
+      } else {
+        DOM.previewCardDesignationBadge.className = "badge badge-untested";
+      }
+    }
+
+    // Initials
+    const parts = name.trim().split(/\s+/);
+    const initials = parts.length > 1 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
+    if (DOM.profileLargeInitials) DOM.profileLargeInitials.textContent = initials;
+    if (DOM.profileFormAvatarInitials) DOM.profileFormAvatarInitials.textContent = initials;
+    if (DOM.previewCardInitials) DOM.previewCardInitials.textContent = initials;
+  }
+
+  function populateProfileForm() {
+    const user = state.currentUser;
+    if (!user) return;
+
+    state.tempProfilePhoto = user.photo || "";
+
+    if (DOM.profileNameInput) DOM.profileNameInput.value = user.name || "";
+    if (DOM.profileEmailInput) DOM.profileEmailInput.value = user.email || "";
+    if (DOM.profilePhoneInput) DOM.profilePhoneInput.value = user.phone || "9876543210";
+
+    if (DOM.profileDesignationSelect) {
+      const desig = user.roleTitle || "";
+      if (["Senior Developer", "Junior Developer", "Senior Tester", "Junior Tester"].includes(desig)) {
+        DOM.profileDesignationSelect.value = desig;
+      } else {
+        const isDev = user.role === "dev";
+        const isSenior = isDev 
+          ? StorageManager.isSeniorDev(user) 
+          : (desig.toLowerCase().includes("lead") || desig.toLowerCase().includes("senior"));
+        if (isDev) {
+          DOM.profileDesignationSelect.value = isSenior ? "Senior Developer" : "Junior Developer";
+        } else {
+          DOM.profileDesignationSelect.value = isSenior ? "Senior Tester" : "Junior Tester";
+        }
+      }
+    }
+
+    renderProfilePhotoPreview(user.photo || "");
+    updateProfilePreviewBadge();
+    validateProfilePhone();
+  }
+
+  // Live input formatting and preview listeners
+  if (DOM.profilePhoneInput) {
+    DOM.profilePhoneInput.addEventListener("input", (e) => {
+      e.target.value = e.target.value.replace(/\D/g, "").slice(0, 10);
+      validateProfilePhone();
+      updateProfilePreviewBadge();
+    });
+  }
+
+  if (DOM.profileNameInput) {
+    DOM.profileNameInput.addEventListener("input", () => {
+      updateProfilePreviewBadge();
+    });
+  }
+
+  if (DOM.profileEmailInput) {
+    DOM.profileEmailInput.addEventListener("input", () => {
+      updateProfilePreviewBadge();
+    });
+  }
+
+  if (DOM.profileDesignationSelect) {
+    DOM.profileDesignationSelect.addEventListener("change", () => {
+      updateProfilePreviewBadge();
+    });
+  }
+
+  // Photo Upload Handler
+  if (DOM.profilePhotoInput) {
+    DOM.profilePhotoInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+        showToast("Image size exceeds 2MB limit. Please upload a smaller photo.", "error");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64Data = event.target.result;
+        state.tempProfilePhoto = base64Data;
+        renderProfilePhotoPreview(base64Data);
+        showToast("Photo loaded into preview. Click 'Save Profile' to commit.", "info");
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  on(DOM.profileRemovePhotoBtn, "click", () => {
+    state.tempProfilePhoto = "";
+    if (DOM.profilePhotoInput) DOM.profilePhotoInput.value = "";
+    renderProfilePhotoPreview("");
+    showToast("Photo removed from preview. Click 'Save Profile' to commit.", "info");
+  });
+
+  on(DOM.resetProfileFormBtn, "click", () => {
+    populateProfileForm();
+    showToast("Profile form reset.", "info");
+  });
+
+  // Topbar user profile click opens profile view
+  if (DOM.userProfileToggle) {
+    DOM.userProfileToggle.style.cursor = "pointer";
+    on(DOM.userProfileToggle, "click", (e) => {
+      if (e.target.closest("#logoutBtn") || e.target.closest("#switchUserQuickBtn")) return;
+      switchView("settings");
+    });
+  }
+
+  // Save Profile Handler with strict 10-digit validation
+  on(DOM.saveProfileBtn, "click", () => {
+    const user = state.currentUser;
+    if (!user) {
+      showToast("No active user logged in", "error");
+      return;
+    }
+
+    const name = DOM.profileNameInput ? DOM.profileNameInput.value.trim() : "";
+    const email = DOM.profileEmailInput ? DOM.profileEmailInput.value.trim() : "";
+    const phone = DOM.profilePhoneInput ? DOM.profilePhoneInput.value.trim() : "";
+    const designation = DOM.profileDesignationSelect ? DOM.profileDesignationSelect.value : "Senior Developer";
+
+    if (!name) {
+      showToast("Please enter your full name.", "error");
+      if (DOM.profileNameInput) DOM.profileNameInput.focus();
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      showToast("Please enter a valid email address.", "error");
+      if (DOM.profileEmailInput) DOM.profileEmailInput.focus();
+      return;
+    }
+
+    // Phone number validation: exactly 10 digits
+    const phoneClean = phone.replace(/\D/g, "");
+    if (!/^\d{10}$/.test(phoneClean)) {
+      showToast("Phone number must contain exactly 10 numbers.", "error");
+      if (DOM.profilePhoneInput) {
+        DOM.profilePhoneInput.focus();
+        DOM.profilePhoneInput.style.borderColor = "var(--rose)";
+      }
+      return;
+    }
+
+    const isDev = designation.includes("Developer");
+    const isSenior = designation.includes("Senior");
+    const role = isDev ? "dev" : "qa";
+    const devLevel = isSenior ? "senior" : "junior";
+
+    const updated = StorageManager.updateUser(user.id, {
+      name,
+      email,
+      phone: phoneClean,
+      photo: state.tempProfilePhoto !== undefined ? state.tempProfilePhoto : (user.photo || ""),
+      role,
+      devLevel,
+      roleTitle: designation
+    });
+
+    if (updated) {
+      state.currentUser = updated;
+      StorageManager.setCurrentUser(updated);
+      updateUserProfileUI();
+      populateProfileForm();
+      showToast("Profile details updated successfully!", "success");
+
+      if (typeof renderDevApprovals === "function") {
+        renderDevApprovals();
+      }
+    }
   });
 
   // =========================================================================
@@ -573,10 +866,24 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   function updateUserProfileUI() {
     const user = state.currentUser;
     if (!user) return;
-    if (DOM.userAvatarInitials) DOM.userAvatarInitials.textContent = user.avatar || user.name.substring(0, 2).toUpperCase();
+
+    if (user.photo) {
+      if (DOM.userAvatarRing) {
+        DOM.userAvatarRing.style.backgroundImage = `url("${user.photo}")`;
+        DOM.userAvatarRing.style.backgroundSize = "cover";
+        DOM.userAvatarRing.style.backgroundPosition = "center";
+      }
+      if (DOM.userAvatarInitials) DOM.userAvatarInitials.textContent = "";
+    } else {
+      if (DOM.userAvatarRing) {
+        DOM.userAvatarRing.style.backgroundImage = "";
+        DOM.userAvatarRing.style.background = user.color || (user.role === 'dev' ? '#10b981' : '#6366f1');
+      }
+      if (DOM.userAvatarInitials) DOM.userAvatarInitials.textContent = user.avatar || user.name.substring(0, 2).toUpperCase();
+    }
+
     if (DOM.userNameLabel) DOM.userNameLabel.textContent = user.name;
     if (DOM.userRoleLabel) DOM.userRoleLabel.innerHTML = `<i class="fa-solid fa-circle status-dot-online"></i> ${user.roleTitle || user.role.toUpperCase()}`;
-    if (DOM.userAvatarRing) DOM.userAvatarRing.style.background = user.color || (user.role === 'dev' ? '#10b981' : '#6366f1');
   }
 
   // --- React Bits Pro Auth 5 State & Controllers ---
@@ -1485,7 +1792,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       "dev-approvals": "Tester Approvals & Access Control",
       "dev-kanban": "Bug Triage Kanban",
       "dev-failures": "Failed Test Diagnostics",
-      settings: "Settings, Supabase & Sync"
+      settings: "My Profile & Account"
     };
     if (DOM.currentCrumb) DOM.currentCrumb.textContent = titles[viewName] || "Workspace";
     if (DOM.sidebar) DOM.sidebar.classList.remove("mobile-open");
@@ -1503,7 +1810,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (viewName === "dev-approvals") renderDevApprovals();
     if (viewName === "dev-kanban") renderDevKanban();
     if (viewName === "dev-failures") renderDevFailures();
-    if (viewName === "settings") updateSupabaseStatusUI();
+    if (viewName === "settings") populateProfileForm();
   }
 
   document.querySelectorAll(".sidebar-nav .nav-item, .sidebar-primary-rail .rail-nav-item").forEach(item => {

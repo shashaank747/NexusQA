@@ -128,8 +128,8 @@
           </div>
           <div class="rail-bottom">
             <ul class="rail-nav-list">
-              <li class="rail-nav-item" data-view="settings" title="Settings">
-                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-sliders"></i></button>
+              <li class="rail-nav-item" data-view="settings" title="My Profile">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-user-gear"></i></button>
               </li>
             </ul>
           </div>
@@ -176,6 +176,12 @@
                     <i class="fa-solid fa-bug-slash"></i>
                     <span>Failed Test Diagnostics</span>
                     <span class="nav-badge badge-blocked" id="devFailedTestsBadge">2</span>
+                  </a>
+                </li>
+                <li class="nav-item" data-view="settings">
+                  <a href="javascript:void(0)" class="nav-link">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>My Profile</span>
                   </a>
                 </li>
               </ul>
@@ -434,80 +440,167 @@
           <div class="dev-failures-container" id="devFailuresContainer"></div>
         </section>
 
-        <!-- VIEW: SETTINGS & SUPABASE -->
+        <!-- VIEW: USER PROFILE & ACCOUNT SETTINGS -->
         <section class="view-panel" id="view-settings">
           <div class="view-header">
             <div>
-              <h1 class="view-title">Settings, Supabase & Sync Configuration</h1>
-              <p class="view-subtitle">Configure Supabase PostgreSQL database connection, real-time sync channel, and backups.</p>
+              <div class="dev-header-badge"><i class="fa-solid fa-id-card"></i> User Profile & Account</div>
+              <h1 class="view-title">Profile & Personal Credentials</h1>
+              <p class="view-subtitle">Manage your personal identity, contact details, profile photo, and engineering designation.</p>
             </div>
           </div>
 
-          <div class="settings-grid">
-            <div class="settings-card">
-              <div class="d-flex justify-between align-center mb-2">
-                <h3><i class="fa-solid fa-database text-emerald"></i> Supabase Cloud Database</h3>
-                <span class="badge badge-untested" id="supabaseConnectionBadge"><i class="fa-solid fa-circle" style="font-size:6px;"></i> Local Mode</span>
+          <div class="profile-settings-grid">
+            <!-- Left Card: Profile Edit Form -->
+            <div class="profile-card-main">
+              <div class="d-flex justify-between align-center mb-3">
+                <div class="d-flex align-center gap-2">
+                  <div class="avatar-ring avatar-dev" id="profileFormAvatarPreview" style="width:44px; height:44px; font-size:15px; border-radius:50%; background-size:cover; background-position:center; display:flex; align-items:center; justify-content:center;">
+                    <span id="profileFormAvatarInitials">MV</span>
+                  </div>
+                  <div>
+                    <h3 class="m-0" id="profileFormHeaderName">Edit Profile</h3>
+                    <p class="text-xs text-muted m-0">Update your account credentials and contact details</p>
+                  </div>
+                </div>
+                <span class="badge badge-passed" id="profileRoleBadgeHeader"><i class="fa-solid fa-shield-halved"></i> Active</span>
               </div>
-              <p class="text-muted text-sm mb-3">Connect your free Supabase project to sync all test cases, runs, and bugs across multiple devices & portals in real-time.</p>
-              
-              <form id="supabaseConfigForm">
-                <div class="form-group">
-                  <label for="supabaseUrlInput">Supabase Project URL</label>
-                  <input type="url" id="supabaseUrlInput" class="nexus-input" placeholder="https://xyzcompany.supabase.co">
+
+              <!-- Upload Photo Section -->
+              <div class="form-group mb-4 profile-photo-upload-zone">
+                <label class="form-label font-semibold">Profile Photo</label>
+                <div class="d-flex align-center gap-3 mt-1">
+                  <div class="profile-avatar-large" id="profileLargeAvatar" style="width:72px; height:72px; border-radius:50%; background: linear-gradient(135deg, #10b981, #06b6d4); display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; font-weight:700; overflow:hidden; border:2px solid rgba(255,255,255,0.15); box-shadow:0 4px 12px rgba(0,0,0,0.15); background-size:cover; background-position:center;">
+                    <span id="profileLargeInitials">MV</span>
+                    <img id="profileLargeImg" src="" alt="Profile Photo" style="display:none; width:100%; height:100%; object-fit:cover;">
+                  </div>
+                  <div class="d-flex flex-column gap-1">
+                    <div class="d-flex gap-2">
+                      <label class="btn btn-secondary btn-sm" style="cursor:pointer; margin:0;" for="profilePhotoInput">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo
+                      </label>
+                      <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;">
+                      <button type="button" class="btn btn-ghost btn-sm text-danger" id="profileRemovePhotoBtn" style="display:none;">
+                        <i class="fa-solid fa-trash-can"></i> Remove
+                      </button>
+                    </div>
+                    <span class="text-xs text-muted">Supports JPG, PNG, WEBP or GIF (Max 2MB)</span>
+                  </div>
+                </div>
+              </div>
+
+              <form id="userProfileForm">
+                <!-- Full Name -->
+                <div class="form-group mb-3">
+                  <label for="profileNameInput" class="form-label font-semibold">Full Name <span class="text-rose">*</span></label>
+                  <div class="input-with-icon">
+                    <i class="fa-solid fa-user input-icon"></i>
+                    <input type="text" id="profileNameInput" class="nexus-input pl-5" placeholder="e.g. Marcus Vance" required>
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="supabaseKeyInput">Supabase anon public API Key</label>
-                  <input type="password" id="supabaseKeyInput" class="nexus-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                <!-- Email ID -->
+                <div class="form-group mb-3">
+                  <label for="profileEmailInput" class="form-label font-semibold">Email ID <span class="text-rose">*</span></label>
+                  <div class="input-with-icon">
+                    <i class="fa-solid fa-envelope input-icon"></i>
+                    <input type="email" id="profileEmailInput" class="nexus-input font-mono pl-5" placeholder="e.g. user@nexusqa.io" required>
+                  </div>
                 </div>
 
-                <div class="d-flex gap-2 mt-3">
-                  <button type="button" class="btn btn-primary btn-sm flex-1" id="saveSupabaseConfigBtn">
-                    <i class="fa-solid fa-plug"></i> Connect & Sync
+                <!-- Phone Number with 10 numbers validation -->
+                <div class="form-group mb-3">
+                  <label for="profilePhoneInput" class="form-label font-semibold">
+                    Phone Number <span class="text-rose">*</span>
+                    <span class="text-xs text-muted font-normal">(10 digits required)</span>
+                  </label>
+                  <div class="input-with-icon">
+                    <i class="fa-solid fa-phone input-icon"></i>
+                    <input type="tel" id="profilePhoneInput" class="nexus-input font-mono pl-5" placeholder="Enter 10-digit phone number (e.g. 9876543210)" maxlength="10">
+                  </div>
+                  <div class="phone-validation-feedback mt-1">
+                    <span id="profilePhoneError" class="text-xs text-rose" style="display:none;">
+                      <i class="fa-solid fa-circle-exclamation"></i> Must be exactly 10 digits
+                    </span>
+                    <span id="profilePhoneValid" class="text-xs text-emerald" style="display:none;">
+                      <i class="fa-solid fa-circle-check"></i> Valid 10-digit number
+                    </span>
+                    <span id="profilePhoneHint" class="text-xs text-muted">
+                      Please enter a valid 10-digit mobile number
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Designation -->
+                <div class="form-group mb-4">
+                  <label for="profileDesignationSelect" class="form-label font-semibold">Designation <span class="text-rose">*</span></label>
+                  <div class="input-with-icon">
+                    <i class="fa-solid fa-briefcase input-icon"></i>
+                    <select id="profileDesignationSelect" class="nexus-select w-100 pl-5">
+                      <option value="Senior Developer">Senior Developer</option>
+                      <option value="Junior Developer">Junior Developer</option>
+                      <option value="Senior Tester">Senior Tester</option>
+                      <option value="Junior Tester">Junior Tester</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Save Action -->
+                <div class="d-flex align-center gap-2 mt-4 pt-2" style="border-top: 1px solid var(--border-color, rgba(255,255,255,0.08));">
+                  <button type="button" class="btn btn-primary flex-1" id="saveProfileBtn">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Profile Details
                   </button>
-                  <button type="button" class="btn btn-secondary btn-sm" id="pushDataToSupabaseBtn" title="Push Demo Data to Supabase">
-                    <i class="fa-solid fa-cloud-arrow-up"></i> Upload Data
-                  </button>
-                  <button type="button" class="btn btn-outline btn-sm" id="copySqlSchemaBtn" title="Copy SQL Schema Script">
-                    <i class="fa-solid fa-copy"></i> SQL Schema
+                  <button type="button" class="btn btn-secondary" id="resetProfileFormBtn" title="Reset changes">
+                    <i class="fa-solid fa-rotate-left"></i> Reset
                   </button>
                 </div>
               </form>
             </div>
 
-            <div class="settings-card">
-              <h3><i class="fa-solid fa-arrows-rotate text-cyan"></i> Real-time Sync & Ping</h3>
-              <p class="text-muted text-sm mb-3">BroadcastChannel & Supabase Realtime synchronization engine.</p>
-              
-              <div class="settings-action-row">
-                <div>
-                  <strong>Broadcast Ping Test</strong>
-                  <p class="text-muted text-xs">Sends a test heartbeat packet across all tabs</p>
-                </div>
-                <button class="btn btn-secondary btn-sm" id="broadcastPingBtn">
-                  <i class="fa-solid fa-satellite-dish"></i> Ping Portals
-                </button>
+            <!-- Right Card: Live ID Card & Profile Card Preview -->
+            <div class="profile-preview-card">
+              <div class="d-flex justify-between align-center mb-3">
+                <h3 class="m-0"><i class="fa-solid fa-address-card text-primary"></i> Live Identity Badge</h3>
+                <span class="badge badge-version">Real-Time Preview</span>
               </div>
+              <p class="text-muted text-sm mb-4">This badge reflects how your profile card and credentials appear to team members across NexusQA.</p>
 
-              <div class="settings-action-row mt-3">
-                <div>
-                  <strong>Workspace Snapshot Export</strong>
-                  <p class="text-muted text-xs">Download complete workspace JSON</p>
+              <div class="profile-id-card-display">
+                <div class="id-card-banner">
+                  <div class="id-card-company"><i class="fa-solid fa-cube text-primary"></i> NexusQA Workspace</div>
+                  <span class="badge badge-passed text-xs" id="previewAccessBadge"><i class="fa-solid fa-circle-check"></i> Verified</span>
                 </div>
-                <button class="btn btn-secondary btn-sm" id="exportFullBackupBtn">
-                  <i class="fa-solid fa-download"></i> Export JSON
-                </button>
-              </div>
+                
+                <div class="id-card-body">
+                  <div class="id-card-avatar-wrap">
+                    <div class="id-card-avatar" id="previewCardAvatar">
+                      <span id="previewCardInitials">MV</span>
+                      <img id="previewCardImg" src="" alt="Avatar" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                    </div>
+                  </div>
+                  
+                  <div class="id-card-info">
+                    <h2 class="id-card-name" id="previewCardName">Marcus Vance</h2>
+                    <div class="id-card-designation-wrap">
+                      <span class="badge badge-passed" id="previewCardDesignationBadge">Senior Developer</span>
+                    </div>
+                  </div>
 
-              <div class="settings-action-row mt-3">
-                <div>
-                  <strong>Reset Seed Data</strong>
-                  <p class="text-muted text-xs">Reload default demo test suites & runs</p>
+                  <div class="id-card-details-list">
+                    <div class="id-card-detail-item">
+                      <span class="detail-label"><i class="fa-solid fa-envelope"></i> Email</span>
+                      <span class="detail-val font-mono" id="previewCardEmail">marcus.dev@nexusqa.io</span>
+                    </div>
+                    <div class="id-card-detail-item">
+                      <span class="detail-label"><i class="fa-solid fa-phone"></i> Phone</span>
+                      <span class="detail-val font-mono" id="previewCardPhone">9876543210</span>
+                    </div>
+                    <div class="id-card-detail-item">
+                      <span class="detail-label"><i class="fa-solid fa-id-badge"></i> User ID</span>
+                      <span class="detail-val font-mono text-muted" id="previewCardUserId">user-dev-1</span>
+                    </div>
+                  </div>
                 </div>
-                <button class="btn btn-danger btn-sm" id="resetSeedDataBtn">
-                  <i class="fa-solid fa-trash-can-arrow-up"></i> Reset Demo Data
-                </button>
               </div>
             </div>
           </div>
