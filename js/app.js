@@ -454,10 +454,26 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   });
 
   // =========================================================================
-  // =========================================================================
-  // ROUTING & DEDICATED TESTER / DEV AUTHENTICATION (Single Link -> Multi-Page)
-  // =========================================================================
+  function initTheme() {
+    const savedTheme = localStorage.getItem("nexusqa_theme") || "dark";
+    if (savedTheme === "light") {
+      document.body.classList.add("light-theme");
+      document.body.classList.remove("dark-theme");
+      if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
+        DOM.themeToggleBtn.querySelector("i").className = "fa-solid fa-sun";
+      }
+    } else {
+      document.body.classList.remove("light-theme");
+      document.body.classList.add("dark-theme");
+      localStorage.setItem("nexusqa_theme", "dark");
+      if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
+        DOM.themeToggleBtn.querySelector("i").className = "fa-solid fa-moon";
+      }
+    }
+  }
+
   function initRouting() {
+    initTheme();
     const pathname = window.location.pathname.toLowerCase();
     const isLandingPage = document.body.classList.contains("page-landing-auth") || pathname.endsWith("index.html") || pathname === "/" || (!document.body.classList.contains("page-tester") && !document.body.classList.contains("page-dev") && !document.getElementById("viewViewport"));
 
@@ -1436,6 +1452,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   on(DOM.themeToggleBtn, "click", () => {
     const isLight = document.body.classList.toggle("light-theme");
+    if (isLight) {
+      document.body.classList.remove("dark-theme");
+      localStorage.setItem("nexusqa_theme", "light");
+    } else {
+      document.body.classList.add("dark-theme");
+      localStorage.setItem("nexusqa_theme", "dark");
+    }
     if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
       DOM.themeToggleBtn.querySelector("i").className = isLight ? "fa-solid fa-sun" : "fa-solid fa-moon";
     }
