@@ -135,15 +135,61 @@
               <strong class="text-primary font-mono" id="otpRecipientEmailLabel">tester@company.com</strong>
             </p>
 
-            <!-- 6 PIN Digit Input Blocks -->
+            <!-- CodeSlots Component Container -->
             <form id="testerOtpForm" class="mt-4">
-              <div class="otp-inputs-grid" id="otpInputsGrid">
-                <input type="text" class="otp-digit" maxlength="1" data-index="0" autofocus>
-                <input type="text" class="otp-digit" maxlength="1" data-index="1">
-                <input type="text" class="otp-digit" maxlength="1" data-index="2">
-                <input type="text" class="otp-digit" maxlength="1" data-index="3">
-                <input type="text" class="otp-digit" maxlength="1" data-index="4">
-                <input type="text" class="otp-digit" maxlength="1" data-index="5">
+              <div class="code-slots-wrapper">
+                <div class="code-slots" id="otpCodeSlots" style="--cs-accent: #6366f1; --cs-ink: #818cf8; --cs-slot: #131d31; --cs-digit: #ffffff; --cs-danger: #f43f5e; --cs-size: 48px; --cs-height: 56px; --cs-gap: 10px; --cs-radius: 12px; --cs-font: 24px;">
+                  <div class="code-slots__row" id="codeSlotsRow" data-status="idle" data-focused="">
+                    <input
+                      id="codeSlotsInput"
+                      class="code-slots__input"
+                      type="text"
+                      inputmode="numeric"
+                      autocomplete="one-time-code"
+                      pattern="[0-9]*"
+                      value=""
+                      maxlength="6"
+                      aria-label="One-time verification code"
+                      autofocus
+                    />
+                    <span class="code-slots__slot" data-active="" data-index="0">
+                      <span class="code-slots__fill"></span>
+                      <span class="code-slots__digit"></span>
+                    </span>
+                    <span class="code-slots__slot" data-index="1">
+                      <span class="code-slots__fill"></span>
+                      <span class="code-slots__digit"></span>
+                    </span>
+                    <span class="code-slots__slot" data-index="2">
+                      <span class="code-slots__fill"></span>
+                      <span class="code-slots__digit"></span>
+                    </span>
+                    <span class="code-slots__slot" data-index="3">
+                      <span class="code-slots__fill"></span>
+                      <span class="code-slots__digit"></span>
+                    </span>
+                    <span class="code-slots__slot" data-index="4">
+                      <span class="code-slots__fill"></span>
+                      <span class="code-slots__digit"></span>
+                    </span>
+                    <span class="code-slots__slot" data-index="5">
+                      <span class="code-slots__fill"></span>
+                      <span class="code-slots__digit"></span>
+                    </span>
+
+                    <span class="code-slots__wash" aria-hidden="true">
+                      <span class="code-slots__check">
+                        <svg class="cs-tick-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </span>
+                    </span>
+                    <span class="code-slots__caret" id="codeSlotsCaret" aria-hidden="true" data-show="">
+                      <span class="code-slots__caret-line"></span>
+                    </span>
+                  </div>
+                  <span id="codeSlotsSrCount" class="code-slots__sr" aria-live="polite">0 of 6 digits entered</span>
+                </div>
               </div>
 
               <div class="d-flex justify-between align-center mt-3 text-xs">

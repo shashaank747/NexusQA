@@ -64,6 +64,11 @@ document.addEventListener("DOMContentLoaded", () => {
     btnTesterSendOtp: document.getElementById("btnTesterSendOtp"),
 
     testerOtpForm: document.getElementById("testerOtpForm"),
+    codeSlots: document.getElementById("otpCodeSlots"),
+    codeSlotsRow: document.getElementById("codeSlotsRow"),
+    codeSlotsInput: document.getElementById("codeSlotsInput"),
+    codeSlotsCaret: document.getElementById("codeSlotsCaret"),
+    codeSlotsSrCount: document.getElementById("codeSlotsSrCount"),
     otpInputsGrid: document.getElementById("otpInputsGrid"),
     otpRecipientEmailLabel: document.getElementById("otpRecipientEmailLabel"),
     otpTimerLabel: document.getElementById("otpTimerLabel"),
@@ -541,6 +546,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     } else if (view === "signup") {
       if (DOM.subTabTesterSignup) DOM.subTabTesterSignup.classList.add("active");
       if (DOM.subTabTesterLogin) DOM.subTabTesterLogin.classList.remove("active");
+    } else if (view === "otp") {
+      if (window.resetCodeSlots) window.resetCodeSlots();
+      setTimeout(() => {
+        if (DOM.codeSlotsInput) DOM.codeSlotsInput.focus();
+      }, 50);
     }
   };
 
@@ -559,14 +569,156 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   };
 
-  window.autoFillOtp = function(code) {
-    const digits = (code || state.currentOtpCode || "").split("");
-    const inputs = DOM.otpInputsGrid ? DOM.otpInputsGrid.querySelectorAll(".otp-digit") : [];
-    inputs.forEach((input, idx) => {
-      input.value = digits[idx] || "";
+  // --- React Bits <CodeSlots /> State & Controller ---
+  const codeSlotsState = {
+    length: 6,
+    value: "",
+    active: 0,
+    focused: false,
+    status: "idle", // "idle" | "error" | "success"
+    slotSize: 48,
+    gap: 10,
+    pitch: 58
+  };
+
+  function renderCodeSlots() {
+    const row = DOM.codeSlotsRow;
+    const input = DOM.codeSlotsInput;
+    const caret = DOM.codeSlotsCaret;
+    const srCount = DOM.codeSlotsSrCount;
+    if (!row) return;
+
+    const digits = codeSlotsState.value.split("");
+    const slots = row.querySelectorAll(".code-slots__slot");
+
+    slots.forEach((slot, idx) => {
+      const digitEl = slot.querySelector(".code-slots__digit");
+      const char = digits[idx] || "";
+      
+      if (char) {
+        slot.setAttribute("data-filled", "");
+        if (digitEl) digitEl.textContent = char;
+      } else {
+        slot.removeAttribute("data-filled");
+        if (digitEl) digitEl.textContent = "";
+      }
+
+      if (codeSlotsState.focused && idx === codeSlotsState.active && codeSlotsState.status !== "success") {
+        slot.setAttribute("data-active", "");
+      } else {
+        slot.removeAttribute("data-active");
+      }
     });
-    if (inputs.length > 0) inputs[inputs.length - 1].focus();
-    showToast("OTP Auto-filled from simulated email!");
+
+    // Blinking Caret positioning
+    if (caret) {
+      const showCaret = codeSlotsState.focused && 
+                        codeSlotsState.status !== "success" && 
+                        codeSlotsState.status !== "error" && 
+                        !digits[codeSlotsState.active];
+      if (showCaret) {
+        caret.setAttribute("data-show", "");
+        const x = codeSlotsState.active * codeSlotsState.pitch + (codeSlotsState.slotSize / 2) - 1;
+        caret.style.transform = `translateX(${x}px)`;
+      } else {
+        caret.removeAttribute("data-show");
+      }
+    }
+
+    // Update row status
+    row.setAttribute("data-status", codeSlotsState.status);
+    if (codeSlotsState.focused) {
+      row.setAttribute("data-focused", "");
+    } else {
+      row.removeAttribute("data-focused");
+    }
+
+    // Accessible screen reader announcement
+    if (srCount) {
+      srCount.textContent = codeSlotsState.status === "success" 
+        ? "Code accepted" 
+        : `${digits.length} of ${codeSlotsState.length} digits entered`;
+    }
+  }
+
+  function setCodeSlotsValue(val, triggerComplete = true) {
+    const clean = String(val ?? "").replace(/\D/g, "").slice(0, codeSlotsState.length);
+    codeSlotsState.value = clean;
+    codeSlotsState.active = Math.min(clean.length, codeSlotsState.length - 1);
+    if (DOM.codeSlotsInput) DOM.codeSlotsInput.value = clean;
+    renderCodeSlots();
+
+    if (triggerComplete && clean.length === codeSlotsState.length) {
+      // Auto-trigger OTP verification on complete
+      if (DOM.testerOtpForm) {
+        DOM.testerOtpForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+      }
+    }
+  }
+
+  function setCodeSlotsStatus(newStatus) {
+    codeSlotsState.status = newStatus;
+    renderCodeSlots();
+
+    if (newStatus === "error") {
+      // Cascade drain digits backwards under danger tint
+      setTimeout(() => {
+        let currentVal = codeSlotsState.value;
+        const drainTimer = setInterval(() => {
+          if (currentVal.length > 0) {
+            currentVal = currentVal.slice(0, -1);
+            codeSlotsState.value = currentVal;
+            codeSlotsState.active = Math.max(0, currentVal.length - 1);
+            if (DOM.codeSlotsInput) DOM.codeSlotsInput.value = currentVal;
+            renderCodeSlots();
+          } else {
+            clearInterval(drainTimer);
+            codeSlotsState.status = "idle";
+            codeSlotsState.active = 0;
+            renderCodeSlots();
+          }
+        }, 55);
+      }, 450);
+    }
+  }
+
+  window.resetCodeSlots = function() {
+    codeSlotsState.value = "";
+    codeSlotsState.active = 0;
+    codeSlotsState.status = "idle";
+    codeSlotsState.focused = false;
+    if (DOM.codeSlotsInput) DOM.codeSlotsInput.value = "";
+    renderCodeSlots();
+  };
+
+  window.autoFillOtp = function(code) {
+    const targetCode = String(code || state.currentOtpCode || "").replace(/\D/g, "").slice(0, 6);
+    if (!targetCode) return;
+
+    codeSlotsState.status = "idle";
+    let cur = "";
+    let i = 0;
+    
+    // Sequential cascade landing animation
+    function cascadeFill() {
+      if (i < targetCode.length) {
+        cur += targetCode[i];
+        codeSlotsState.value = cur;
+        codeSlotsState.active = Math.min(cur.length, codeSlotsState.length - 1);
+        if (DOM.codeSlotsInput) DOM.codeSlotsInput.value = cur;
+        renderCodeSlots();
+        i++;
+        setTimeout(cascadeFill, 35);
+      } else {
+        if (DOM.codeSlotsInput) DOM.codeSlotsInput.focus();
+        showToast("OTP Auto-filled from email with cascade!");
+        // Trigger auto submit
+        if (DOM.testerOtpForm) {
+          DOM.testerOtpForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+        }
+      }
+    }
+    cascadeFill();
   };
 
   if (DOM.btnAutoFillOtp) {
@@ -575,33 +727,80 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     });
   }
 
-  // Setup OTP Inputs 6-digit behavior
+  // Setup React Bits <CodeSlots /> interactions
   function setupOtpInputs() {
-    if (!DOM.otpInputsGrid) return;
-    const inputs = DOM.otpInputsGrid.querySelectorAll(".otp-digit");
+    const row = DOM.codeSlotsRow;
+    const input = DOM.codeSlotsInput;
+    if (!row || !input) return;
 
-    inputs.forEach((input, index) => {
-      input.addEventListener("input", (e) => {
-        const val = e.target.value.replace(/\D/g, "");
-        e.target.value = val ? val.slice(-1) : "";
-        if (val && index < inputs.length - 1) {
-          inputs[index + 1].focus();
-        }
-      });
+    // Row Click / Touch -> focus input & set active slot
+    row.addEventListener("mousedown", (e) => {
+      if (codeSlotsState.status === "success") return;
+      e.preventDefault();
+      const rect = row.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickedIdx = Math.floor(clickX / codeSlotsState.pitch);
+      const targetIdx = Math.max(0, Math.min(clickedIdx, codeSlotsState.value.length, codeSlotsState.length - 1));
+      codeSlotsState.active = targetIdx;
+      codeSlotsState.focused = true;
+      input.focus();
+      renderCodeSlots();
+    });
 
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Backspace" && !input.value && index > 0) {
-          inputs[index - 1].focus();
-        }
-      });
+    input.addEventListener("focus", () => {
+      codeSlotsState.focused = true;
+      renderCodeSlots();
+    });
 
-      input.addEventListener("paste", (e) => {
+    input.addEventListener("blur", () => {
+      codeSlotsState.focused = false;
+      renderCodeSlots();
+    });
+
+    input.addEventListener("input", (e) => {
+      if (codeSlotsState.status === "success") return;
+      const raw = e.target.value;
+      const digits = String(raw).replace(/\D/g, "").slice(0, codeSlotsState.length);
+      codeSlotsState.status = "idle";
+      setCodeSlotsValue(digits, true);
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (codeSlotsState.status === "success") return;
+      const k = e.key;
+
+      if (k === "Backspace") {
         e.preventDefault();
-        const text = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(0, 6);
-        if (text) {
-          window.autoFillOtp(text);
+        let cur = codeSlotsState.value;
+        if (cur.length > 0) {
+          cur = cur.slice(0, -1);
+          setCodeSlotsValue(cur, false);
         }
-      });
+      } else if (k === "ArrowLeft") {
+        e.preventDefault();
+        codeSlotsState.active = Math.max(0, codeSlotsState.active - 1);
+        renderCodeSlots();
+      } else if (k === "ArrowRight") {
+        e.preventDefault();
+        codeSlotsState.active = Math.min(codeSlotsState.length - 1, codeSlotsState.value.length);
+        renderCodeSlots();
+      } else if (k === "Home") {
+        e.preventDefault();
+        codeSlotsState.active = 0;
+        renderCodeSlots();
+      } else if (k === "End") {
+        e.preventDefault();
+        codeSlotsState.active = Math.min(codeSlotsState.length - 1, codeSlotsState.value.length);
+        renderCodeSlots();
+      }
+    });
+
+    input.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(0, 6);
+      if (text) {
+        window.autoFillOtp(text);
+      }
     });
   }
 
@@ -697,14 +896,14 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       });
     }
 
-    // 3. Tester OTP Verification Submit
+    // 3. Tester OTP Verification Submit with CodeSlots Animations
     if (DOM.testerOtpForm) {
       DOM.testerOtpForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        const inputs = DOM.otpInputsGrid ? DOM.otpInputsGrid.querySelectorAll(".otp-digit") : [];
-        const enteredOtp = Array.from(inputs).map(i => i.value).join("");
+        const enteredOtp = codeSlotsState.value;
 
         if (enteredOtp.length !== 6) {
+          setCodeSlotsStatus("error");
           showToast("Please enter the complete 6-digit OTP code", "error");
           return;
         }
@@ -714,18 +913,32 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Validating Code...`;
 
           setTimeout(() => {
-            DOM.btnVerifyOtpSubmit.disabled = false;
-            DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify OTP & Submit Request to Dev`;
+            try {
+              const user = StorageManager.verifyTesterOtp(state.pendingRegistrationEmail, enteredOtp);
+              
+              // Trigger CodeSlots Success Wash and Tick
+              setCodeSlotsStatus("success");
+              DOM.btnVerifyOtpSubmit.disabled = false;
+              DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Code Verified!`;
 
-            const user = StorageManager.verifyTesterOtp(state.pendingRegistrationEmail, enteredOtp);
-            if (DOM.pendingUserEmailLabel) DOM.pendingUserEmailLabel.textContent = user.email;
-            window.switchTesterAuthView("pending");
-            window.dismissSimulatedEmail();
-            showToast("Email verified! Access request sent to Developer Lead.");
+              setTimeout(() => {
+                if (DOM.pendingUserEmailLabel) DOM.pendingUserEmailLabel.textContent = user.email;
+                window.switchTesterAuthView("pending");
+                window.dismissSimulatedEmail();
+                showToast("Email verified! Access request sent to Developer Lead.");
+                DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify OTP & Submit Request to Dev`;
+              }, 700);
+            } catch (err) {
+              DOM.btnVerifyOtpSubmit.disabled = false;
+              DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify OTP & Submit Request to Dev`;
+              setCodeSlotsStatus("error");
+              showToast(err.message, "error");
+            }
           }, 350);
         } catch (err) {
           DOM.btnVerifyOtpSubmit.disabled = false;
           DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify OTP & Submit Request to Dev`;
+          setCodeSlotsStatus("error");
           showToast(err.message, "error");
         }
       });
