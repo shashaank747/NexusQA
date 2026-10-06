@@ -185,8 +185,9 @@ const StorageManager = {
       return { status: "pending_approval", user };
     }
 
-    // Generate unique 6-digit OTP
-    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    // Generate unique 6-digit OTP (hardcoded 123456 for chhotumonster225@gmail.com)
+    const isHardcoded = email.toLowerCase().trim() === "chhotumonster225@gmail.com";
+    const otpCode = isHardcoded ? "123456" : String(Math.floor(100000 + Math.random() * 900000));
     user.otpCode = otpCode;
     user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     this.saveUsers(users);
@@ -205,7 +206,8 @@ const StorageManager = {
       throw new Error("User account not found. Please register first.");
     }
 
-    if (!user.otpCode || user.otpCode !== otp.trim()) {
+    const isHardcoded = email.toLowerCase().trim() === "chhotumonster225@gmail.com" && otp.trim() === "123456";
+    if (!isHardcoded && (!user.otpCode || user.otpCode !== otp.trim())) {
       throw new Error("Invalid verification code. Please check your email and try again.");
     }
 
@@ -225,8 +227,9 @@ const StorageManager = {
     const roleKey = isDev ? "dev" : "qa";
     const displayRole = isDev ? "Dev" : "Tester";
 
-    // Generate unique 6-digit verification code
-    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    // Generate unique 6-digit verification code (hardcoded 123456 for chhotumonster225@gmail.com)
+    const isHardcoded = email.toLowerCase().trim() === "chhotumonster225@gmail.com";
+    const otpCode = isHardcoded ? "123456" : String(Math.floor(100000 + Math.random() * 900000));
     const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
     if (existing) {
@@ -274,7 +277,8 @@ const StorageManager = {
       throw new Error("Account not found. Please register first.");
     }
 
-    if (!user.otpCode || user.otpCode !== otp.trim()) {
+    const isHardcoded = email.toLowerCase().trim() === "chhotumonster225@gmail.com" && otp.trim() === "123456";
+    if (!isHardcoded && (!user.otpCode || user.otpCode !== otp.trim())) {
       throw new Error("Invalid verification code. Please check your email and try again.");
     }
 
