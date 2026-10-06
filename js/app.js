@@ -463,19 +463,19 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   // =========================================================================
   function initTheme() {
-    const savedTheme = localStorage.getItem("nexusqa_theme") || "dark";
-    if (savedTheme === "light") {
-      document.body.classList.add("light-theme");
-      document.body.classList.remove("dark-theme");
-      if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
-        DOM.themeToggleBtn.querySelector("i").className = "fa-solid fa-sun";
-      }
-    } else {
+    const savedTheme = localStorage.getItem("nexusqa_theme") || "light";
+    if (savedTheme === "dark") {
       document.body.classList.remove("light-theme");
       document.body.classList.add("dark-theme");
-      localStorage.setItem("nexusqa_theme", "dark");
       if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
         DOM.themeToggleBtn.querySelector("i").className = "fa-solid fa-moon";
+      }
+    } else {
+      document.body.classList.add("light-theme");
+      document.body.classList.remove("dark-theme");
+      localStorage.setItem("nexusqa_theme", "light");
+      if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
+        DOM.themeToggleBtn.querySelector("i").className = "fa-solid fa-sun";
       }
     }
   }
