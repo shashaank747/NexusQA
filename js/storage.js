@@ -111,15 +111,38 @@ const StorageManager = {
   // -------------------------------------------------------------
   getUsers() {
     const raw = localStorage.getItem(STORAGE_KEYS.USERS);
-    return raw ? JSON.parse(raw) : SEED_USERS;
+    let users = raw ? JSON.parse(raw) : [...SEED_USERS];
+    
+    // Ensure chhotumonster225@gmail.com is configured as active dev
+    const targetEmail = "chhotumonster225@gmail.com";
+    const devIndex = users.findIndex(u => u.email && u.email.toLowerCase() === targetEmail);
+    if (devIndex === -1) {
+      users.push({
+        id: "user-dev-chhotu",
+        name: "Chhotu Monster",
+        email: targetEmail,
+        role: "dev",
+        roleTitle: "Lead Full-Stack Developer",
+        avatar: "CM",
+        color: "#10b981",
+        status: "active",
+        emailVerified: true,
+        createdAt: "2026-10-06 12:00"
+      });
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    } else if (users[devIndex].role !== "dev" || users[devIndex].status !== "active") {
+      users[devIndex].role = "dev";
+      users[devIndex].status = "active";
+      users[devIndex].emailVerified = true;
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    }
+
+    return users;
   },
 
   saveUsers(users) {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     this.broadcast("USERS_UPDATED");
-    if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
-      SupabaseManager.pushAllLocalToSupabase();
-    }
   },
 
   getCurrentUser() {

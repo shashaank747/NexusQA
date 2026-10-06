@@ -53,6 +53,18 @@ const SEED_USERS = [
     createdAt: "2026-10-01 08:00"
   },
   {
+    id: "user-dev-chhotu",
+    name: "Chhotu Monster",
+    email: "chhotumonster225@gmail.com",
+    role: "dev",
+    roleTitle: "Lead Full-Stack Developer",
+    avatar: "CM",
+    color: "#10b981",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2026-10-06 12:00"
+  },
+  {
     id: "user-dev-2",
     name: "Sarah Lin",
     email: "sarah.dev@nexusqa.io",
