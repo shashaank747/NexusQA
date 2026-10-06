@@ -123,6 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
     currentCrumb: document.getElementById("currentCrumb"),
     globalSearchInput: document.getElementById("globalSearchInput"),
     themeToggleBtn: document.getElementById("themeToggleBtn"),
+    themeSwitchCheckbox: document.getElementById("themeSwitchCheckbox"),
     menuToggleBtn: document.getElementById("menuToggleBtn"),
     logoutBtn: document.getElementById("logoutBtn"),
     switchUserQuickBtn: document.getElementById("switchUserQuickBtn"),
@@ -467,6 +468,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (savedTheme === "dark") {
       document.body.classList.remove("light-theme");
       document.body.classList.add("dark-theme");
+      if (DOM.themeSwitchCheckbox) DOM.themeSwitchCheckbox.checked = true;
       if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
         DOM.themeToggleBtn.querySelector("i").className = "fa-solid fa-moon";
       }
@@ -474,6 +476,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       document.body.classList.add("light-theme");
       document.body.classList.remove("dark-theme");
       localStorage.setItem("nexusqa_theme", "light");
+      if (DOM.themeSwitchCheckbox) DOM.themeSwitchCheckbox.checked = false;
       if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
         DOM.themeToggleBtn.querySelector("i").className = "fa-solid fa-sun";
       }
@@ -1453,12 +1456,27 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (isLight) {
       document.body.classList.remove("dark-theme");
       localStorage.setItem("nexusqa_theme", "light");
+      if (DOM.themeSwitchCheckbox) DOM.themeSwitchCheckbox.checked = false;
     } else {
       document.body.classList.add("dark-theme");
       localStorage.setItem("nexusqa_theme", "dark");
+      if (DOM.themeSwitchCheckbox) DOM.themeSwitchCheckbox.checked = true;
     }
     if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
       DOM.themeToggleBtn.querySelector("i").className = isLight ? "fa-solid fa-sun" : "fa-solid fa-moon";
+    }
+  });
+
+  on(DOM.themeSwitchCheckbox, "change", (e) => {
+    const isChecked = e.target.checked;
+    if (isChecked) {
+      document.body.classList.remove("light-theme");
+      document.body.classList.add("dark-theme");
+      localStorage.setItem("nexusqa_theme", "dark");
+    } else {
+      document.body.classList.add("light-theme");
+      document.body.classList.remove("dark-theme");
+      localStorage.setItem("nexusqa_theme", "light");
     }
   });
 
