@@ -29,21 +29,11 @@
         <div class="auth5-logo-badge">
           <i class="fa-solid fa-shield-halved"></i>
         </div>
-        <h1 class="auth5-title" id="auth5Title">Welcome back</h1>
-        <p class="auth5-subtitle" id="auth5Subtitle">Sign in with your QA Tester credentials to continue</p>
+        <h1 class="auth5-title" id="auth5Title">Welcome to NexusQA</h1>
+        <p class="auth5-subtitle" id="auth5Subtitle">Enter your work email to receive a secure 6-digit login OTP</p>
       </div>
 
-      <!-- 2. Role Switcher (Tester vs Developer) -->
-      <div class="auth5-role-switch" id="auth5RoleSwitch">
-        <button type="button" class="auth5-role-btn active" data-role="tester" id="btnRoleTester" onclick="window.setAuth5Role('tester')">
-          <i class="fa-solid fa-vial"></i> QA Tester
-        </button>
-        <button type="button" class="auth5-role-btn" data-role="dev" id="btnRoleDev" onclick="window.setAuth5Role('dev')">
-          <i class="fa-solid fa-code"></i> Developer Lead
-        </button>
-      </div>
-
-      <!-- 3. STATE A: CREDENTIALS / SIGN IN / SIGN UP FORM -->
+      <!-- 2. STATE A: CREDENTIALS / SIGN IN / SIGN UP FORM -->
       <div class="auth5-state-form" id="auth5StateForm">
         <!-- OAuth Fallback Grid -->
         <div class="auth5-oauth-grid">
@@ -74,15 +64,15 @@
           <span id="authInlineAlertText">No user registered with this email. Please create a new account first.</span>
         </div>
 
-        <!-- QA Tester Everyday Login Form (Email -> OTP) -->
+        <!-- Unified Everyday Login Form (Pure Email -> OTP) -->
         <form id="testerLoginForm" class="auth5-form">
           <div class="auth5-form-group">
             <label class="auth5-label">
-              <span>QA Tester Work Email</span>
+              <span>Work Email Address</span>
             </label>
             <div class="auth5-input-wrapper">
               <i class="fa-regular fa-envelope auth5-input-icon"></i>
-              <input type="email" id="testerLoginEmail" class="auth5-input" placeholder="e.g. alex.qa@nexusqa.io" required>
+              <input type="email" id="testerLoginEmail" class="auth5-input" placeholder="e.g. alex.qa@nexusqa.io or marcus.dev@nexusqa.io" required>
             </div>
           </div>
 
@@ -91,15 +81,15 @@
           </button>
 
           <p class="text-center text-muted text-xs mt-3">
-            First time tester? <a href="javascript:void(0)" onclick="window.switchTesterAuthMode('signup')" class="text-primary font-bold">Register & verify email OTP</a>
+            New user? <a href="javascript:void(0)" onclick="window.switchAuthMode('signup')" class="text-primary font-bold">Create an account (Tester / Dev)</a>
           </p>
         </form>
 
-        <!-- QA Tester 1st Time Sign Up Form (Generates Initial OTP) -->
+        <!-- New Account Registration Form (ONLY place where Tester / Dev option is shown) -->
         <form id="testerSignupForm" class="auth5-form" style="display: none;">
           <div class="auth-info-banner mb-3">
             <i class="fa-solid fa-circle-info text-cyan"></i>
-            <span class="text-xs">Step 1: Verify work email via 6-digit OTP ➔ Step 2: Senior Dev Lead approves access.</span>
+            <span class="text-xs">Step 1: Choose Role & Verify Email OTP ➔ Step 2: Senior Dev Approves Access.</span>
           </div>
 
           <div class="auth5-form-group">
@@ -114,12 +104,12 @@
             <label class="auth5-label"><span>Work Email</span></label>
             <div class="auth5-input-wrapper">
               <i class="fa-regular fa-envelope auth5-input-icon"></i>
-              <input type="email" id="testerSignupEmail" class="auth5-input" placeholder="e.g. jordan.qa@company.com" required>
+              <input type="email" id="testerSignupEmail" class="auth5-input" placeholder="e.g. jordan@company.com" required>
             </div>
           </div>
 
           <div class="auth5-form-group">
-            <label class="auth5-label"><span>Role</span></label>
+            <label class="auth5-label"><span>Account Role</span></label>
             <select id="testerSignupRoleTitle" class="nexus-select w-100" style="padding: 0.65rem 0.75rem; border-radius: 12px; width: 100%;">
               <option value="Tester">Tester</option>
               <option value="Dev">Dev</option>
@@ -131,28 +121,7 @@
           </button>
 
           <p class="text-center text-muted text-xs mt-3">
-            Already registered? <a href="javascript:void(0)" onclick="window.switchTesterAuthMode('login')" class="text-primary font-bold">Sign In here</a>
-          </p>
-        </form>
-
-        <!-- Developer Lead Everyday Login Form (Email -> OTP) -->
-        <form id="devLoginForm" class="auth5-form" style="display: none;">
-          <div class="auth5-form-group">
-            <label class="auth5-label">
-              <span>Developer Lead Email</span>
-            </label>
-            <div class="auth5-input-wrapper">
-              <i class="fa-regular fa-envelope auth5-input-icon"></i>
-              <input type="email" id="devLoginEmail" class="auth5-input" placeholder="e.g. marcus.dev@nexusqa.io" required>
-            </div>
-          </div>
-
-          <button type="submit" class="auth5-submit-btn dev-btn" id="btnDevLoginSubmit">
-            <i class="fa-solid fa-paper-plane"></i> Send 6-Digit Email OTP
-          </button>
-
-          <p class="text-center text-muted text-xs mt-3">
-            Authorized Dev Leads manage QA defect pipelines & review tester approvals.
+            Already have an account? <a href="javascript:void(0)" onclick="window.switchAuthMode('login')" class="text-primary font-bold">Sign In here</a>
           </p>
         </form>
       </div>

@@ -382,5 +382,30 @@ const SupabaseManager = {
         await this.client.from("nexus_test_runs").upsert(this.mapTestRunToDB(testRun));
       } catch(e) { console.warn("Supabase test run upsert error:", e); }
     }
+  },
+
+  /**
+   * Send real OTP / Magic Link email to user via Supabase Auth
+   */
+  async sendRealEmailOtp(email) {
+    if (!this.client || !this.isConnected) {
+      console.log(`ℹ️ [Supabase Mail] Simulating real email OTP dispatch to ${email}`);
+      return { success: true, simulated: true };
+    }
+
+    try {
+      const { data, error } = await this.client.auth.signInWithOtp({
+        email: email.toLowerCase().trim(),
+        options: {
+          shouldCreateUser: true
+        }
+      });
+      if (error) throw error;
+      console.log(`✅ [Supabase Mail] Real OTP email dispatched to ${email}`);
+      return { success: true, data };
+    } catch (err) {
+      console.warn(`⚠️ [Supabase Mail] Could not send via Supabase Auth (${err.message}). Falling back to local token dispatch.`);
+      return { success: false, error: err.message };
+    }
   }
 };

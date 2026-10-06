@@ -567,73 +567,41 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (alertEl) alertEl.style.display = "none";
   };
 
-  window.setAuth5Role = function(role) {
-    window.hideAuthAlert();
-    state.auth5Role = role;
-    const btnTester = DOM.btnRoleTester || document.getElementById("btnRoleTester");
-    const btnDev = DOM.btnRoleDev || document.getElementById("btnRoleDev");
-    const title = DOM.auth5Title || document.getElementById("auth5Title");
-    const subtitle = DOM.auth5Subtitle || document.getElementById("auth5Subtitle");
-    const formState = DOM.auth5StateForm || document.getElementById("auth5StateForm");
-    const inboxState = DOM.auth5InboxState || document.getElementById("auth5InboxState");
-    const pendingState = DOM.testerPendingApprovalView || document.getElementById("testerPendingApprovalView");
-    const roleSwitch = DOM.auth5RoleSwitch || document.getElementById("auth5RoleSwitch");
-
-    if (formState) formState.style.display = "block";
-    if (inboxState) inboxState.style.display = "none";
-    if (pendingState) pendingState.style.display = "none";
-    if (roleSwitch) roleSwitch.style.display = "grid";
-
-    if (role === "dev") {
-      if (btnDev) btnDev.classList.add("active");
-      if (btnTester) btnTester.classList.remove("active");
-      if (title) title.textContent = "Developer Hub Gateway";
-      if (subtitle) subtitle.textContent = "Sign in with Developer Lead credentials to manage QA approvals";
-      if (DOM.devLoginForm) DOM.devLoginForm.style.display = "block";
-      if (DOM.testerLoginForm) DOM.testerLoginForm.style.display = "none";
-      if (DOM.testerSignupForm) DOM.testerSignupForm.style.display = "none";
-    } else {
-      if (btnTester) btnTester.classList.add("active");
-      if (btnDev) btnDev.classList.remove("active");
-      if (title) title.textContent = "Welcome back";
-      if (subtitle) subtitle.textContent = "Sign in with your QA Tester credentials to continue";
-      if (DOM.testerLoginForm) DOM.testerLoginForm.style.display = "block";
-      if (DOM.testerSignupForm) DOM.testerSignupForm.style.display = "none";
-      if (DOM.devLoginForm) DOM.devLoginForm.style.display = "none";
-    }
-  };
-
-  window.switchTesterAuthMode = function(mode) {
+  window.switchAuthMode = function(mode) {
     window.hideAuthAlert();
     state.auth5Mode = mode;
     const title = DOM.auth5Title || document.getElementById("auth5Title");
     const subtitle = DOM.auth5Subtitle || document.getElementById("auth5Subtitle");
+    const loginForm = DOM.testerLoginForm || document.getElementById("testerLoginForm");
+    const signupForm = DOM.testerSignupForm || document.getElementById("testerSignupForm");
 
     if (mode === "signup") {
-      if (DOM.testerLoginForm) DOM.testerLoginForm.style.display = "none";
-      if (DOM.testerSignupForm) DOM.testerSignupForm.style.display = "block";
-      if (title) title.textContent = "Create Tester Account";
-      if (subtitle) subtitle.textContent = "Register with work email to receive your 6-digit OTP verification code";
+      if (loginForm) loginForm.style.display = "none";
+      if (signupForm) signupForm.style.display = "block";
+      if (title) title.textContent = "Create New Account";
+      if (subtitle) subtitle.textContent = "Select your role (Tester / Dev) and verify work email via OTP";
     } else {
-      if (DOM.testerSignupForm) DOM.testerSignupForm.style.display = "none";
-      if (DOM.testerLoginForm) DOM.testerLoginForm.style.display = "block";
-      if (title) title.textContent = "Welcome back";
-      if (subtitle) subtitle.textContent = "Sign in with your QA Tester credentials to continue";
+      if (signupForm) signupForm.style.display = "none";
+      if (loginForm) loginForm.style.display = "block";
+      if (title) title.textContent = "Welcome to NexusQA";
+      if (subtitle) subtitle.textContent = "Enter your work email to receive a secure 6-digit login OTP";
     }
   };
+
+  // Backwards-compatible alias
+  window.switchTesterAuthMode = window.switchAuthMode;
+  window.setAuth5Role = function() {}; // No-op as everyday login is unified by email
 
   window.backToAuthForm = function() {
     const formState = DOM.auth5StateForm || document.getElementById("auth5StateForm");
     const inboxState = DOM.auth5InboxState || document.getElementById("auth5InboxState");
     const pendingState = DOM.testerPendingApprovalView || document.getElementById("testerPendingApprovalView");
-    const roleSwitch = DOM.auth5RoleSwitch || document.getElementById("auth5RoleSwitch");
 
     if (formState) formState.style.display = "block";
     if (inboxState) inboxState.style.display = "none";
     if (pendingState) pendingState.style.display = "none";
-    if (roleSwitch) roleSwitch.style.display = "grid";
 
-    window.setAuth5Role(state.auth5Role);
+    window.switchAuthMode(state.auth5Mode || "login");
   };
 
   window.showInboxState = function(email, otpCode) {
@@ -1015,7 +983,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   // Setup Auth Form Listeners
   function setupAuthListeners() {
-    // 1. Tester Everyday Login (Email -> Unique OTP)
+    // 1. Unified Everyday Login (Email -> Unique OTP for both Testers and Devs)
     if (DOM.testerLoginForm) {
       DOM.testerLoginForm.addEventListener("submit", (e) => {
         e.preventDefault();
@@ -1023,15 +991,21 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         const email = DOM.testerLoginEmail.value.trim();
 
         try {
-          const res = StorageManager.requestLoginOtp(email, "qa");
+          const res = StorageManager.requestLoginOtp(email);
           state.pendingRegistrationEmail = res.user.email;
           state.isRegistrationFlow = false;
 
           if (res.status === "pending_approval") {
             window.showPendingState(res.user.email);
-            showToast("Your tester account is awaiting Senior Dev approval.", "info");
+            showToast("Your account is awaiting Senior Dev approval.", "info");
           } else if (res.status === "otp_sent") {
             state.currentOtpCode = res.otpCode;
+            
+            // Dispatch real OTP email via Supabase Auth if connected
+            if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+              SupabaseManager.sendRealEmailOtp(email);
+            }
+
             window.showInboxState(res.user.email, res.otpCode);
             showToast(`Unique login OTP dispatched to ${res.user.email}!`);
           }
@@ -1042,7 +1016,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       });
     }
 
-    // 2. Tester 1st-Time Sign Up (Generates Initial OTP)
+    // 2. 1st-Time Account Sign Up (Tester / Dev Selection)
     if (DOM.testerSignupForm) {
       DOM.testerSignupForm.addEventListener("submit", (e) => {
         e.preventDefault();
@@ -1064,34 +1038,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             state.currentOtpCode = otpCode;
             state.isRegistrationFlow = true;
 
+            // Dispatch real OTP email via Supabase Auth if connected
+            if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+              SupabaseManager.sendRealEmailOtp(email);
+            }
+
             window.showInboxState(email, otpCode);
             showToast(`Verification code sent to ${email}!`);
           }, 350);
         } catch (err) {
           DOM.btnTesterSendOtp.disabled = false;
           DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Register & Send 6-Digit Email OTP`;
-          window.showAuthAlert(err.message);
-          showToast(err.message, "error");
-        }
-      });
-    }
-
-    // 3. Developer Lead Everyday Login (Email -> Unique OTP)
-    if (DOM.devLoginForm) {
-      DOM.devLoginForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        window.hideAuthAlert();
-        const email = DOM.devLoginEmail.value.trim();
-
-        try {
-          const res = StorageManager.requestLoginOtp(email, "dev");
-          state.pendingRegistrationEmail = res.user.email;
-          state.currentOtpCode = res.otpCode;
-          state.isRegistrationFlow = false;
-
-          window.showInboxState(res.user.email, res.otpCode);
-          showToast(`Unique login OTP dispatched to Developer ${res.user.email}!`);
-        } catch (err) {
           window.showAuthAlert(err.message);
           showToast(err.message, "error");
         }
