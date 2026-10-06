@@ -995,7 +995,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           } else if (res.status === "otp_sent") {
             state.currentOtpCode = res.otpCode;
             window.showInboxState(res.user.email, res.otpCode);
-            showToast(`Unique login OTP dispatched to ${res.user.email}!`);
           }
         } catch (err) {
           window.showAuthAlert(err.message);
