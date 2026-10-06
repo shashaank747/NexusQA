@@ -290,43 +290,6 @@
     </div>
   </div>
 
-  <!-- ============================================== -->
-  <!-- SIMULATED EMAIL INBOX NOTIFICATION POPOVER -->
-  <!-- ============================================== -->
-  <div class="simulated-email-toast" id="simulatedEmailToast" style="display: none;">
-    <div class="email-toast-header">
-      <div class="d-flex align-center gap-2">
-        <span class="email-toast-icon"><i class="fa-solid fa-envelope"></i></span>
-        <div>
-          <span class="email-toast-title">Simulated Mail Server (Inbox)</span>
-          <span class="email-toast-subtitle">Received 1 new security email</span>
-        </div>
-      </div>
-      <button class="icon-btn-xs" onclick="window.dismissSimulatedEmail()"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="email-toast-body">
-      <div class="email-meta-line">
-        <strong>From:</strong> <span>NexusQA Security &lt;auth@nexusqa.io&gt;</span>
-      </div>
-      <div class="email-meta-line">
-        <strong>To:</strong> <span id="simulatedEmailToLabel">tester@company.com</span>
-      </div>
-      <div class="email-subject-line">
-        <strong>Subject:</strong> <span>Your NexusQA Email Verification Code</span>
-      </div>
-      <div class="email-body-content">
-        <p>Use the following 6-digit one-time passcode (OTP) to complete your NexusQA Tester registration:</p>
-        <div class="email-otp-display">
-          <span class="otp-code-highlight font-mono" id="simulatedEmailOtpCode">------</span>
-          <button class="btn btn-primary btn-xs" id="btnAutoFillOtp">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fill OTP
-          </button>
-        </div>
-        <p class="email-footer-note">This code will expire in 15 minutes. Once verified, your access request will be sent to Developer Marcus Vance for workspace approval.</p>
-      </div>
-    </div>
-  </div>
-
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 

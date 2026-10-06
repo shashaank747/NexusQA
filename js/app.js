@@ -715,20 +715,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     else if (view === "pending") window.showPendingState(state.pendingRegistrationEmail || "tester@company.com");
   };
 
-  // --- Simulated Email Client Popover ---
-  window.showSimulatedEmail = function(email, otpCode) {
-    if (DOM.simulatedEmailToast) {
-      if (DOM.simulatedEmailToLabel) DOM.simulatedEmailToLabel.textContent = email;
-      if (DOM.simulatedEmailOtpCode) DOM.simulatedEmailOtpCode.textContent = otpCode;
-      DOM.simulatedEmailToast.style.display = "block";
-    }
-  };
-
-  window.dismissSimulatedEmail = function() {
-    if (DOM.simulatedEmailToast) {
-      DOM.simulatedEmailToast.style.display = "none";
-    }
-  };
+  // --- Real Email Client Handlers (Simulated UI popover disabled) ---
+  window.showSimulatedEmail = function() {};
+  window.dismissSimulatedEmail = function() {};
 
   // --- React Bits <CodeSlots /> State & Controller ---
   const codeSlotsState = {
@@ -1062,13 +1051,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     // 4. OTP Verification Submit with CodeSlots Animations
     if (DOM.testerOtpForm) {
-      DOM.testerOtpForm.addEventListener("submit", (e) => {
+      DOM.testerOtpForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const enteredOtp = codeSlotsState.value;
 
         if (enteredOtp.length !== 6) {
           setCodeSlotsStatus("error");
-          showToast("Please enter the complete 6-digit OTP code", "error");
+          showToast("Please enter the complete 6-digit OTP code from your email", "error");
           return;
         }
 
@@ -1076,46 +1065,40 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           DOM.btnVerifyOtpSubmit.disabled = true;
           DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Validating Code...`;
 
-          setTimeout(() => {
-            try {
-              if (state.isRegistrationFlow) {
-                // 1st Time Registration Flow -> Verify Email & Submit to Senior Dev
-                const user = StorageManager.verifyTesterOtp(state.pendingRegistrationEmail, enteredOtp);
-                setCodeSlotsStatus("success");
-                DOM.btnVerifyOtpSubmit.disabled = false;
-                DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Code Verified!`;
+          // Verify with Supabase Auth if connected
+          if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+            await SupabaseManager.verifyRealEmailOtp(state.pendingRegistrationEmail, enteredOtp);
+          }
 
-                setTimeout(() => {
-                  window.showPendingState(user.email);
-                  window.dismissSimulatedEmail();
-                  showToast("Email verified! Access request sent to Senior Developer Lead.");
-                  DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify Code & Submit Request`;
-                }, 600);
-              } else {
-                // Everyday Login Flow -> Authenticate & Enter Workspace
-                const { user } = StorageManager.verifyLoginOtp(state.pendingRegistrationEmail, enteredOtp);
-                setCodeSlotsStatus("success");
-                DOM.btnVerifyOtpSubmit.disabled = false;
-                DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Welcome Back, ${user.name}!`;
+          if (state.isRegistrationFlow) {
+            // 1st Time Registration Flow -> Verify Email & Submit to Senior Dev
+            const user = StorageManager.verifyTesterOtp(state.pendingRegistrationEmail, enteredOtp);
+            setCodeSlotsStatus("success");
+            DOM.btnVerifyOtpSubmit.disabled = false;
+            DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Code Verified!`;
 
-                setTimeout(() => {
-                  window.dismissSimulatedEmail();
-                  if (user.role === "dev") {
-                    showToast(`Authenticated as Developer Lead: ${user.name}. Entering Dev Hub...`);
-                    window.location.href = "dev.html";
-                  } else {
-                    showToast(`Authenticated as QA Tester: ${user.name}. Entering QA Portal...`);
-                    window.location.href = "tester.html";
-                  }
-                }, 600);
-              }
-            } catch (err) {
-              DOM.btnVerifyOtpSubmit.disabled = false;
+            setTimeout(() => {
+              window.showPendingState(user.email);
+              showToast("Email verified! Access request sent to Senior Developer Lead.");
               DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify Code & Submit Request`;
-              setCodeSlotsStatus("error");
-              showToast(err.message, "error");
-            }
-          }, 350);
+            }, 500);
+          } else {
+            // Everyday Login Flow -> Authenticate & Enter Workspace
+            const { user } = StorageManager.verifyLoginOtp(state.pendingRegistrationEmail, enteredOtp);
+            setCodeSlotsStatus("success");
+            DOM.btnVerifyOtpSubmit.disabled = false;
+            DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Welcome Back, ${user.name}!`;
+
+            setTimeout(() => {
+              if (user.role === "dev") {
+                showToast(`Authenticated as Developer Lead: ${user.name}. Entering Dev Hub...`);
+                window.location.href = "dev.html";
+              } else {
+                showToast(`Authenticated as QA Tester: ${user.name}. Entering QA Portal...`);
+                window.location.href = "tester.html";
+              }
+            }, 500);
+          }
         } catch (err) {
           DOM.btnVerifyOtpSubmit.disabled = false;
           DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify Code & Submit Request`;
@@ -1137,7 +1120,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
           StorageManager.saveUsers(users);
           state.currentOtpCode = otpCode;
-          window.showSimulatedEmail(user.email, otpCode);
+
+          if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+            SupabaseManager.sendRealEmailOtp(user.email);
+          }
+
           startResendCooldown(60);
           startOtpTimer(900);
           showToast(`New verification code dispatched to ${user.email}`);

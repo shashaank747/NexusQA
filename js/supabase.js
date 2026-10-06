@@ -376,22 +376,47 @@ const SupabaseManager = {
    */
   async sendRealEmailOtp(email) {
     if (!this.client || !this.isConnected) {
-      console.log(`ℹ️ [Supabase Mail] Simulating real email OTP dispatch to ${email}`);
-      return { success: true, simulated: true };
+      console.warn("⚠️ Supabase client not connected for email dispatch.");
+      return { success: false, error: "Database not connected" };
     }
 
     try {
+      const cleanEmail = email.toLowerCase().trim();
       const { data, error } = await this.client.auth.signInWithOtp({
-        email: email.toLowerCase().trim(),
+        email: cleanEmail,
         options: {
           shouldCreateUser: true
         }
       });
       if (error) throw error;
-      console.log(`✅ [Supabase Mail] Real OTP email dispatched to ${email}`);
+      console.log(`✅ [Supabase Auth] Real OTP email dispatched directly to ${cleanEmail}`);
       return { success: true, data };
     } catch (err) {
-      console.warn(`⚠️ [Supabase Mail] Could not send via Supabase Auth (${err.message}). Falling back to local token dispatch.`);
+      console.warn(`⚠️ [Supabase Auth Mail Error] ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
+   * Verify real OTP token received in user's email inbox
+   */
+  async verifyRealEmailOtp(email, token) {
+    if (!this.client || !this.isConnected) {
+      return { success: false, error: "Database not connected" };
+    }
+
+    try {
+      const cleanEmail = email.toLowerCase().trim();
+      const { data, error } = await this.client.auth.verifyOtp({
+        email: cleanEmail,
+        token: token.trim(),
+        type: "email"
+      });
+      if (error) throw error;
+      console.log(`✅ [Supabase Auth] Real OTP verified for ${cleanEmail}!`, data);
+      return { success: true, data };
+    } catch (err) {
+      console.warn(`⚠️ [Supabase Auth Verification Error] ${err.message}`);
       return { success: false, error: err.message };
     }
   }
