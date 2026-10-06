@@ -24,10 +24,11 @@
   <!-- ============================================== -->
   <div id="app" class="app-layout">
     
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <div class="brand-logo">
+    <!-- Top Workspace Bar (Fixed permanently at top with Logo on Top-Left) -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <!-- Fixed Logo on Top-Left (Outside and Above Sidebar) -->
+        <div class="brand-logo fixed-top-logo">
           <div class="logo-icon">
             <i class="fa-solid fa-shield-halved"></i>
           </div>
@@ -36,81 +37,80 @@
             <span class="badge badge-version">QA Tester Portal</span>
           </div>
         </div>
-        <div class="sidebar-toggle-row">
+
+        <div class="topbar-divider-v"></div>
+
+        <div class="breadcrumb" id="breadcrumb">
+          <span class="crumb-root" id="portalCrumbRoot">NexusQA Tester</span>
+          <i class="fa-solid fa-chevron-right crumb-sep"></i>
+          <span class="crumb-current" id="currentCrumb">Quality Analytics</span>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <div class="global-search-bar">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="globalSearchInput" placeholder="Search test cases, bugs, suites, runs (Press '/' to focus)...">
+          <kbd class="search-shortcut">/</kbd>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <button class="btn btn-ai-voice btn-sm" id="topbarVoiceAiBtn" title="Launch Voice & Chat AI Test Studio">
+          <i class="fa-solid fa-microphone text-cyan"></i>
+          <span>Voice AI Studio</span>
+        </button>
+        
+        <button class="btn btn-primary btn-sm" id="createQuickBtn">
+          <i class="fa-solid fa-plus"></i>
+          <span id="createQuickBtnLabel">New Test Case</span>
+        </button>
+
+        <div class="theme-toggle-wrapper">
+          <button class="icon-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+            <i class="fa-solid fa-sun"></i>
+          </button>
+        </div>
+
+        <div class="topbar-divider"></div>
+
+        <!-- Topbar User Profile -->
+        <div class="user-profile-wrapper topbar-user-profile" id="userProfileToggle">
+          <div class="user-profile">
+            <div class="avatar-ring avatar-qa" id="userAvatarRing">
+              <span class="avatar-initials" id="userAvatarInitials">AM</span>
+            </div>
+            <div class="user-details">
+              <span class="user-name" id="userNameLabel">Alex Morgan</span>
+              <span class="user-role" id="userRoleLabel"><i class="fa-solid fa-circle status-dot-online"></i> QA Lead</span>
+            </div>
+          </div>
+          <button class="icon-btn-xs" id="logoutBtn" title="Sign Out & Return to Login"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+          <button class="icon-btn-xs" id="switchUserQuickBtn" title="Sign Out" style="display:none;"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Workspace Body (Sidebar + Main Content below fixed topbar) -->
+    <div class="workspace-body">
+      <!-- Sidebar Navigation with Burger Icon directly below Logo -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-top-control">
           <button type="button" class="sidebar-burger-btn" id="sidebarBurgerBtn" title="Toggle Sidebar Navigation">
             <i class="fa-solid fa-bars"></i>
             <span class="burger-label">Collapse Menu</span>
           </button>
         </div>
-      </div>
 
-      <!-- Dynamic Sidebar Nav -->
-      <nav class="sidebar-nav" id="qaNavSection">
-      </nav>
-    </aside>
+        <!-- Dynamic Sidebar Nav -->
+        <nav class="sidebar-nav" id="qaNavSection">
+        </nav>
+      </aside>
 
-    <!-- Main Workspace Container -->
-    <main class="main-content" id="mainContent">
-      
-      <!-- Top Workspace Bar -->
-      <header class="topbar">
-        <div class="topbar-left">
-          <button class="icon-btn mobile-menu-toggle" id="menuToggleBtn" title="Toggle Navigation">
-            <i class="fa-solid fa-bars"></i>
-          </button>
-          <div class="breadcrumb" id="breadcrumb">
-            <span class="crumb-root" id="portalCrumbRoot">NexusQA Tester</span>
-            <i class="fa-solid fa-chevron-right crumb-sep"></i>
-            <span class="crumb-current" id="currentCrumb">Quality Analytics</span>
-          </div>
-        </div>
-
-        <div class="topbar-center">
-          <div class="global-search-bar">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="globalSearchInput" placeholder="Search test cases, bugs, suites, runs (Press '/' to focus)...">
-            <kbd class="search-shortcut">/</kbd>
-          </div>
-        </div>
-
-        <div class="topbar-right">
-          <button class="btn btn-ai-voice btn-sm" id="topbarVoiceAiBtn" title="Launch Voice & Chat AI Test Studio">
-            <i class="fa-solid fa-microphone text-cyan"></i>
-            <span>Voice AI Studio</span>
-          </button>
-          
-          <button class="btn btn-primary btn-sm" id="createQuickBtn">
-            <i class="fa-solid fa-plus"></i>
-            <span id="createQuickBtnLabel">New Test Case</span>
-          </button>
-
-          <div class="theme-toggle-wrapper">
-            <button class="icon-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
-              <i class="fa-solid fa-moon"></i>
-            </button>
-          </div>
-
-          <div class="topbar-divider"></div>
-
-          <!-- Topbar User Profile -->
-          <div class="user-profile-wrapper topbar-user-profile" id="userProfileToggle">
-            <div class="user-profile">
-              <div class="avatar-ring avatar-qa" id="userAvatarRing">
-                <span class="avatar-initials" id="userAvatarInitials">AM</span>
-              </div>
-              <div class="user-details">
-                <span class="user-name" id="userNameLabel">Alex Morgan</span>
-                <span class="user-role" id="userRoleLabel"><i class="fa-solid fa-circle status-dot-online"></i> QA Lead</span>
-              </div>
-            </div>
-            <button class="icon-btn-xs" id="logoutBtn" title="Sign Out & Return to Login"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-            <button class="icon-btn-xs" id="switchUserQuickBtn" title="Sign Out" style="display:none;"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-          </div>
-        </div>
-      </header>
-
-      <!-- View Containers -->
-      <div class="view-viewport" id="viewViewport">
+      <!-- Main Workspace Container -->
+      <main class="main-content" id="mainContent">
+        <!-- View Containers -->
+        <div class="view-viewport" id="viewViewport">
         
         <!-- QA VIEW 1: DASHBOARD -->
         <section class="view-panel active-view" id="view-dashboard">
@@ -673,6 +673,7 @@
 
       </div>
     </main>
+    </div>
   </div>
 
   <!-- ============================================== -->

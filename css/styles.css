@@ -259,7 +259,16 @@ html, body {
 /* Layout */
 .app-layout {
   display: flex;
+  flex-direction: column;
   height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.workspace-body {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 56px);
   width: 100vw;
   overflow: hidden;
 }
@@ -474,7 +483,65 @@ html, body {
 }
 
 /* ==========================================================================
-   Sidebar Navigation
+   Fixed Top Logo & Header
+   ========================================================================== */
+.fixed-top-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 190px;
+}
+
+.fixed-top-logo .logo-icon {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1rem;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.35);
+}
+
+.fixed-top-logo .brand-text {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.fixed-top-logo .brand-text h2 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-heading);
+  line-height: 1.15;
+}
+
+.fixed-top-logo .brand-text h2 span {
+  color: var(--primary);
+}
+
+.badge-version {
+  font-size: 0.58rem;
+  padding: 1px 6px;
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--primary);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.topbar-divider-v {
+  width: 1px;
+  height: 22px;
+  background: var(--border-color);
+  margin: 0 0.5rem;
+}
+
+/* ==========================================================================
+   Sidebar Navigation (Below Topbar)
    ========================================================================== */
 .sidebar {
   width: 210px;
@@ -485,71 +552,15 @@ html, body {
   flex-direction: column;
   height: 100%;
   z-index: 50;
-  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform var(--transition-normal);
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.sidebar-header {
-  padding: 0.85rem 0.85rem 0.4rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.brand-logo {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  min-width: 0;
-}
-
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 0.95rem;
-  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.35);
-}
-
-.brand-text {
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.brand-text h2 {
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text-heading);
-  line-height: 1.15;
-}
-
-.brand-text h2 span {
-  color: var(--primary);
-}
-
-.badge-version {
-  font-size: 0.58rem;
-  padding: 1px 5px;
-  background: rgba(99, 102, 241, 0.15);
-  color: var(--primary);
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-/* Sidebar Burger Toggle Row (Below Logo) */
-.sidebar-toggle-row {
-  display: flex;
-  align-items: center;
-  margin-top: 0.1rem;
-  padding-bottom: 0.35rem;
+/* Sidebar Top Burger Control (Directly below Logo) */
+.sidebar-top-control {
+  padding: 0.6rem 0.65rem;
   border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
 }
 
 .sidebar-burger-btn {
@@ -560,7 +571,7 @@ html, body {
   background: var(--bg-card-subtle);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 0.35rem 0.6rem;
+  padding: 0.4rem 0.65rem;
   color: var(--text-muted);
   font-size: 0.76rem;
   font-weight: 600;
@@ -583,11 +594,10 @@ html, body {
 
 /* Collapsed Sidebar Mode */
 .sidebar.collapsed {
-  width: 58px;
-  min-width: 58px;
+  width: 52px;
+  min-width: 52px;
 }
 
-.sidebar.collapsed .brand-text,
 .sidebar.collapsed .burger-label,
 .sidebar.collapsed .nav-section-title,
 .sidebar.collapsed .nav-item .nav-link span,
@@ -597,18 +607,9 @@ html, body {
   display: none !important;
 }
 
-.sidebar.collapsed .sidebar-header {
-  padding: 0.75rem 0.5rem 0.4rem;
-  align-items: center;
-}
-
-.sidebar.collapsed .brand-logo {
+.sidebar.collapsed .sidebar-top-control {
   justify-content: center;
-}
-
-.sidebar.collapsed .sidebar-toggle-row {
-  justify-content: center;
-  width: 100%;
+  padding: 0.5rem 0.35rem;
 }
 
 .sidebar.collapsed .sidebar-burger-btn {

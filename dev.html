@@ -24,10 +24,11 @@
   <!-- ============================================== -->
   <div id="app" class="app-layout">
     
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <div class="brand-logo">
+    <!-- Top Workspace Bar (Fixed permanently at top with Logo on Top-Left) -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <!-- Fixed Logo on Top-Left (Outside and Above Sidebar) -->
+        <div class="brand-logo fixed-top-logo">
           <div class="logo-icon">
             <i class="fa-solid fa-shield-halved"></i>
           </div>
@@ -36,131 +37,130 @@
             <span class="badge badge-version badge-dev">Developer Hub</span>
           </div>
         </div>
-        <div class="sidebar-toggle-row">
+
+        <div class="topbar-divider-v"></div>
+
+        <div class="breadcrumb" id="breadcrumb">
+          <span class="crumb-root" id="portalCrumbRoot">NexusQA Developer</span>
+          <i class="fa-solid fa-chevron-right crumb-sep"></i>
+          <span class="crumb-current" id="currentCrumb">Dev Defect Dashboard</span>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <div class="global-search-bar">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="globalSearchInput" placeholder="Search bugs, test cases, branches, PRs (Press '/' to focus)...">
+          <kbd class="search-shortcut">/</kbd>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <button class="btn btn-primary btn-sm" id="createQuickBtn">
+          <i class="fa-solid fa-plus"></i>
+          <span id="createQuickBtnLabel">New Bug Ticket</span>
+        </button>
+
+        <div class="theme-toggle-wrapper">
+          <button class="icon-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+            <i class="fa-solid fa-sun"></i>
+          </button>
+        </div>
+
+        <div class="topbar-divider"></div>
+
+        <!-- Topbar User Profile -->
+        <div class="user-profile-wrapper topbar-user-profile" id="userProfileToggle">
+          <div class="user-profile">
+            <div class="avatar-ring avatar-dev" id="userAvatarRing">
+              <span class="avatar-initials" id="userAvatarInitials">MV</span>
+            </div>
+            <div class="user-details">
+              <span class="user-name" id="userNameLabel">Marcus Vance</span>
+              <span class="user-role" id="userRoleLabel"><i class="fa-solid fa-circle status-dot-online"></i> Dev Lead</span>
+            </div>
+          </div>
+          <button class="icon-btn-xs" id="logoutBtn" title="Sign Out & Return to Login"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+          <button class="icon-btn-xs" id="switchUserQuickBtn" title="Sign Out" style="display:none;"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Workspace Body (Sidebar + Main Content below fixed topbar) -->
+    <div class="workspace-body">
+      <!-- Sidebar Navigation with Burger Icon directly below Logo -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-top-control">
           <button type="button" class="sidebar-burger-btn" id="sidebarBurgerBtn" title="Toggle Sidebar Navigation">
             <i class="fa-solid fa-bars"></i>
             <span class="burger-label">Collapse Menu</span>
           </button>
         </div>
-      </div>
 
-      <!-- Dynamic Sidebar Nav -->
-      <nav class="sidebar-nav">
-        <div id="devNavSection">
-          <div class="nav-section-title">DEVELOPER HUB</div>
+        <!-- Dynamic Sidebar Nav -->
+        <nav class="sidebar-nav">
+          <div id="devNavSection">
+            <div class="nav-section-title">DEVELOPER HUB</div>
+            <ul class="nav-list">
+              <li class="nav-item active" data-view="dev-dashboard">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-laptop-code"></i>
+                  <span>Dev Defect Dashboard</span>
+                </a>
+              </li>
+              <li class="nav-item" data-view="dev-approvals">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-user-shield text-amber"></i>
+                  <span>Tester Approvals</span>
+                  <span class="nav-badge badge-danger" id="devPendingApprovalsBadge">0</span>
+                </a>
+              </li>
+              <li class="nav-item" data-view="dev-kanban">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-table-columns"></i>
+                  <span>Bug Triage Kanban</span>
+                  <span class="nav-badge badge-danger" id="devAssignedBadge">2</span>
+                </a>
+              </li>
+              <li class="nav-item" data-view="dev-failures">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-bug-slash"></i>
+                  <span>Failed Test Diagnostics</span>
+                  <span class="nav-badge badge-blocked" id="devFailedTestsBadge">2</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div class="nav-section-title">PLATFORM</div>
           <ul class="nav-list">
-            <li class="nav-item active" data-view="dev-dashboard">
+            <li class="nav-item" data-view="settings">
               <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-laptop-code"></i>
-                <span>Dev Defect Dashboard</span>
-              </a>
-            </li>
-            <li class="nav-item" data-view="dev-approvals">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-user-shield text-amber"></i>
-                <span>Tester Approvals</span>
-                <span class="nav-badge badge-danger" id="devPendingApprovalsBadge">0</span>
-              </a>
-            </li>
-            <li class="nav-item" data-view="dev-kanban">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-table-columns"></i>
-                <span>Bug Triage Kanban</span>
-                <span class="nav-badge badge-danger" id="devAssignedBadge">2</span>
-              </a>
-            </li>
-            <li class="nav-item" data-view="dev-failures">
-              <a href="javascript:void(0)" class="nav-link">
-                <i class="fa-solid fa-bug-slash"></i>
-                <span>Failed Test Diagnostics</span>
-                <span class="nav-badge badge-blocked" id="devFailedTestsBadge">2</span>
+                <i class="fa-solid fa-sliders"></i>
+                <span>Settings</span>
               </a>
             </li>
           </ul>
-        </div>
+        </nav>
+      </aside>
 
-        <div class="nav-section-title">PLATFORM</div>
-        <ul class="nav-list">
-          <li class="nav-item" data-view="settings">
-            <a href="javascript:void(0)" class="nav-link">
-              <i class="fa-solid fa-sliders"></i>
-              <span>Settings</span>
-            </a>
-          </li>
-        </ul>
-      </nav>
-    </aside>
-
-    <!-- Main Workspace Container -->
-    <main class="main-content" id="mainContent">
-      
-      <!-- Top Workspace Bar -->
-      <header class="topbar">
-        <div class="topbar-left">
-          <button class="icon-btn mobile-menu-toggle" id="menuToggleBtn" title="Toggle Navigation">
-            <i class="fa-solid fa-bars"></i>
-          </button>
-          <div class="breadcrumb" id="breadcrumb">
-            <span class="crumb-root" id="portalCrumbRoot">NexusQA Developer</span>
-            <i class="fa-solid fa-chevron-right crumb-sep"></i>
-            <span class="crumb-current" id="currentCrumb">Dev Defect Dashboard</span>
-          </div>
-        </div>
-
-        <div class="topbar-center">
-          <div class="global-search-bar">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="globalSearchInput" placeholder="Search bugs, test cases, branches, PRs (Press '/' to focus)...">
-            <kbd class="search-shortcut">/</kbd>
-          </div>
-        </div>
-
-        <div class="topbar-right">
-          <button class="btn btn-primary btn-sm" id="createQuickBtn">
-            <i class="fa-solid fa-plus"></i>
-            <span id="createQuickBtnLabel">New Bug Ticket</span>
-          </button>
-
-          <div class="theme-toggle-wrapper">
-            <button class="icon-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
-              <i class="fa-solid fa-moon"></i>
-            </button>
-          </div>
-
-          <div class="topbar-divider"></div>
-
-          <!-- Topbar User Profile -->
-          <div class="user-profile-wrapper topbar-user-profile" id="userProfileToggle">
-            <div class="user-profile">
-              <div class="avatar-ring avatar-dev" id="userAvatarRing">
-                <span class="avatar-initials" id="userAvatarInitials">MV</span>
+      <!-- Main Workspace Container -->
+      <main class="main-content" id="mainContent">
+        <!-- View Containers -->
+        <div class="view-viewport" id="viewViewport">
+          
+          <!-- DEVELOPER VIEW 1: DEV DASHBOARD -->
+          <section class="view-panel active-view" id="view-dev-dashboard">
+            <div class="view-header">
+              <div>
+                <div class="dev-header-badge"><i class="fa-solid fa-code"></i> Developer Portal</div>
+                <h1 class="view-title">Engineering Defect & Triage Command Center</h1>
+                <p class="view-subtitle">Live sync with QA testers & Supabase: diagnose test failures, inspect reproduction steps, and submit code fixes.</p>
               </div>
-              <div class="user-details">
-                <span class="user-name" id="userNameLabel">Marcus Vance</span>
-                <span class="user-role" id="userRoleLabel"><i class="fa-solid fa-circle status-dot-online"></i> Dev Lead</span>
+              <div class="view-actions">
+                <button class="btn btn-secondary btn-sm" id="refreshDevMetricsBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Feed</button>
               </div>
             </div>
-            <button class="icon-btn-xs" id="logoutBtn" title="Sign Out & Return to Login"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-            <button class="icon-btn-xs" id="switchUserQuickBtn" title="Sign Out" style="display:none;"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-          </div>
-        </div>
-      </header>
-
-      <!-- View Containers -->
-      <div class="view-viewport" id="viewViewport">
-        
-        <!-- DEVELOPER VIEW 1: DEV DASHBOARD -->
-        <section class="view-panel active-view" id="view-dev-dashboard">
-          <div class="view-header">
-            <div>
-              <div class="dev-header-badge"><i class="fa-solid fa-code"></i> Developer Portal</div>
-              <h1 class="view-title">Engineering Defect & Triage Command Center</h1>
-              <p class="view-subtitle">Live sync with QA testers & Supabase: diagnose test failures, inspect reproduction steps, and submit code fixes.</p>
-            </div>
-            <div class="view-actions">
-              <button class="btn btn-secondary btn-sm" id="refreshDevMetricsBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Feed</button>
-            </div>
-          </div>
 
           <!-- Pending Tester Approvals Alert Banner for Devs -->
           <div class="dev-approval-alert-banner" id="devApprovalAlertBanner" style="display: none;">
@@ -474,6 +474,7 @@
 
       </div>
     </main>
+    </div>
   </div>
 
   <!-- ============================================== -->
