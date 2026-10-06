@@ -422,58 +422,6 @@ const SupabaseManager = {
   async syncTestRunUpsert(testRun) {
     if (this.client && this.isConnected) {
       try {
-        await this.client.from("nexus_test_runs").upsert(this.mapTestRunToDB(testRun));
-      } catch(e) { console.warn("Supabase test run upsert error:", e); }
-    }
-  },
-
-  /**
-   * Send real OTP / Magic Link email to user via Supabase Auth
-   */
-  async sendRealEmailOtp(email) {
-    if (!this.client || !this.isConnected) {
-      console.warn("⚠️ Supabase client not connected for email dispatch.");
-      return { success: false, error: "Database not connected" };
-    }
-
-    try {
-      const cleanEmail = email.toLowerCase().trim();
-      const { data, error } = await this.client.auth.signInWithOtp({
-        email: cleanEmail,
-        options: {
-          shouldCreateUser: true
-        }
-      });
-      if (error) throw error;
-      console.log(`✅ [Supabase Auth] Real OTP email dispatched directly to ${cleanEmail}`);
-      return { success: true, data };
-    } catch (err) {
-      console.warn(`⚠️ [Supabase Auth Mail Error] ${err.message}`);
-      return { success: false, error: err.message };
-    }
-  },
-
-  /**
-   * Verify real OTP token received in user's email inbox
-   */
-  async verifyRealEmailOtp(email, token) {
-    if (!this.client || !this.isConnected) {
-      return { success: false, error: "Database not connected" };
-    }
-
-    try {
-      const cleanEmail = email.toLowerCase().trim();
-      const { data, error } = await this.client.auth.verifyOtp({
-        email: cleanEmail,
-        token: token.trim(),
-        type: "email"
-      });
-      if (error) throw error;
-      console.log(`✅ [Supabase Auth] Real OTP verified for ${cleanEmail}!`, data);
-      return { success: true, data };
-    } catch (err) {
-      console.warn(`⚠️ [Supabase Auth Verification Error] ${err.message}`);
-      return { success: false, error: err.message };
-    }
   }
 };
+

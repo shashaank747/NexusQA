@@ -994,12 +994,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             showToast("Your account is awaiting Senior Dev approval.", "info");
           } else if (res.status === "otp_sent") {
             state.currentOtpCode = res.otpCode;
-            
-            // Dispatch real OTP email via Supabase Auth if connected
-            if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
-              SupabaseManager.sendRealEmailOtp(email);
-            }
-
             window.showInboxState(res.user.email, res.otpCode);
             showToast(`Unique login OTP dispatched to ${res.user.email}!`);
           }
@@ -1032,11 +1026,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             state.currentOtpCode = otpCode;
             state.isRegistrationFlow = true;
 
-            // Dispatch real OTP email via Supabase Auth if connected
-            if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
-              SupabaseManager.sendRealEmailOtp(email);
-            }
-
             window.showInboxState(email, otpCode);
             showToast(`Verification code sent to ${email}!`);
           }, 350);
@@ -1064,11 +1053,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         try {
           DOM.btnVerifyOtpSubmit.disabled = true;
           DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Validating Code...`;
-
-          // Verify with Supabase Auth if connected
-          if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
-            await SupabaseManager.verifyRealEmailOtp(state.pendingRegistrationEmail, enteredOtp);
-          }
 
           if (state.isRegistrationFlow) {
             // 1st Time Registration Flow -> Verify Email & Submit to Senior Dev
@@ -1120,10 +1104,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
           StorageManager.saveUsers(users);
           state.currentOtpCode = otpCode;
-
-          if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
-            SupabaseManager.sendRealEmailOtp(user.email);
-          }
 
           startResendCooldown(60);
           startOtpTimer(900);
