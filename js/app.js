@@ -1098,8 +1098,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         const users = StorageManager.getUsers();
         const user = users.find(u => u.email.toLowerCase() === state.pendingRegistrationEmail.toLowerCase());
         if (user) {
-          const isHardcoded = user.email.toLowerCase().trim() === "chhotumonster225@gmail.com";
-          const otpCode = isHardcoded ? "123456" : String(Math.floor(100000 + Math.random() * 900000));
+          const cleanEmail = user.email.toLowerCase().trim();
+          let otpCode = String(Math.floor(100000 + Math.random() * 900000));
+          if (cleanEmail === "chhotumonster225@gmail.com") {
+            otpCode = "123456";
+          } else if (cleanEmail === "a@a") {
+            otpCode = "654321";
+          }
           user.otpCode = otpCode;
           user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
           StorageManager.saveUsers(users);

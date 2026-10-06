@@ -5,6 +5,18 @@
 
 const SEED_USERS = [
   {
+    id: "user-qa-a",
+    name: "QA Tester",
+    email: "a@a",
+    role: "qa",
+    roleTitle: "QA Automation Tester",
+    avatar: "QA",
+    color: "#6366f1",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2026-10-06 12:00"
+  },
+  {
     id: "user-qa-1",
     name: "Alex Morgan",
     email: "alex.qa@nexusqa.io",

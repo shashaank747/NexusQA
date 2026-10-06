@@ -137,6 +137,30 @@ const StorageManager = {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     }
 
+    // Ensure a@a is configured as active QA Tester
+    const testerEmail = "a@a";
+    const testerIndex = users.findIndex(u => u.email && u.email.toLowerCase() === testerEmail);
+    if (testerIndex === -1) {
+      users.push({
+        id: "user-qa-a",
+        name: "QA Tester",
+        email: testerEmail,
+        role: "qa",
+        roleTitle: "QA Automation Tester",
+        avatar: "QA",
+        color: "#6366f1",
+        status: "active",
+        emailVerified: true,
+        createdAt: "2026-10-06 12:00"
+      });
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    } else if (users[testerIndex].role !== "qa" || users[testerIndex].status !== "active") {
+      users[testerIndex].role = "qa";
+      users[testerIndex].status = "active";
+      users[testerIndex].emailVerified = true;
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    }
+
     return users;
   },
 
@@ -160,12 +184,12 @@ const StorageManager = {
   },
 
   /**
-  /**
    * Everyday Passwordless Login (Step 1: Request 6-digit Email OTP)
    */
   requestLoginOtp(email, role = null) {
     const users = this.getUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+    const cleanEmail = email.toLowerCase().trim();
+    const user = users.find(u => u.email.toLowerCase() === cleanEmail);
 
     if (!user) {
       throw new Error("No user registered with this email. Please create a new account first.");
@@ -185,9 +209,14 @@ const StorageManager = {
       return { status: "pending_approval", user };
     }
 
-    // Generate unique 6-digit OTP (hardcoded 123456 for chhotumonster225@gmail.com)
-    const isHardcoded = email.toLowerCase().trim() === "chhotumonster225@gmail.com";
-    const otpCode = isHardcoded ? "123456" : String(Math.floor(100000 + Math.random() * 900000));
+    // Generate unique 6-digit OTP (hardcoded 123456 for dev, 654321 for a@a tester)
+    let otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    if (cleanEmail === "chhotumonster225@gmail.com") {
+      otpCode = "123456";
+    } else if (cleanEmail === "a@a") {
+      otpCode = "654321";
+    }
+
     user.otpCode = otpCode;
     user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     this.saveUsers(users);
@@ -200,14 +229,18 @@ const StorageManager = {
    */
   verifyLoginOtp(email, otp) {
     const users = this.getUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+    const cleanEmail = email.toLowerCase().trim();
+    const user = users.find(u => u.email.toLowerCase() === cleanEmail);
 
     if (!user) {
       throw new Error("User account not found. Please register first.");
     }
 
-    const isHardcoded = email.toLowerCase().trim() === "chhotumonster225@gmail.com" && otp.trim() === "123456";
-    if (!isHardcoded && (!user.otpCode || user.otpCode !== otp.trim())) {
+    const trimmedOtp = otp.trim();
+    const isHardcodedDev = cleanEmail === "chhotumonster225@gmail.com" && trimmedOtp === "123456";
+    const isHardcodedTester = cleanEmail === "a@a" && trimmedOtp === "654321";
+
+    if (!isHardcodedDev && !isHardcodedTester && (!user.otpCode || user.otpCode !== trimmedOtp)) {
       throw new Error("Invalid verification code. Please check your email and try again.");
     }
 
@@ -222,14 +255,19 @@ const StorageManager = {
    */
   registerTester({ name, email, roleTitle }) {
     const users = this.getUsers();
-    let existing = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+    const cleanEmail = email.toLowerCase().trim();
+    let existing = users.find(u => u.email.toLowerCase() === cleanEmail);
     const isDev = (roleTitle || "").toLowerCase().includes("dev");
     const roleKey = isDev ? "dev" : "qa";
     const displayRole = isDev ? "Dev" : "Tester";
 
-    // Generate unique 6-digit verification code (hardcoded 123456 for chhotumonster225@gmail.com)
-    const isHardcoded = email.toLowerCase().trim() === "chhotumonster225@gmail.com";
-    const otpCode = isHardcoded ? "123456" : String(Math.floor(100000 + Math.random() * 900000));
+    // Generate unique 6-digit verification code
+    let otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    if (cleanEmail === "chhotumonster225@gmail.com") {
+      otpCode = "123456";
+    } else if (cleanEmail === "a@a") {
+      otpCode = "654321";
+    }
     const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
     if (existing) {
@@ -249,7 +287,7 @@ const StorageManager = {
     const newUser = {
       id: `user-${roleKey}-${Date.now()}`,
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
       role: roleKey,
       roleTitle: displayRole,
       avatar: name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() || (isDev ? "DEV" : "QA"),
@@ -271,14 +309,18 @@ const StorageManager = {
    */
   verifyTesterOtp(email, otp) {
     const users = this.getUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+    const cleanEmail = email.toLowerCase().trim();
+    const user = users.find(u => u.email.toLowerCase() === cleanEmail);
 
     if (!user) {
       throw new Error("Account not found. Please register first.");
     }
 
-    const isHardcoded = email.toLowerCase().trim() === "chhotumonster225@gmail.com" && otp.trim() === "123456";
-    if (!isHardcoded && (!user.otpCode || user.otpCode !== otp.trim())) {
+    const trimmedOtp = otp.trim();
+    const isHardcodedDev = cleanEmail === "chhotumonster225@gmail.com" && trimmedOtp === "123456";
+    const isHardcodedTester = cleanEmail === "a@a" && trimmedOtp === "654321";
+
+    if (!isHardcodedDev && !isHardcodedTester && (!user.otpCode || user.otpCode !== trimmedOtp)) {
       throw new Error("Invalid verification code. Please check your email and try again.");
     }
 
