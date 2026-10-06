@@ -2312,10 +2312,9 @@ html, body {
 
 .ai-workspace-grid {
   display: grid;
-  grid-template-columns: 1fr 1.25fr;
+  grid-template-columns: minmax(340px, 460px) 1fr;
   gap: 1.25rem;
-  align-items: stretch;
-  min-height: 580px;
+  align-items: start;
 }
 
 @media (max-width: 900px) {
@@ -2332,16 +2331,23 @@ html, body {
   flex-direction: column;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  height: 100%;
 }
 
 .ai-chat-interface-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.ai-chat-interface-card .card-body {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  width: 100% !important;
 }
 
 .ai-avatar-icon {
@@ -2358,16 +2364,28 @@ html, body {
 }
 
 .ai-chat-history {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  background: rgba(10, 15, 29, 0.4);
+  height: 240px !important;
+  min-height: 180px !important;
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  padding: 1rem 1.25rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.85rem !important;
+  background: rgba(10, 15, 29, 0.45);
   border-bottom: 1px solid var(--border-color);
-  min-height: 320px;
-  max-height: 480px;
+  width: 100% !important;
+  box-sizing: border-box;
+}
+
+.ai-chat-input-container {
+  padding: 0.85rem 1.15rem !important;
+  background: var(--bg-card);
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+  width: 100% !important;
+  box-sizing: border-box;
 }
 
 .chat-message {
@@ -2480,15 +2498,6 @@ html, body {
 @keyframes waveBar {
   0%, 100% { transform: scaleY(0.4); }
   50% { transform: scaleY(1.2); }
-}
-
-/* Chat Input Container */
-.ai-chat-input-container {
-  padding: 0.85rem 1rem;
-  background: var(--bg-card);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
 }
 
 .ai-preset-chips {
@@ -2622,7 +2631,9 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 540px;
+  height: calc(100vh - 200px) !important;
+  min-height: 480px !important;
+  max-height: 620px !important;
   box-shadow: var(--shadow-sm);
 }
 

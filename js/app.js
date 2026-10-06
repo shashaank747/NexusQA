@@ -1394,6 +1394,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.currentCrumb) DOM.currentCrumb.textContent = titles[viewName] || "Workspace";
     if (DOM.sidebar) DOM.sidebar.classList.remove("mobile-open");
 
+    const vp = document.getElementById("viewViewport");
+    if (vp) vp.scrollTop = 0;
+    window.scrollTo(0, 0);
+
     if (viewName === "dashboard") renderDashboard();
     if (viewName === "test-cases") renderRepository();
     if (viewName === "defects") renderDefects();
@@ -2954,7 +2958,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   if (DOM.topbarVoiceAiBtn) {
     DOM.topbarVoiceAiBtn.addEventListener("click", () => {
       switchView("ai-generator");
-      if (DOM.aiStoryPrompt) DOM.aiStoryPrompt.focus();
+      if (DOM.aiStoryPrompt) DOM.aiStoryPrompt.focus({ preventScroll: true });
     });
   }
 
