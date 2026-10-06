@@ -1890,7 +1890,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       "ai-generator": "Voice & AI Chat Studio",
       suites: "Suites & Modules",
       "dev-dashboard": "Dev Defect Command Center",
-      "dev-approvals": "Tester Approvals & Access Control",
+      "dev-approvals": "Employees & Access Control",
       "dev-kanban": "Bug Triage Kanban",
       "dev-failures": "Failed Test Diagnostics",
       settings: "My Profile & Account"
