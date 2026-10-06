@@ -557,7 +557,7 @@ html, body {
 
 /* Sidebar Top Burger Control (Directly below Logo) */
 .sidebar-top-control {
-  padding: 0.5rem 0.65rem;
+  padding: 0.65rem 1.25rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -565,36 +565,50 @@ html, body {
 }
 
 .sidebar-burger-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
   background: var(--bg-card-subtle);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
+  border-radius: 10px;
+  color: var(--text-heading);
   cursor: pointer;
   transition: all var(--transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .sidebar-burger-btn:hover {
-  background: var(--bg-card-hover);
-  color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
   border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 
 .sidebar-burger-btn i {
-  font-size: 0.92rem;
-  color: var(--primary);
+  font-size: 0.95rem;
+  color: inherit;
   text-align: center;
+}
+
+body.light-theme .sidebar-burger-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+}
+
+body.light-theme .sidebar-burger-btn:hover {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #ffffff;
 }
 
 /* Collapsed Sidebar Mode */
 .sidebar.collapsed {
-  width: 52px;
-  min-width: 52px;
+  width: 56px;
+  min-width: 56px;
 }
 
 .sidebar.collapsed .burger-label,
@@ -608,15 +622,15 @@ html, body {
 
 .sidebar.collapsed .sidebar-top-control {
   justify-content: center;
-  padding: 0.5rem 0.35rem;
+  padding: 0.65rem 0;
 }
 
 .sidebar.collapsed .sidebar-burger-btn {
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   padding: 0;
-  border-radius: var(--radius-md);
+  border-radius: 10px;
 }
 
 .sidebar.collapsed .sidebar-nav {
