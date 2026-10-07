@@ -30,20 +30,7 @@ const StorageManager = {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(SEED_USERS));
     }
 
-    if (!localStorage.getItem(STORAGE_KEYS.CURRENT_USER)) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const pathname = window.location.pathname.toLowerCase();
-      
-      let initialRole = "qa";
-      if (urlParams.get("role") === "dev" || pathname.includes("/dev")) {
-        initialRole = "dev";
-      }
-
-      const users = this.getUsers();
-      const defaultUser = users.find(u => u.role === initialRole && u.status === "active") || users[0];
-      this.setCurrentUser(defaultUser);
-    }
-
+    // Clean storage sync
     window.addEventListener("storage", (e) => {
       this.notifyListeners({ type: "STORAGE_CHANGE", key: e.key });
     });
@@ -263,17 +250,30 @@ const StorageManager = {
 
   getCurrentUser() {
     const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    let u = raw ? JSON.parse(raw) : this.getUsers()[0];
-    if (u && u.roleTitle && u.roleTitle.toLowerCase().includes("automation")) {
-      u.roleTitle = u.roleTitle.replace(/automation\s*/gi, "").replace(/\s+/g, " ").trim() || "QA Tester";
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(u));
+    if (!raw) return null;
+    try {
+      let u = JSON.parse(raw);
+      if (u && u.roleTitle && u.roleTitle.toLowerCase().includes("automation")) {
+        u.roleTitle = u.roleTitle.replace(/automation\s*/gi, "").replace(/\s+/g, " ").trim() || "QA Tester";
+        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(u));
+      }
+      return u;
+    } catch (e) {
+      return null;
     }
-    return u;
   },
 
   setCurrentUser(user) {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    if (user) {
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    }
     this.broadcast("AUTH_CHANGE", { user });
+  },
+
+  logout() {
+    this.setCurrentUser(null);
   },
 
   getUserByEmail(email) {
@@ -539,7 +539,8 @@ const StorageManager = {
       testCase.id = `TC-${nextNum}`;
     }
     testCase.lastRun = testCase.lastRun || "Never";
-    testCase.author = testCase.author || this.getCurrentUser().name;
+    const curUser = this.getCurrentUser();
+    testCase.author = testCase.author || (curUser ? curUser.name : "QA Tester");
     cases.unshift(testCase);
     this.saveTestCases(cases);
 
@@ -652,7 +653,8 @@ const StorageManager = {
     defect.createdAt = defect.createdAt || new Date().toISOString().replace("T", " ").substring(0, 16);
     defect.updatedAt = defect.createdAt;
     defect.status = defect.status || "Open";
-    defect.reportedBy = defect.reportedBy || this.getCurrentUser().name;
+    const curUser = this.getCurrentUser();
+    defect.reportedBy = defect.reportedBy || (curUser ? curUser.name : "QA Tester");
     defects.unshift(defect);
     this.saveDefects(defects);
 
@@ -736,11 +738,12 @@ const StorageManager = {
       return Math.max(max, num);
     }, 800) + 1;
 
+    const curUser = this.getCurrentUser();
     const newRun = {
       id: `RUN-${nextNum}`,
       name: name || `Sprint Test Execution Run #${nextNum}`,
       environment: environment || "Staging",
-      author: this.getCurrentUser().name,
+      author: (curUser ? curUser.name : "QA Tester"),
       date: new Date().toISOString().replace("T", " ").substring(0, 16),
       duration: "00m 00s",
       status: "In Progress",

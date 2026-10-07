@@ -891,31 +891,57 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     initSidebarState();
     initKpiCardMagneticHover();
     const pathname = window.location.pathname.toLowerCase();
-    const isLandingPage = document.body.classList.contains("page-landing-auth") || pathname.endsWith("index.html") || pathname === "/" || (!document.body.classList.contains("page-tester") && !document.body.classList.contains("page-dev") && !document.getElementById("viewViewport"));
+    const isLandingPage = document.body.classList.contains("page-landing-auth") || pathname.endsWith("index.html") || pathname === "/" || pathname.endsWith("/login") || (!document.body.classList.contains("page-tester") && !document.body.classList.contains("page-dev") && !document.getElementById("viewViewport"));
 
     setupOtpInputs();
     setupAuthListeners();
 
-    if (document.body.classList.contains("page-dev") || pathname.includes("/dev")) {
-      const devUser = StorageManager.getUsers().find(u => u.role === "dev") || StorageManager.getUsers()[3];
-      StorageManager.setCurrentUser(devUser);
-      setPortal("dev", "dev-dashboard");
-    } else if (document.body.classList.contains("page-tester") || pathname.includes("/tester") || pathname.includes("/qa")) {
-      const qaUser = StorageManager.getUsers().find(u => u.role === "qa" && u.status === "active") || StorageManager.getUsers()[0];
-      StorageManager.setCurrentUser(qaUser);
-      setPortal("qa", "dashboard");
-    } else if (isLandingPage) {
+    if (isLandingPage) {
       // Main Landing & Login Gateway (index.html)
       window.switchAuthTab("tester");
+      return;
+    }
+
+    const currentUser = StorageManager.getCurrentUser();
+    if (!currentUser) {
+      // Unauthenticated access attempt -> redirect to login gateway
+      window.location.replace("index.html");
+      return;
+    }
+
+    if (document.body.classList.contains("page-dev") || pathname.includes("/dev")) {
+      // Developer Portal: requires developer role
+      if (currentUser.role !== "dev") {
+        showToast("Access Denied: Developer account required.", "error");
+        setTimeout(() => {
+          window.location.replace("tester.html");
+        }, 350);
+        return;
+      }
+      setPortal("dev", "dev-dashboard");
+    } else if (document.body.classList.contains("page-tester") || pathname.includes("/tester") || pathname.includes("/qa")) {
+      // Tester Portal
+      if (currentUser.status === "pending_approval") {
+        showToast("Your tester registration is still pending approval.", "warning");
+        setTimeout(() => {
+          StorageManager.logout();
+          window.location.replace("index.html");
+        }, 350);
+        return;
+      }
+      setPortal("qa", "dashboard");
     } else {
-      const currentUser = StorageManager.getCurrentUser();
-      setPortal(currentUser.role, currentUser.role === "dev" ? "dev-dashboard" : "dashboard");
+      setPortal(currentUser.role === "dev" ? "dev" : "qa", currentUser.role === "dev" ? "dev-dashboard" : "dashboard");
     }
   }
 
   function setPortal(role, defaultView = null) {
     state.currentPortal = role;
     state.currentUser = StorageManager.getCurrentUser();
+    if (!state.currentUser) {
+      window.location.replace("index.html");
+      return;
+    }
     if (DOM.authGateOverlay) DOM.authGateOverlay.style.display = "none";
 
     if (role === "dev") {
@@ -1556,13 +1582,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   if (DOM.logoutBtn) {
     DOM.logoutBtn.addEventListener("click", () => {
-      window.location.href = "index.html";
+      StorageManager.logout();
+      window.location.replace("index.html");
     });
   }
   
   if (DOM.switchUserQuickBtn) {
     DOM.switchUserQuickBtn.addEventListener("click", () => {
-      window.location.href = "index.html";
+      StorageManager.logout();
+      window.location.replace("index.html");
     });
   }
 
