@@ -1074,6 +1074,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (roleSwitch) roleSwitch.style.display = "none";
 
     if (DOM.otpRecipientEmailLabel) DOM.otpRecipientEmailLabel.textContent = email;
+    const badgeEl = document.getElementById("simulatedOtpCodeBadge");
+    if (badgeEl) badgeEl.textContent = otpCode;
+    state.currentOtpCode = otpCode;
+
     if (window.resetCodeSlots) window.resetCodeSlots();
     setTimeout(() => {
       if (DOM.codeSlotsInput) DOM.codeSlotsInput.focus();
@@ -1081,7 +1085,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     startResendCooldown(60);
     startOtpTimer(900);
-    window.showSimulatedEmail(email, otpCode);
+    showToast(`Verification code sent to ${email}: [ ${otpCode} ]`, "info");
   };
 
   window.showPendingState = function(email) {
@@ -1570,15 +1574,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   }
 
-  window.quickLoginPersona = function(userId) {
-    const user = StorageManager.getUsers().find(u => u.id === userId);
+  window.quickLoginPersona = function(identifier) {
+    const users = StorageManager.getUsers();
+    const cleanId = (identifier || "").toLowerCase().trim();
+    const user = users.find(u => u.id === identifier || u.email.toLowerCase() === cleanId);
     if (user) {
       StorageManager.setCurrentUser(user);
       if (user.role === "dev") {
-        showToast(`Logging in as Developer: ${user.name}...`);
+        showToast(`Signing in as Developer: ${user.name}...`);
         setTimeout(() => { window.location.href = "dev.html"; }, 300);
       } else {
-        showToast(`Logging in as QA Tester: ${user.name}...`);
+        showToast(`Signing in as QA Tester: ${user.name}...`);
         setTimeout(() => { window.location.href = "tester.html"; }, 300);
       }
     }
