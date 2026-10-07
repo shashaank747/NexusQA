@@ -24,13 +24,14 @@
   <script>
     (function() {
       try {
-        var raw = localStorage.getItem("nexus_qa_current_user");
+        var raw = localStorage.getItem("nexusqa_current_user") || localStorage.getItem("nexus_qa_current_user");
         if (!raw) {
           window.location.replace("index.html");
           return;
         }
         var user = JSON.parse(raw);
         if (!user || user.status === "pending_approval") {
+          localStorage.removeItem("nexusqa_current_user");
           localStorage.removeItem("nexus_qa_current_user");
           window.location.replace("index.html");
           return;
