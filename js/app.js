@@ -148,6 +148,9 @@ document.addEventListener("DOMContentLoaded", () => {
     kpiTotalTests: document.getElementById("kpiTotalTests"),
     kpiPassRate: document.getElementById("kpiPassRate"),
     kpiPassRateProgress: document.getElementById("kpiPassRateProgress"),
+    kpiUntestedCount: document.getElementById("kpiUntestedCount"),
+    kpiUntestedSub: document.getElementById("kpiUntestedSub"),
+    kpiUntestedProgress: document.getElementById("kpiUntestedProgress"),
     kpiAutomationRate: document.getElementById("kpiAutomationRate"),
     kpiAutoCount: document.getElementById("kpiAutoCount"),
     kpiAutoProgress: document.getElementById("kpiAutoProgress"),
@@ -182,6 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
     batchRunBtn: document.getElementById("batchRunBtn"),
     batchPassBtn: document.getElementById("batchPassBtn"),
     batchFailBtn: document.getElementById("batchFailBtn"),
+    batchBlockBtn: document.getElementById("batchBlockBtn"),
     batchDeleteBtn: document.getElementById("batchDeleteBtn"),
     testCasesTableBody: document.getElementById("testCasesTableBody"),
     selectAllCheckbox: document.getElementById("selectAllCheckbox"),
@@ -297,6 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
     closeEditMemberModalBtn: document.getElementById("closeEditMemberModalBtn"),
     cancelEditMemberModalBtn: document.getElementById("cancelEditMemberModalBtn"),
     saveEditMemberBtn: document.getElementById("saveEditMemberBtn"),
+    deleteMemberWrap: document.getElementById("deleteMemberWrap"),
     deleteMemberBtn: document.getElementById("deleteMemberBtn"),
     editMemberIdBadge: document.getElementById("editMemberIdBadge"),
     editMemberAuthBadge: document.getElementById("editMemberAuthBadge"),
@@ -356,6 +361,8 @@ document.addEventListener("DOMContentLoaded", () => {
     tcRemoveImageBtn: document.getElementById("tcRemoveImageBtn"),
     tcViewImageFullBtn: document.getElementById("tcViewImageFullBtn"),
     tcImageFileName: document.getElementById("tcImageFileName"),
+    editTestCaseDeleteWrap: document.getElementById("editTestCaseDeleteWrap"),
+    deleteTestCaseModalBtn: document.getElementById("deleteTestCaseModalBtn"),
 
     testCaseDetailModal: document.getElementById("testCaseDetailModal"),
     viewDetailId: document.getElementById("viewDetailId"),
@@ -364,11 +371,17 @@ document.addEventListener("DOMContentLoaded", () => {
     closeDetailModalBtn: document.getElementById("closeDetailModalBtn"),
     editDetailTestCaseBtn: document.getElementById("editDetailTestCaseBtn"),
     runDetailTestCaseBtn: document.getElementById("runDetailTestCaseBtn"),
+    detailPassedTestCaseBtn: document.getElementById("detailPassedTestCaseBtn"),
+    detailFailedTestCaseBtn: document.getElementById("detailFailedTestCaseBtn"),
+    detailBlockedTestCaseBtn: document.getElementById("detailBlockedTestCaseBtn"),
+    deleteDetailTestCaseBtn: document.getElementById("deleteDetailTestCaseBtn"),
 
     defectModal: document.getElementById("defectModal"),
     closeDefectModalBtn: document.getElementById("closeDefectModalBtn"),
     cancelDefectModalBtn: document.getElementById("cancelDefectModalBtn"),
     saveDefectBtn: document.getElementById("saveDefectBtn"),
+    editDefectDeleteWrap: document.getElementById("editDefectDeleteWrap"),
+    deleteDefectModalBtn: document.getElementById("deleteDefectModalBtn"),
     defectForm: document.getElementById("defectForm"),
     editDefectId: document.getElementById("editDefectId"),
     bugSummary: document.getElementById("bugSummary"),
@@ -403,6 +416,7 @@ document.addEventListener("DOMContentLoaded", () => {
     profileLargeInitials: document.getElementById("profileLargeInitials"),
     profileLargeImg: document.getElementById("profileLargeImg"),
     profilePhotoInput: document.getElementById("profilePhotoInput"),
+    profileRemovePhotoWrap: document.getElementById("profileRemovePhotoWrap"),
     profileRemovePhotoBtn: document.getElementById("profileRemovePhotoBtn"),
     userProfileForm: document.getElementById("userProfileForm"),
     profileNameInput: document.getElementById("profileNameInput"),
@@ -540,6 +554,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }
       if (DOM.profileFormAvatarInitials) DOM.profileFormAvatarInitials.style.display = "none";
       if (DOM.profileRemovePhotoBtn) DOM.profileRemovePhotoBtn.style.display = "inline-flex";
+      if (DOM.profileRemovePhotoWrap) DOM.profileRemovePhotoWrap.style.display = "inline-flex";
     } else {
       if (DOM.profileLargeImg) DOM.profileLargeImg.style.display = "none";
       if (DOM.profileLargeInitials) DOM.profileLargeInitials.style.display = "inline";
@@ -550,6 +565,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }
       if (DOM.profileFormAvatarInitials) DOM.profileFormAvatarInitials.style.display = "inline";
       if (DOM.profileRemovePhotoBtn) DOM.profileRemovePhotoBtn.style.display = "none";
+      if (DOM.profileRemovePhotoWrap) DOM.profileRemovePhotoWrap.style.display = "none";
     }
   }
 
@@ -1105,7 +1121,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           name: "Alex Morgan",
           email: "alex.qa@nexusqa.io",
           role: "tester",
-          roleTitle: "Lead QA Automation Engineer",
+          roleTitle: "QA Lead",
           approvedByDev: true
         };
         StorageManager.setCurrentUser(testerUser);
@@ -1726,7 +1742,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         const actionCell = isSenior
           ? `<div class="d-flex align-center gap-1">
               <button class="btn btn-secondary btn-xs" onclick="window.openEditMemberModal('${u.id}')" title="Edit member details as Senior Dev"><i class="fa-solid fa-user-pen"></i> Edit</button>
-              ${isSelf ? '' : `<button class="btn btn-outline-danger btn-xs" onclick="window.deleteMember('${u.id}')" title="Delete user from workspace"><i class="fa-solid fa-trash-can"></i></button>`}
+              ${isSelf ? '' : createDeleteButtonHtml({ onClick: `window.deleteMember('${u.id}')`, title: 'Delete user from workspace', isCompact: true })}
             </div>`
           : `<span class="badge badge-untested text-xs" title="Only Senior Developers can edit"><i class="fa-solid fa-lock"></i> View Only</span>`;
 
@@ -1781,6 +1797,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
 
     const isSelf = state.currentUser && state.currentUser.id === user.id;
+    if (DOM.deleteMemberWrap) {
+      DOM.deleteMemberWrap.style.display = isSelf ? "none" : "inline-flex";
+    }
     if (DOM.deleteMemberBtn) {
       DOM.deleteMemberBtn.style.display = isSelf ? "none" : "inline-flex";
     }
@@ -2370,8 +2389,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const untested = cases.filter(c => c.status === "Untested").length;
 
     const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
-    const automatedCount = cases.filter(c => c.type === "Automated" || c.type === "API" || c.type === "E2E").length;
-    const autoRatio = total > 0 ? Math.round((automatedCount / total) * 100) : 0;
+    const untestedPercent = total > 0 ? Math.round((untested / total) * 100) : 0;
 
     const openBugs = defects.filter(d => d.status !== "Closed" && d.status !== "Resolved & Verified");
     const criticalBugs = openBugs.filter(d => d.severity === "Critical" || d.priority.includes("P0"));
@@ -2379,9 +2397,16 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.kpiTotalTests) DOM.kpiTotalTests.textContent = total;
     if (DOM.kpiPassRate) DOM.kpiPassRate.textContent = `${passRate}%`;
     if (DOM.kpiPassRateProgress) DOM.kpiPassRateProgress.style.width = `${passRate}%`;
-    if (DOM.kpiAutomationRate) DOM.kpiAutomationRate.textContent = `${autoRatio}%`;
-    if (DOM.kpiAutoCount) DOM.kpiAutoCount.textContent = `${automatedCount} / ${total} Automated`;
-    if (DOM.kpiAutoProgress) DOM.kpiAutoProgress.style.width = `${autoRatio}%`;
+
+    if (DOM.kpiUntestedCount) DOM.kpiUntestedCount.textContent = untested;
+    if (DOM.kpiUntestedSub) DOM.kpiUntestedSub.textContent = `${untested} awaiting manual test`;
+    if (DOM.kpiUntestedProgress) DOM.kpiUntestedProgress.style.width = `${untestedPercent}%`;
+
+    // Backward-compatibility
+    if (DOM.kpiAutomationRate) DOM.kpiAutomationRate.textContent = `${untested}`;
+    if (DOM.kpiAutoCount) DOM.kpiAutoCount.textContent = `${untested} Pending`;
+    if (DOM.kpiAutoProgress) DOM.kpiAutoProgress.style.width = `${untestedPercent}%`;
+
     if (DOM.kpiDefectsCount) DOM.kpiDefectsCount.textContent = openBugs.length;
     if (DOM.kpiCriticalDefects) DOM.kpiCriticalDefects.textContent = `${criticalBugs.length} Critical Blocker${criticalBugs.length === 1 ? '' : 's'}`;
 
@@ -2709,22 +2734,20 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
             <span class="badge ${prioClass}">${tc.priority}</span>
           </td>
           <td class="col-type" onclick="window.viewTestCaseDetail('${tc.id}')">
-            <span class="badge badge-type">${tc.type}</span>
+            <span class="badge badge-type">${escapeHtml(tc.type || 'Functional')}</span>
           </td>
           <td class="col-status" onclick="window.viewTestCaseDetail('${tc.id}')">
             <span class="badge ${statusClass}"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> ${tc.status}</span>
           </td>
           <td class="col-actions" onclick="event.stopPropagation()">
-            <div class="d-flex justify-end gap-1">
-              <button class="icon-btn-xs" title="Execute Test" onclick="window.launchSingleTestRun('${tc.id}')">
-                <i class="fa-solid fa-play text-emerald"></i>
+            <div class="d-flex justify-end align-center gap-1">
+              <button class="icon-btn-xs" title="Quick Mark as Passed" onclick="window.markTestCaseStatus('${tc.id}', 'Passed')">
+                <i class="fa-solid fa-check text-emerald"></i>
               </button>
               <button class="icon-btn-xs" title="Edit Test Case" onclick="window.openEditTestCaseModal('${tc.id}')">
                 <i class="fa-solid fa-pen text-primary"></i>
               </button>
-              <button class="icon-btn-xs" title="Delete" onclick="window.deleteSingleTestCase('${tc.id}')">
-                <i class="fa-solid fa-trash text-rose"></i>
-              </button>
+              ${createDeleteButtonHtml({ onClick: `window.deleteSingleTestCase('${tc.id}')`, title: `Delete test case ${tc.id}`, isCompact: true })}
             </div>
           </td>
         </tr>
@@ -2813,6 +2836,14 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     state.selectedTestCaseIds.clear();
     renderTestCaseTable();
     showToast(`Marked ${selectedIds.length} tests as Failed`, "error");
+  });
+
+  on(DOM.batchBlockBtn, "click", () => {
+    const selectedIds = Array.from(state.selectedTestCaseIds);
+    StorageManager.updateMultipleTestCaseStatuses(selectedIds, "Blocked");
+    state.selectedTestCaseIds.clear();
+    renderTestCaseTable();
+    showToast(`Marked ${selectedIds.length} tests as Blocked`, "warning");
   });
 
   on(DOM.batchDeleteBtn, "click", () => {
@@ -2940,6 +2971,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       { step: 1, action: "Navigate to target view or endpoint", expected: "Page/response loads correctly with status 200" },
       { step: 2, action: "Trigger action with parameters", expected: "State updates properly and confirmation returned" }
     ]);
+    if (DOM.editTestCaseDeleteWrap) DOM.editTestCaseDeleteWrap.style.display = "none";
     if (DOM.testCaseModal) DOM.testCaseModal.style.display = "flex";
   }
 
@@ -2959,6 +2991,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.tcPreconditions) DOM.tcPreconditions.value = tc.preconditions || "";
     if (DOM.tcTags) DOM.tcTags.value = (tc.tags || []).join(", ");
     renderStepRows(tc.steps || []);
+    if (DOM.editTestCaseDeleteWrap) DOM.editTestCaseDeleteWrap.style.display = "inline-flex";
     if (DOM.testCaseModal) DOM.testCaseModal.style.display = "flex";
   };
 
@@ -2966,6 +2999,13 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   on(DOM.emptyCreateBtn, "click", openCreateTestCaseModal);
   on(DOM.closeTestCaseModalBtn, "click", () => { if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none"; });
   on(DOM.cancelTestCaseModalBtn, "click", () => { if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none"; });
+  on(DOM.deleteTestCaseModalBtn, "click", () => {
+    const id = DOM.editTestCaseId ? DOM.editTestCaseId.value : "";
+    if (id) {
+      if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none";
+      window.deleteSingleTestCase(id);
+    }
+  });
 
   on(DOM.saveTestCaseBtn, "click", () => {
     const title = DOM.tcTitle ? DOM.tcTitle.value.trim() : "";
@@ -3055,8 +3095,8 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
             <span class="meta-val"><span class="badge ${prioClass}">${tc.priority}</span></span>
           </div>
           <div class="detail-meta-item">
-            <span class="meta-label">Execution Type</span>
-            <span class="meta-val"><span class="badge badge-type">${tc.type}</span></span>
+            <span class="meta-label">Category</span>
+            <span class="meta-val"><span class="badge badge-type">${escapeHtml(tc.type || 'Functional')}</span></span>
           </div>
           <div class="detail-meta-item">
             <span class="meta-label">Current Status</span>
@@ -3103,10 +3143,37 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
         window.openEditTestCaseModal(tc.id);
       };
     }
+    const detailPassBtn = document.getElementById("detailPassedTestCaseBtn");
+    if (detailPassBtn) {
+      detailPassBtn.onclick = () => {
+        if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none";
+        window.markTestCaseStatus(tc.id, "Passed");
+      };
+    }
+    const detailFailBtn = document.getElementById("detailFailedTestCaseBtn");
+    if (detailFailBtn) {
+      detailFailBtn.onclick = () => {
+        if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none";
+        window.markTestCaseStatus(tc.id, "Failed");
+      };
+    }
+    const detailBlockBtn = document.getElementById("detailBlockedTestCaseBtn");
+    if (detailBlockBtn) {
+      detailBlockBtn.onclick = () => {
+        if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none";
+        window.markTestCaseStatus(tc.id, "Blocked");
+      };
+    }
     if (DOM.runDetailTestCaseBtn) {
       DOM.runDetailTestCaseBtn.onclick = () => {
         if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none";
-        window.launchSingleTestRun(tc.id);
+        window.markTestCaseStatus(tc.id, "Passed");
+      };
+    }
+    if (DOM.deleteDetailTestCaseBtn) {
+      DOM.deleteDetailTestCaseBtn.onclick = () => {
+        if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none";
+        window.deleteSingleTestCase(tc.id);
       };
     }
     DOM.testCaseDetailModal.style.display = "flex";
@@ -3114,13 +3181,18 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
   on(DOM.closeDetailModalBtn, "click", () => { if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none"; });
 
-  // Single test execution
-  window.launchSingleTestRun = function(testCaseId) {
+  // Single test execution & status logging
+  window.markTestCaseStatus = function(testCaseId, newStatus) {
     const tc = StorageManager.getTestCaseById(testCaseId);
     if (!tc) return;
-    StorageManager.updateTestCase({ ...tc, status: "Passed", lastRun: "Just now" });
+    StorageManager.updateTestCase({ ...tc, status: newStatus, lastRun: "Just now" });
     renderTestCaseTable();
-    showToast(`Test ${tc.id} marked as Passed!`);
+    renderDashboard();
+    showToast(`Test ${tc.id} marked as ${newStatus}!`, newStatus === "Failed" ? "error" : "success");
+  };
+
+  window.launchSingleTestRun = function(testCaseId) {
+    window.markTestCaseStatus(testCaseId, "Passed");
   };
 
   function renderTestRunner() {
@@ -3456,13 +3528,11 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           </td>
           <td>${statusBadge}</td>
           <td>
-            <div class="d-flex gap-1">
+            <div class="d-flex align-center gap-1">
               <button class="btn btn-secondary btn-xs" title="Verify or Edit Fix" onclick="window.openDevFixModal('${d.id}')">
                 <i class="fa-solid fa-magnifying-glass"></i> View
               </button>
-              <button class="icon-btn-xs" title="Delete" onclick="window.deleteDefect('${d.id}')">
-                <i class="fa-solid fa-trash text-rose"></i>
-              </button>
+              ${createDeleteButtonHtml({ onClick: `window.deleteDefect('${d.id}')`, title: `Delete defect ${d.id}`, isCompact: true })}
             </div>
           </td>
         </tr>
@@ -3477,11 +3547,19 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   on(DOM.createNewBugBtn, "click", () => {
     if (DOM.defectForm) DOM.defectForm.reset();
     if (DOM.editDefectId) DOM.editDefectId.value = "";
+    if (DOM.editDefectDeleteWrap) DOM.editDefectDeleteWrap.style.display = "none";
     if (DOM.defectModal) DOM.defectModal.style.display = "flex";
   });
 
   on(DOM.closeDefectModalBtn, "click", () => { if (DOM.defectModal) DOM.defectModal.style.display = "none"; });
   on(DOM.cancelDefectModalBtn, "click", () => { if (DOM.defectModal) DOM.defectModal.style.display = "none"; });
+  on(DOM.deleteDefectModalBtn, "click", () => {
+    const id = DOM.editDefectId ? DOM.editDefectId.value : "";
+    if (id) {
+      if (DOM.defectModal) DOM.defectModal.style.display = "none";
+      window.deleteDefect(id);
+    }
+  });
 
   on(DOM.saveDefectBtn, "click", () => {
     const summary = DOM.bugSummary ? DOM.bugSummary.value.trim() : "";
@@ -4145,6 +4223,31 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
   }
+
+  // Delete Button Component Helper (Uiverse delete button matching user spec)
+  function createDeleteButtonHtml(options = {}) {
+    const {
+      id = "",
+      onClick = "",
+      title = "Delete",
+      className = "",
+      isCompact = true,
+      extraAttrs = ""
+    } = options;
+    const idAttr = id ? `id="${id}"` : "";
+    const clickAttr = onClick ? `onclick="${onClick}"` : "";
+    const titleAttr = title ? `title="${escapeHtml(title)}"` : "";
+    const compactClass = isCompact ? "btn-sm" : "";
+
+    return `
+      <div class="styled-delete-wrapper ${compactClass} ${className}">
+        <button type="button" class="button" ${idAttr} ${clickAttr} ${titleAttr} ${extraAttrs}>
+          <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+        </button>
+      </div>
+    `.trim();
+  }
+  window.createDeleteButtonHtml = createDeleteButtonHtml;
 
   // Boot Routing
   initRouting();

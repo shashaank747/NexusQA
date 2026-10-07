@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.2">
 </head>
 <body class="light-theme page-dev">
 
@@ -372,7 +372,7 @@
                       <th>OTP Status</th>
                       <th>Workspace Access</th>
                       <th>Approved By</th>
-                      <th>Actions</th>
+                      <th width="160">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="authorizedTestersTableBody"></tbody>
@@ -480,9 +480,11 @@
                         <i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo
                       </label>
                       <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;">
-                      <button type="button" class="btn btn-ghost btn-sm text-danger" id="profileRemovePhotoBtn" style="display:none;">
-                        <i class="fa-solid fa-trash-can"></i> Remove
-                      </button>
+                      <div class="styled-delete-wrapper btn-sm" id="profileRemovePhotoWrap" style="display:none;">
+                        <button type="button" class="button" id="profileRemovePhotoBtn" title="Remove Profile Photo">
+                          <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+                        </button>
+                      </div>
                     </div>
                     <span class="text-xs text-muted">Supports JPG, PNG, WEBP or GIF (Max 2MB)</span>
                   </div>
@@ -655,7 +657,7 @@
             </div>
             <div class="form-group flex-1">
               <label for="editMemberSpecialty">Job Title / Specialty <span class="text-rose">*</span></label>
-              <input type="text" id="editMemberSpecialty" class="nexus-input" required placeholder="e.g. Lead QA Automation Engineer">
+              <input type="text" id="editMemberSpecialty" class="nexus-input" required placeholder="e.g. Senior QA Analyst or Full-Stack Developer">
             </div>
           </div>
 
@@ -676,9 +678,11 @@
         </form>
       </div>
       <div class="modal-footer justify-between">
-        <button type="button" class="btn btn-outline-danger" id="deleteMemberBtn">
-          <i class="fa-solid fa-trash-can"></i> Delete User
-        </button>
+        <div class="styled-delete-wrapper" id="deleteMemberWrap">
+          <button type="button" class="button" id="deleteMemberBtn" title="Delete User from Workspace">
+            <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+          </button>
+        </div>
         <div class="d-flex align-center gap-2">
           <button type="button" class="btn btn-ghost" id="cancelEditMemberModalBtn">Cancel</button>
           <button type="button" class="btn btn-primary" id="saveEditMemberBtn">
@@ -797,9 +801,16 @@
           </div>
         </form>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" id="cancelDefectModalBtn">Cancel</button>
-        <button type="button" class="btn btn-danger" id="saveDefectBtn"><i class="fa-solid fa-bug"></i> Save & Broadcast Defect</button>
+      <div class="modal-footer justify-between">
+        <div class="styled-delete-wrapper" id="editDefectDeleteWrap" style="display: none;">
+          <button type="button" class="button" id="deleteDefectModalBtn" title="Delete Defect">
+            <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+          </button>
+        </div>
+        <div class="d-flex align-center gap-2">
+          <button type="button" class="btn btn-ghost" id="cancelDefectModalBtn">Cancel</button>
+          <button type="button" class="btn btn-danger" id="saveDefectBtn"><i class="fa-solid fa-bug"></i> Save & Broadcast Defect</button>
+        </div>
       </div>
     </div>
   </div>
@@ -812,8 +823,15 @@
         <button class="icon-btn close-modal-btn" id="closeDetailModalBtn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body" id="viewDetailBody"></div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="editDetailTestCaseBtn"><i class="fa-solid fa-pen-to-square"></i> Close</button>
+      <div class="modal-footer justify-between">
+        <div class="styled-delete-wrapper">
+          <button type="button" class="button" id="deleteDetailTestCaseBtn" title="Delete Test Case">
+            <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+          </button>
+        </div>
+        <div class="d-flex align-center gap-2">
+          <button type="button" class="btn btn-secondary" id="editDetailTestCaseBtn"><i class="fa-solid fa-pen-to-square"></i> Close</button>
+        </div>
       </div>
     </div>
   </div>
@@ -827,9 +845,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <!-- Scripts -->
-  <script src="js/data.js?v=1.0.1"></script>
-  <script src="js/supabase.js?v=1.0.1"></script>
-  <script src="js/storage.js?v=1.0.1"></script>
-  <script src="js/app.js?v=1.0.1"></script>
+  <script src="js/data.js?v=1.0.3"></script>
+  <script src="js/supabase.js?v=1.0.3"></script>
+  <script src="js/storage.js?v=1.0.3"></script>
+  <script src="js/app.js?v=1.0.3"></script>
 </body>
 </html>

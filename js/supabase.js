@@ -91,7 +91,7 @@ const SupabaseManager = {
             name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
             email: email,
             role: isDev ? "dev" : "qa",
-            roleTitle: isDev ? "Lead Full-Stack Developer" : "QA Automation Tester",
+            roleTitle: isDev ? "Lead Full-Stack Developer" : "QA Tester",
             avatar: email.substring(0, 2).toUpperCase(),
             color: isDev ? "#10b981" : "#6366f1",
             status: "active",

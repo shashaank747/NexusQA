@@ -1,5 +1,5 @@
 /* ==========================================================================
-   NexusQA - Modern High-Tech QA & Test Automation Platform Stylesheet
+   NexusQA - Manual Testing & QA Defect Management Platform Stylesheet
    ========================================================================== */
 
 :root {
@@ -2365,7 +2365,7 @@ body.light-theme .sidebar-secondary-panel {
 .col-priority { width: 130px; }
 .col-type { width: 110px; }
 .col-status { width: 120px; }
-.col-actions { width: 100px; text-align: right; }
+.col-actions { width: 175px; min-width: 175px; text-align: right; }
 
 .test-id-pill {
   font-family: var(--font-mono);
@@ -6654,6 +6654,136 @@ body.light-theme .nexus-table tbody td {
   color: #273444 !important;
 }
 
+/* ==========================================================================
+   Animated Uiverse Delete Button Component
+   ========================================================================== */
+.styled-delete-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  position: relative;
+}
 
+.styled-delete-wrapper .button,
+.uiverse-delete-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: rgb(20, 20, 20);
+  border: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.164);
+  cursor: pointer;
+  transition-duration: .3s;
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+  outline: none;
+  flex-shrink: 0;
+  font-family: inherit;
+  box-sizing: border-box;
+}
 
+.styled-delete-wrapper .button .svgIcon,
+.uiverse-delete-btn .svgIcon {
+  width: 12px;
+  height: auto;
+  transition-duration: .3s;
+  display: block;
+}
+
+.styled-delete-wrapper .button .svgIcon path,
+.uiverse-delete-btn .svgIcon path {
+  fill: white;
+}
+
+.styled-delete-wrapper .button:hover,
+.uiverse-delete-btn:hover {
+  width: 140px;
+  border-radius: 50px;
+  transition-duration: .3s;
+  background-color: rgb(255, 69, 69);
+  align-items: center;
+}
+
+.styled-delete-wrapper .button:hover .svgIcon,
+.uiverse-delete-btn:hover .svgIcon {
+  width: 50px;
+  transition-duration: .3s;
+  transform: translateY(60%);
+}
+
+.styled-delete-wrapper .button::before,
+.uiverse-delete-btn::before {
+  position: absolute;
+  top: -20px;
+  content: "Delete";
+  color: white;
+  transition-duration: .3s;
+  font-size: 2px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+  left: 50%;
+  transform: translateX(-50%);
+  line-height: 1;
+}
+
+.styled-delete-wrapper .button:hover::before,
+.uiverse-delete-btn:hover::before {
+  font-size: 13px;
+  opacity: 1;
+  transform: translate(-50%, 30px);
+  transition-duration: .3s;
+}
+
+.styled-delete-wrapper .button:focus-visible,
+.uiverse-delete-btn:focus-visible {
+  outline: 2px solid #ff4545;
+  outline-offset: 2px;
+}
+
+/* Compact variant for dense table rows */
+.styled-delete-wrapper.btn-sm .button,
+.uiverse-delete-btn.btn-sm {
+  width: 36px;
+  height: 36px;
+}
+
+.styled-delete-wrapper.btn-sm .button .svgIcon,
+.uiverse-delete-btn.btn-sm .svgIcon {
+  width: 11px;
+}
+
+.styled-delete-wrapper.btn-sm .button:hover,
+.uiverse-delete-btn.btn-sm:hover {
+  width: 105px;
+  border-radius: 36px;
+}
+
+.styled-delete-wrapper.btn-sm .button:hover .svgIcon,
+.uiverse-delete-btn.btn-sm:hover .svgIcon {
+  width: 36px;
+  transform: translateY(58%);
+}
+
+.styled-delete-wrapper.btn-sm .button::before,
+.uiverse-delete-btn.btn-sm::before {
+  top: -18px;
+  font-size: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  line-height: 1;
+}
+
+.styled-delete-wrapper.btn-sm .button:hover::before,
+.uiverse-delete-btn.btn-sm:hover::before {
+  font-size: 11px;
+  transform: translate(-50%, 24px);
+  transition-duration: .3s;
+}
 

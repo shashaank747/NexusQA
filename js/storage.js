@@ -146,7 +146,7 @@ const StorageManager = {
         name: "QA Tester",
         email: testerEmail,
         role: "qa",
-        roleTitle: "QA Automation Tester",
+        roleTitle: "QA Tester",
         avatar: "QA",
         color: "#6366f1",
         status: "active",
@@ -184,6 +184,12 @@ const StorageManager = {
     if (phoneUpdated) {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     }
+
+    users.forEach(u => {
+      if (u.roleTitle && u.roleTitle.toLowerCase().includes("automation")) {
+        u.roleTitle = u.roleTitle.replace(/automation\s*/gi, "").replace(/\s+/g, " ").trim() || "QA Tester";
+      }
+    });
 
     return users;
   },
@@ -257,7 +263,12 @@ const StorageManager = {
 
   getCurrentUser() {
     const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    return raw ? JSON.parse(raw) : this.getUsers()[0];
+    let u = raw ? JSON.parse(raw) : this.getUsers()[0];
+    if (u && u.roleTitle && u.roleTitle.toLowerCase().includes("automation")) {
+      u.roleTitle = u.roleTitle.replace(/automation\s*/gi, "").replace(/\s+/g, " ").trim() || "QA Tester";
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(u));
+    }
+    return u;
   },
 
   setCurrentUser(user) {
@@ -491,7 +502,22 @@ const StorageManager = {
   // -------------------------------------------------------------
   getTestCases() {
     const raw = localStorage.getItem(STORAGE_KEYS.TEST_CASES);
-    return raw ? JSON.parse(raw) : [];
+    let cases = raw ? JSON.parse(raw) : [];
+    let updated = false;
+    cases = cases.map(tc => {
+      if (tc.type === "Automated" || tc.type === "E2E") {
+        tc.type = "Functional";
+        updated = true;
+      } else if (tc.type === "API") {
+        tc.type = "Integration";
+        updated = true;
+      }
+      return tc;
+    });
+    if (updated && raw) {
+      localStorage.setItem(STORAGE_KEYS.TEST_CASES, JSON.stringify(cases));
+    }
+    return cases;
   },
 
   saveTestCases(cases, shouldBroadcast = true) {

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NexusQA - QA Tester Workspace</title>
-  <meta name="description" content="Dedicated QA Tester Portal for test authoring, live test execution, automated test generation, and bug reporting with Supabase synchronization.">
+  <meta name="description" content="Dedicated QA Tester Portal for manual test case logging, test result tracking, voice/AI test creation, and bug reporting with Supabase synchronization.">
   
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="Glossy Neon Coding Loop Logo.png">
@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.2">
 </head>
 <body class="light-theme page-tester">
 
@@ -112,22 +112,19 @@
             </button>
             <div class="rail-divider"></div>
             <ul class="rail-nav-list">
-              <li class="rail-nav-item active" data-view="dashboard" title="Quality Analytics">
+              <li class="rail-nav-item active" data-view="dashboard" title="Quality Dashboard">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-chart-pie"></i></button>
               </li>
-              <li class="rail-nav-item" data-view="test-cases" title="Test Cases & Repo">
+              <li class="rail-nav-item" data-view="test-cases" title="Test Cases & Logs">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-flask-vial"></i></button>
               </li>
-              <li class="rail-nav-item" data-view="executions" title="Live Test Runner">
-                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-play"></i></button>
-              </li>
-              <li class="rail-nav-item" data-view="ai-generate" title="AI Test Studio">
+              <li class="rail-nav-item" data-view="ai-generate" title="Voice & AI Creator">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-wand-magic-sparkles text-purple"></i></button>
               </li>
               <li class="rail-nav-item" data-view="defects" title="Defect Tracker">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-triangle-exclamation text-rose"></i></button>
               </li>
-              <li class="rail-nav-item" data-view="suites" title="Suites & Plans">
+              <li class="rail-nav-item" data-view="suites" title="Suites & Modules">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-layer-group"></i></button>
               </li>
             </ul>
@@ -159,27 +156,20 @@
               <li class="nav-item active" data-view="dashboard">
                 <a href="javascript:void(0)" class="nav-link">
                   <i class="fa-solid fa-chart-pie"></i>
-                  <span>Quality Analytics</span>
+                  <span>Quality Dashboard</span>
                 </a>
               </li>
               <li class="nav-item" data-view="test-cases">
                 <a href="javascript:void(0)" class="nav-link">
                   <i class="fa-solid fa-flask-vial"></i>
-                  <span>Test Cases & Repo</span>
+                  <span>Test Cases & Logs</span>
                   <span class="nav-badge" id="testCasesCountBadge">12</span>
-                </a>
-              </li>
-              <li class="nav-item" data-view="executions">
-                <a href="javascript:void(0)" class="nav-link">
-                  <i class="fa-solid fa-play"></i>
-                  <span>Live Test Runner</span>
-                  <span class="nav-badge badge-active">Live</span>
                 </a>
               </li>
               <li class="nav-item" data-view="ai-generate">
                 <a href="javascript:void(0)" class="nav-link">
                   <i class="fa-solid fa-wand-magic-sparkles text-purple"></i>
-                  <span>AI Test Studio</span>
+                  <span>Voice & AI Creator</span>
                   <span class="nav-badge badge-ai">PRO</span>
                 </a>
               </li>
@@ -193,7 +183,7 @@
               <li class="nav-item" data-view="suites">
                 <a href="javascript:void(0)" class="nav-link">
                   <i class="fa-solid fa-layer-group"></i>
-                  <span>Suites & Plans</span>
+                  <span>Suites & Modules</span>
                 </a>
               </li>
               <li class="nav-item" data-view="settings">
@@ -216,8 +206,8 @@
         <section class="view-panel active-view" id="view-dashboard">
           <div class="view-header">
             <div>
-              <h1 class="view-title">QA Quality & Health Analytics</h1>
-              <p class="view-subtitle">Real-time test execution metrics, automated coverage, and defect tracking.</p>
+              <h1 class="view-title">Manual Testing Logs & Analytics</h1>
+              <p class="view-subtitle">Real-time manual test logging metrics, pass/fail status, and defect tracking.</p>
             </div>
             <div class="view-actions">
               <button class="btn btn-secondary btn-sm" id="refreshMetricsBtn">
@@ -266,17 +256,17 @@
               </div>
             </div>
 
-            <div class="kpi-card card-glow-cyan">
+            <div class="kpi-card card-glow-amber">
               <div class="kpi-header">
-                <span class="kpi-title">Automation Ratio</span>
-                <span class="kpi-icon-badge icon-cyan"><i class="fa-solid fa-robot"></i></span>
+                <span class="kpi-title">Pending / Untested</span>
+                <span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-hourglass-half"></i></span>
               </div>
               <div class="kpi-body">
-                <span class="kpi-value text-cyan" id="kpiAutomationRate">0%</span>
-                <span class="kpi-trend trend-neutral" id="kpiAutoCount">0 Automated</span>
+                <span class="kpi-value text-amber" id="kpiUntestedCount">0</span>
+                <span class="kpi-trend trend-neutral" id="kpiUntestedSub">0 to test</span>
               </div>
               <div class="kpi-progress-bar">
-                <div class="kpi-progress-fill bg-cyan" id="kpiAutoProgress" style="width: 0%"></div>
+                <div class="kpi-progress-fill bg-amber" id="kpiUntestedProgress" style="width: 0%"></div>
               </div>
             </div>
 
@@ -332,8 +322,8 @@
             <div class="dashboard-card">
               <div class="card-header">
                 <div class="card-title-group">
-                  <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Test Execution Runs</h3>
-                  <p class="card-subtitle">Latest automated and manual validation cycles</p>
+                  <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Test Execution Logs</h3>
+                  <p class="card-subtitle">Latest manual test verification and execution activity</p>
                 </div>
                 <button class="btn btn-ghost btn-sm" id="gotoTestRunsBtn">View All <i class="fa-solid fa-arrow-right"></i></button>
               </div>
@@ -373,8 +363,8 @@
         <section class="view-panel" id="view-test-cases">
           <div class="view-header">
             <div>
-              <h1 class="view-title">Test Repository & Specifications</h1>
-              <p class="view-subtitle">Author, manage, categorize, and batch-execute structured test cases.</p>
+              <h1 class="view-title">Test Cases & Manual Logs</h1>
+              <p class="view-subtitle">Author, review, categorize, and log manual test execution results.</p>
             </div>
             <div class="view-actions">
               <button class="btn btn-outline btn-sm" id="importTestsBtn"><i class="fa-solid fa-file-import"></i> Import JSON</button>
@@ -421,11 +411,12 @@
                   </select>
 
                   <select id="filterType" class="nexus-select">
-                    <option value="all">All Test Types</option>
-                    <option value="Manual">Manual</option>
-                    <option value="Automated">Automated</option>
-                    <option value="API">API</option>
-                    <option value="E2E">E2E</option>
+                    <option value="all">All Categories</option>
+                    <option value="Functional">Functional</option>
+                    <option value="UI / UX">UI / UX</option>
+                    <option value="Regression">Regression</option>
+                    <option value="Smoke">Smoke</option>
+                    <option value="Integration">Integration</option>
                     <option value="Security">Security</option>
                     <option value="Performance">Performance</option>
                   </select>
@@ -441,10 +432,14 @@
                   <span>test cases selected</span>
                 </div>
                 <div class="batch-buttons">
-                  <button class="btn btn-secondary btn-xs" id="batchRunBtn"><i class="fa-solid fa-play"></i> Execute Selected</button>
                   <button class="btn btn-success btn-xs" id="batchPassBtn"><i class="fa-solid fa-check"></i> Mark Passed</button>
                   <button class="btn btn-danger btn-xs" id="batchFailBtn"><i class="fa-solid fa-xmark"></i> Mark Failed</button>
-                  <button class="btn btn-danger btn-xs" id="batchDeleteBtn"><i class="fa-solid fa-trash"></i> Delete</button>
+                  <button class="btn btn-warning btn-xs" id="batchBlockBtn"><i class="fa-solid fa-ban"></i> Mark Blocked</button>
+                  <div class="styled-delete-wrapper btn-sm">
+                    <button type="button" class="button" id="batchDeleteBtn" title="Delete Selected">
+                      <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -458,9 +453,9 @@
                         <th>Test Case Title</th>
                         <th width="140">Suite</th>
                         <th width="110">Priority</th>
-                        <th width="100">Type</th>
+                        <th width="110">Category</th>
                         <th width="110">Status</th>
-                        <th width="100">Actions</th>
+                        <th width="160">Actions</th>
                       </tr>
                     </thead>
                     <tbody id="testCasesTableBody"></tbody>
@@ -551,7 +546,7 @@
                     <th width="120">Linked Test</th>
                     <th width="150">Assignee</th>
                     <th width="150">Status</th>
-                    <th width="100">Actions</th>
+                    <th width="160">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="defectsTableBody"></tbody>
@@ -565,11 +560,11 @@
           <div class="view-header">
             <div>
               <div class="d-flex align-center gap-2 mb-1">
-                <span class="badge badge-ai"><i class="fa-solid fa-sparkles"></i> AI Studio</span>
-                <span class="badge badge-version">Speech-to-Text Enabled</span>
+                <span class="badge badge-ai"><i class="fa-solid fa-sparkles"></i> AI Assistant</span>
+                <span class="badge badge-version">Manual Test Case Creator</span>
               </div>
-              <h1 class="view-title">Voice & AI Chat Test Case Creator</h1>
-              <p class="view-subtitle">Dictate your testing steps using your microphone or chat with the AI assistant. Automatically extracts structured test cases, generates unique test IDs, copies to Excel, and saves directly to your database.</p>
+              <h1 class="view-title">Voice & AI Manual Test Case Creator</h1>
+              <p class="view-subtitle">Speak or type your manual test steps, observations, and expected results. The assistant structures them into formal manual test cases ready for your log repository.</p>
             </div>
             <div class="view-actions">
               <button class="btn btn-outline btn-sm" id="btnClearAiChat" title="Clear Chat History">
@@ -732,9 +727,11 @@
                         <i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo
                       </label>
                       <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;">
-                      <button type="button" class="btn btn-ghost btn-sm text-danger" id="profileRemovePhotoBtn" style="display:none;">
-                        <i class="fa-solid fa-trash-can"></i> Remove
-                      </button>
+                      <div class="styled-delete-wrapper btn-sm" id="profileRemovePhotoWrap" style="display:none;">
+                        <button type="button" class="button" id="profileRemovePhotoBtn" title="Remove Profile Photo">
+                          <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+                        </button>
+                      </div>
                     </div>
                     <span class="text-xs text-muted">Supports JPG, PNG, WEBP or GIF (Max 2MB)</span>
                   </div>
@@ -898,12 +895,13 @@
               </select>
             </div>
             <div class="form-group flex-1">
-              <label for="tcType">Test Type</label>
+              <label for="tcType">Test Category</label>
               <select id="tcType" class="nexus-select w-100">
-                <option value="Manual">Manual</option>
-                <option value="Automated">Automated</option>
-                <option value="API">API</option>
-                <option value="E2E">E2E</option>
+                <option value="Functional" selected>Functional</option>
+                <option value="UI / UX">UI / UX</option>
+                <option value="Regression">Regression</option>
+                <option value="Smoke">Smoke</option>
+                <option value="Integration">Integration</option>
                 <option value="Security">Security</option>
                 <option value="Performance">Performance</option>
               </select>
@@ -961,9 +959,11 @@
                 <div class="tc-image-preview-container">
                   <img id="tcImagePreview" src="" alt="Test Case Reference Image" class="tc-image-preview-img">
                   <div class="tc-image-preview-overlay">
-                    <button type="button" class="btn btn-danger btn-xs" id="tcRemoveImageBtn" title="Remove attached image">
-                      <i class="fa-solid fa-trash-can"></i> Remove
-                    </button>
+                    <div class="styled-delete-wrapper btn-sm">
+                      <button type="button" class="button" id="tcRemoveImageBtn" title="Remove attached image">
+                        <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+                      </button>
+                    </div>
                     <a id="tcViewImageFullBtn" href="#" target="_blank" class="btn btn-secondary btn-xs" title="View Full Resolution">
                       <i class="fa-solid fa-up-right-from-square"></i> Full View
                     </a>
@@ -978,9 +978,16 @@
           </div>
         </form>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" id="cancelTestCaseModalBtn">Cancel</button>
-        <button type="button" class="btn btn-primary" id="saveTestCaseBtn"><i class="fa-solid fa-floppy-disk"></i> Save Test Case</button>
+      <div class="modal-footer justify-between">
+        <div class="styled-delete-wrapper" id="editTestCaseDeleteWrap" style="display: none;">
+          <button type="button" class="button" id="deleteTestCaseModalBtn" title="Delete Test Case">
+            <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+          </button>
+        </div>
+        <div class="d-flex align-center gap-2">
+          <button type="button" class="btn btn-ghost" id="cancelTestCaseModalBtn">Cancel</button>
+          <button type="button" class="btn btn-primary" id="saveTestCaseBtn"><i class="fa-solid fa-floppy-disk"></i> Save Test Case</button>
+        </div>
       </div>
     </div>
   </div>
@@ -993,9 +1000,18 @@
         <button class="icon-btn close-modal-btn" id="closeDetailModalBtn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body" id="viewDetailBody"></div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="editDetailTestCaseBtn"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
-        <button type="button" class="btn btn-primary" id="runDetailTestCaseBtn"><i class="fa-solid fa-play"></i> Execute Test</button>
+      <div class="modal-footer justify-between">
+        <div class="styled-delete-wrapper">
+          <button type="button" class="button" id="deleteDetailTestCaseBtn" title="Delete Test Case">
+            <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+          </button>
+        </div>
+        <div class="d-flex align-center gap-2">
+          <button type="button" class="btn btn-secondary btn-sm" id="editDetailTestCaseBtn"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+          <button type="button" class="btn btn-warning btn-sm" id="detailBlockedTestCaseBtn" title="Mark as Blocked"><i class="fa-solid fa-ban"></i> Blocked</button>
+          <button type="button" class="btn btn-danger btn-sm" id="detailFailedTestCaseBtn" title="Mark as Failed"><i class="fa-solid fa-xmark"></i> Failed</button>
+          <button type="button" class="btn btn-success btn-sm" id="detailPassedTestCaseBtn" title="Mark as Passed"><i class="fa-solid fa-check"></i> Passed</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1050,9 +1066,16 @@
           </div>
         </form>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" id="cancelDefectModalBtn">Cancel</button>
-        <button type="button" class="btn btn-danger" id="saveDefectBtn"><i class="fa-solid fa-bug"></i> Save & Broadcast Defect</button>
+      <div class="modal-footer justify-between">
+        <div class="styled-delete-wrapper" id="editDefectDeleteWrap" style="display: none;">
+          <button type="button" class="button" id="deleteDefectModalBtn" title="Delete Defect">
+            <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+          </button>
+        </div>
+        <div class="d-flex align-center gap-2">
+          <button type="button" class="btn btn-ghost" id="cancelDefectModalBtn">Cancel</button>
+          <button type="button" class="btn btn-danger" id="saveDefectBtn"><i class="fa-solid fa-bug"></i> Save & Broadcast Defect</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1102,9 +1125,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <!-- Scripts -->
-  <script src="js/data.js?v=1.0.1"></script>
-  <script src="js/supabase.js?v=1.0.1"></script>
-  <script src="js/storage.js?v=1.0.1"></script>
-  <script src="js/app.js?v=1.0.1"></script>
+  <script src="js/data.js?v=1.0.3"></script>
+  <script src="js/supabase.js?v=1.0.3"></script>
+  <script src="js/storage.js?v=1.0.3"></script>
+  <script src="js/app.js?v=1.0.3"></script>
 </body>
 </html>
