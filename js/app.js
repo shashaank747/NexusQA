@@ -929,6 +929,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         }, 350);
         return;
       }
+      if (window.__pendingAuthNotice) {
+        showToast(window.__pendingAuthNotice, "error");
+        try { delete window.__pendingAuthNotice; } catch (e) {}
+      }
       setPortal("qa", "dashboard");
     } else {
       setPortal(currentUser.role === "dev" ? "dev" : "qa", currentUser.role === "dev" ? "dev-dashboard" : "dashboard");

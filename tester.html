@@ -18,7 +18,33 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.2">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.4">
+
+  <!-- Instant Strict Auth Guard -->
+  <script>
+    (function() {
+      try {
+        var raw = localStorage.getItem("nexus_qa_current_user");
+        if (!raw) {
+          window.location.replace("index.html");
+          return;
+        }
+        var user = JSON.parse(raw);
+        if (!user || user.status === "pending_approval") {
+          localStorage.removeItem("nexus_qa_current_user");
+          window.location.replace("index.html");
+          return;
+        }
+        var authErr = sessionStorage.getItem("nexus_auth_error");
+        if (authErr) {
+          sessionStorage.removeItem("nexus_auth_error");
+          window.__pendingAuthNotice = authErr;
+        }
+      } catch (e) {
+        window.location.replace("index.html");
+      }
+    })();
+  </script>
 </head>
 <body class="light-theme page-tester">
 
