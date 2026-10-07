@@ -6447,8 +6447,8 @@ body.light-theme .nexus-table tbody td {
 
 .styled-delete-wrapper .button,
 .uiverse-delete-btn {
-  width: 34px;
-  height: 34px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background-color: rgb(20, 20, 20);
   border: none;
@@ -6456,9 +6456,9 @@ body.light-theme .nexus-table tbody td {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  transition-duration: .3s;
+  transition-duration: .25s;
   overflow: hidden;
   position: relative;
   padding: 0;
@@ -6470,9 +6470,9 @@ body.light-theme .nexus-table tbody td {
 
 .styled-delete-wrapper .button .svgIcon,
 .uiverse-delete-btn .svgIcon {
-  width: 11px;
+  width: 9.5px;
   height: auto;
-  transition-duration: .3s;
+  transition-duration: .25s;
   display: block;
 }
 
@@ -6483,30 +6483,31 @@ body.light-theme .nexus-table tbody td {
 
 .styled-delete-wrapper .button:hover,
 .uiverse-delete-btn:hover {
-  width: 88px;
-  border-radius: 24px;
-  transition-duration: .3s;
+  width: 62px;
+  height: 24px;
+  border-radius: 12px;
+  transition-duration: .25s;
   background-color: rgb(255, 69, 69);
   align-items: center;
 }
 
 .styled-delete-wrapper .button:hover .svgIcon,
 .uiverse-delete-btn:hover .svgIcon {
-  width: 26px;
-  transition-duration: .3s;
-  transform: translateY(54%);
+  width: 14px;
+  transition-duration: .25s;
+  transform: translateY(48%);
 }
 
 .styled-delete-wrapper .button::before,
 .uiverse-delete-btn::before {
   position: absolute;
-  top: -16px;
+  top: -14px;
   content: "Delete";
   color: white;
-  transition-duration: .3s;
+  transition-duration: .25s;
   font-size: 2px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
   pointer-events: none;
   left: 50%;
   transform: translateX(-50%);
@@ -6515,45 +6516,46 @@ body.light-theme .nexus-table tbody td {
 
 .styled-delete-wrapper .button:hover::before,
 .uiverse-delete-btn:hover::before {
-  font-size: 11px;
+  font-size: 9.5px;
   opacity: 1;
-  transform: translate(-50%, 22px);
-  transition-duration: .3s;
+  transform: translate(-50%, 15px);
+  transition-duration: .25s;
 }
 
 .styled-delete-wrapper .button:focus-visible,
 .uiverse-delete-btn:focus-visible {
   outline: 2px solid #ff4545;
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 /* Compact variant for dense table rows */
 .styled-delete-wrapper.btn-sm .button,
 .uiverse-delete-btn.btn-sm {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
 }
 
 .styled-delete-wrapper.btn-sm .button .svgIcon,
 .uiverse-delete-btn.btn-sm .svgIcon {
-  width: 9px;
+  width: 8px;
 }
 
 .styled-delete-wrapper.btn-sm .button:hover,
 .uiverse-delete-btn.btn-sm:hover {
-  width: 72px;
-  border-radius: 18px;
+  width: 52px;
+  height: 20px;
+  border-radius: 10px;
 }
 
 .styled-delete-wrapper.btn-sm .button:hover .svgIcon,
 .uiverse-delete-btn.btn-sm:hover .svgIcon {
-  width: 20px;
-  transform: translateY(50%);
+  width: 12px;
+  transform: translateY(44%);
 }
 
 .styled-delete-wrapper.btn-sm .button::before,
 .uiverse-delete-btn.btn-sm::before {
-  top: -14px;
+  top: -12px;
   font-size: 2px;
   left: 50%;
   transform: translateX(-50%);
@@ -6562,8 +6564,8 @@ body.light-theme .nexus-table tbody td {
 
 .styled-delete-wrapper.btn-sm .button:hover::before,
 .uiverse-delete-btn.btn-sm:hover::before {
-  font-size: 9.5px;
-  transform: translate(-50%, 17px);
-  transition-duration: .3s;
+  font-size: 8.5px;
+  transform: translate(-50%, 12px);
+  transition-duration: .25s;
 }
 
