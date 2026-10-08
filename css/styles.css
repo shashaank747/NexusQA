@@ -8075,17 +8075,19 @@ body.light-theme .styled-back-to-top-wrapper .button:hover {
   display: flex;
   align-items: center;
   z-index: 1;
+  border-radius: 10px;
+  transition: all 0.2s ease;
 }
 
 .uiverse-search-wrapper .input {
   background-color: #010201;
   border: none;
   width: 100%;
-  height: 42px;
+  height: 40px;
   border-radius: 10px;
   color: #ffffff;
-  padding-left: 44px;
-  padding-right: 48px;
+  padding-left: 42px;
+  padding-right: 46px;
   font-size: 0.85rem;
   font-family: inherit;
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
@@ -8110,7 +8112,7 @@ body.light-theme .styled-back-to-top-wrapper .button:hover {
   height: 20px;
   position: absolute;
   background: linear-gradient(90deg, transparent, rgba(1, 2, 1, 0.9));
-  top: 11px;
+  top: 10px;
   left: 55px;
 }
 
@@ -8291,9 +8293,9 @@ body.light-theme .styled-back-to-top-wrapper .button:hover {
   align-items: center;
   justify-content: center;
   z-index: 2;
-  height: 30px;
-  width: 30px;
-  border-radius: 8px;
+  height: 28px;
+  width: 28px;
+  border-radius: 7px;
   background: linear-gradient(180deg, #161329, black, #1d1b4b);
   border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
@@ -8307,14 +8309,14 @@ body.light-theme .styled-back-to-top-wrapper .button:hover {
 }
 
 .uiverse-search-wrapper .filterBorder {
-  height: 32px;
-  width: 32px;
+  height: 30px;
+  width: 30px;
   position: absolute;
   overflow: hidden;
   top: 50%;
   right: 5px;
   transform: translateY(-50%);
-  border-radius: 8px;
+  border-radius: 7px;
   pointer-events: none;
 }
 
@@ -8343,26 +8345,84 @@ body.light-theme .styled-back-to-top-wrapper .button:hover {
 
 .uiverse-search-wrapper #search-icon {
   position: absolute;
-  left: 14px;
+  left: 13px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   align-items: center;
   pointer-events: none;
+  z-index: 2;
+}
+
+/* ==========================================================================
+   LIGHT THEME SEARCH BAR STYLES (Ultra-Crisp, High Contrast, Clean Design)
+   ========================================================================== */
+body.light-theme .uiverse-search-wrapper .white,
+body.light-theme .uiverse-search-wrapper .border,
+body.light-theme .uiverse-search-wrapper .darkBorderBg,
+body.light-theme .uiverse-search-wrapper .glow {
+  display: none !important;
+}
+
+body.light-theme .uiverse-search-wrapper #pink-mask,
+body.light-theme .uiverse-search-wrapper #input-mask,
+body.light-theme .uiverse-search-wrapper .filterBorder {
+  display: none !important;
+}
+
+body.light-theme .uiverse-search-wrapper #main {
+  background: #ffffff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .uiverse-search-wrapper #main:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+body.light-theme .uiverse-search-wrapper #main:focus-within {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 2px 8px rgba(99, 102, 241, 0.08) !important;
 }
 
 body.light-theme .uiverse-search-wrapper .input {
-  background-color: #ffffff;
-  color: #0f172a;
-  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.05);
+  background-color: transparent !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+  font-weight: 500;
 }
 
 body.light-theme .uiverse-search-wrapper .input::placeholder {
-  color: #64748b;
+  color: #64748b !important;
+  opacity: 1;
 }
 
-body.light-theme .uiverse-search-wrapper #input-mask {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9));
+body.light-theme .uiverse-search-wrapper #filter-icon {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+body.light-theme .uiverse-search-wrapper #filter-icon svg path {
+  stroke: #475569 !important;
+}
+
+body.light-theme .uiverse-search-wrapper #filter-icon:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+body.light-theme .uiverse-search-wrapper #filter-icon:hover svg path {
+  stroke: #0f172a !important;
+}
+
+body.light-theme .uiverse-search-wrapper #search-icon svg circle,
+body.light-theme .uiverse-search-wrapper #search-icon svg line {
+  stroke: #6366f1 !important;
 }
 
 /* ==========================================================================
