@@ -5886,7 +5886,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   }
 
   // URL Parameter Routing & 404 checks
-  function initRouting() {
+  function applyUrlViewRouting() {
     const params = new URLSearchParams(window.location.search);
     const viewParam = params.get("view");
     if (viewParam) {
@@ -5897,5 +5897,6 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   // Boot Back to Top & Routing
   initBackToTopButton();
   initRouting();
+  applyUrlViewRouting();
 });
 
