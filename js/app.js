@@ -2123,11 +2123,39 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       else item.classList.remove("active");
     });
 
+    let hasMatchingPanel = false;
     if (DOM.viewPanels) {
       DOM.viewPanels.forEach(panel => {
-        if (panel.id === `view-${viewName}`) panel.classList.add("active-view");
-        else panel.classList.remove("active-view");
+        if (panel.id === `view-${viewName}`) {
+          panel.classList.add("active-view");
+          hasMatchingPanel = true;
+        } else {
+          panel.classList.remove("active-view");
+        }
       });
+    }
+
+    let notFoundPanel = document.getElementById("view-404");
+    if (!hasMatchingPanel && !titles[viewName]) {
+      if (!notFoundPanel) {
+        notFoundPanel = document.createElement("section");
+        notFoundPanel.id = "view-404";
+        notFoundPanel.className = "view-panel active-view";
+        const viewport = document.getElementById("viewViewport") || document.querySelector(".main-content");
+        if (viewport) viewport.appendChild(notFoundPanel);
+      }
+      if (notFoundPanel) {
+        notFoundPanel.classList.add("active-view");
+        notFoundPanel.innerHTML = create404Html({
+          title: "Error 404",
+          heading: "View Not Found",
+          desc: `The view "${viewName}" does not exist in this workspace.`,
+          actionText: state.currentPortal === "dev" ? "Go to Dev Command Center" : "Go to Quality Analytics",
+          actionHandler: `switchView('${state.currentPortal === "dev" ? "dev-dashboard" : "dashboard"}')`
+        });
+      }
+    } else if (notFoundPanel) {
+      notFoundPanel.classList.remove("active-view");
     }
 
     const titles = {
@@ -2141,9 +2169,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       "dev-approvals": "Employees & Access Control",
       "dev-kanban": "Bug Triage Kanban",
       "dev-failures": "Failed Test Diagnostics",
-      settings: "My Profile & Account"
+      settings: "My Profile & Account",
+      "404": "Error 404 - Not Found"
     };
-    if (DOM.currentCrumb) DOM.currentCrumb.textContent = titles[viewName] || "Workspace";
+    if (DOM.currentCrumb) DOM.currentCrumb.textContent = titles[viewName] || "Error 404";
     if (DOM.sidebar) DOM.sidebar.classList.remove("mobile-open");
 
     const vp = document.getElementById("viewViewport");
@@ -5343,6 +5372,62 @@ Tags: concurrency, inventory, bug-fix, deadlock`
       </div>
     `.trim();
   }
+
+  // 404 Face Animation Component Helper (Uiverse / Custom Animated Face)
+  function create404Html(options = {}) {
+    const {
+      title = "Error 404",
+      heading = "Lost in Space?",
+      desc = "We searched everywhere, but couldn't find what you're looking for.",
+      actionText = "Back to Safety",
+      actionHandler = "window.history.length > 1 ? window.history.back() : switchView('dashboard')"
+    } = options;
+
+    return `
+      <div class="styled-404-wrapper">
+        <div class="error-404-card">
+          <div class="error-404-badge">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>${escapeHtml(title)}</span>
+          </div>
+
+          <main class="my-custom-face-container">
+            <svg class="face" viewBox="0 0 320 380">
+              <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="25">
+                <g class="face__eyes" transform="translate(0,112.5)">
+                  <g transform="translate(15,0)">
+                    <polyline class="face__eye-lid" points="37,0 0,120 75,120" />
+                    <polyline class="face__pupil" points="55,120 55,155" stroke-dasharray="35 35" />
+                  </g>
+                  <g transform="translate(230,0)">
+                    <polyline class="face__eye-lid" points="37,0 0,120 75,120" />
+                    <polyline class="face__pupil" points="55,120 55,155" stroke-dasharray="35 35" />
+                  </g>
+                </g>
+                <rect class="face__nose" x="132.5" y="112.5" width="55" height="155" rx="4" ry="4" />
+                <g transform="translate(65,334)" stroke-dasharray="102 102">
+                  <path class="face__mouth-left" d="M 0 30 C 0 30 40 0 95 0" />
+                  <path class="face__mouth-right" d="M 95 0 C 150 0 190 30 190 30" />
+                </g>
+              </g>
+            </svg>
+          </main>
+
+          <h1 class="error-404-title">${escapeHtml(heading)}</h1>
+          <p class="error-404-desc">${escapeHtml(desc)}</p>
+
+          <div class="error-404-actions">
+            <button type="button" class="btn-404-primary" onclick="${actionHandler}">
+              <i class="fa-solid fa-arrow-left"></i>
+              <span>${escapeHtml(actionText)}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `.trim();
+  }
+  window.create404Html = create404Html;
+
   // Back to Top Button Controller (Animated Expandable Pill)
   function initBackToTopButton() {
     const wrap = document.getElementById("scrollToTopWrapper");
@@ -5381,6 +5466,15 @@ Tags: concurrency, inventory, bug-fix, deadlock`
 
     if (btn) btn.addEventListener("click", doScrollToTop);
     if (wrap) wrap.addEventListener("click", doScrollToTop);
+  }
+
+  // URL Parameter Routing & 404 checks
+  function initRouting() {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get("view");
+    if (viewParam) {
+      switchView(viewParam);
+    }
   }
 
   // Boot Back to Top & Routing

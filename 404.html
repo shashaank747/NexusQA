@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 - Page Not Found | NexusQA</title>
+  <meta name="description" content="The requested page could not be found on NexusQA.">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="Glossy Neon Coding Loop Logo.png">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="page-404">
+
+  <!-- Background Decorative Aurora & Grid Effects -->
+  <div class="auth-bg-mesh">
+    <div class="auth-bg-orb auth-bg-orb-1"></div>
+    <div class="auth-bg-orb auth-bg-orb-2"></div>
+    <div class="auth-bg-orb auth-bg-orb-3"></div>
+    <div class="auth-grid-overlay"></div>
+    <div class="auth-vignette-overlay"></div>
+  </div>
+
+  <div class="styled-404-wrapper">
+    <div class="error-404-card">
+      <div class="error-404-badge">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Error 404</span>
+      </div>
+
+      <!-- Animated Face Component -->
+      <main class="my-custom-face-container">
+        <svg class="face" viewBox="0 0 320 380">
+          <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="25">
+            <g className="face__eyes" transform="translate(0,112.5)">
+              <g transform="translate(15,0)">
+                <polyline class="face__eye-lid" points="37,0 0,120 75,120" />
+                <polyline class="face__pupil" points="55,120 55,155" strokeDasharray="35 35" />
+              </g>
+              <g transform="translate(230,0)">
+                <polyline class="face__eye-lid" points="37,0 0,120 75,120" />
+                <polyline class="face__pupil" points="55,120 55,155" strokeDasharray="35 35" />
+              </g>
+            </g>
+            <rect class="face__nose" x="132.5" y="112.5" width="55" height="155" rx="4" ry="4" />
+            <g transform="translate(65,334)" strokeDasharray="102 102">
+              <path class="face__mouth-left" d="M 0 30 C 0 30 40 0 95 0" />
+              <path class="face__mouth-right" d="M 95 0 C 150 0 190 30 190 30" />
+            </g>
+          </g>
+        </svg>
+      </main>
+
+      <h1 class="error-404-title">Lost in Space?</h1>
+      <p class="error-404-desc">
+        We searched everywhere, but couldn't find the page or resource you're looking for. It may have been moved, deleted, or never existed.
+      </p>
+
+      <div class="error-404-actions">
+        <a href="tester.html" class="btn-404-primary" id="btnGoDashboard">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span>Go to Dashboard</span>
+        </a>
+        <button class="btn-404-secondary" onclick="window.history.length > 1 ? window.history.back() : window.location.href='index.html'">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>Go Back</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Apply saved theme preference
+    (function() {
+      const savedTheme = localStorage.getItem("nexusqa_theme");
+      if (savedTheme === "light") {
+        document.body.classList.add("light-theme");
+      } else {
+        document.body.classList.remove("light-theme");
+      }
+
+      // Check current portal role to redirect to appropriate dashboard
+      try {
+        const user = JSON.parse(localStorage.getItem("nexusqa_current_user") || "null");
+        const btnDashboard = document.getElementById("btnGoDashboard");
+        if (btnDashboard && user) {
+          if (user.role === "developer" || user.role === "lead_developer") {
+            btnDashboard.href = "dev.html";
+          } else {
+            btnDashboard.href = "tester.html";
+          }
+        }
+      } catch (e) {
+        // Fallback to tester.html
+      }
+    })();
+  </script>
+</body>
+</html>
