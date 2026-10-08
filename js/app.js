@@ -73,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     testerSignupName: document.getElementById("testerSignupName"),
     testerSignupEmail: document.getElementById("testerSignupEmail"),
     testerSignupPassword: document.getElementById("testerSignupPassword"),
+    testerSignupConfirmPassword: document.getElementById("testerSignupConfirmPassword"),
     testerSignupRoleTitle: document.getElementById("testerSignupRoleTitle"),
     btnTesterSendOtp: document.getElementById("btnTesterSendOtp"),
     authInlineAlert: document.getElementById("authInlineAlert"),
@@ -897,6 +898,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     setupAuthListeners();
 
     if (isLandingPage) {
+      // Check if redirected due to auth or role mismatch
+      var authErr = sessionStorage.getItem("nexus_auth_error");
+      if (authErr) {
+        sessionStorage.removeItem("nexus_auth_error");
+        setTimeout(() => {
+          showToast(authErr, "error");
+          if (typeof window.showAuthAlert === "function") window.showAuthAlert(authErr);
+        }, 150);
+      }
       // Main Landing & Login Gateway (index.html)
       window.switchAuthTab("tester");
       return;
@@ -912,15 +922,20 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (document.body.classList.contains("page-dev") || pathname.includes("/dev")) {
       // Developer Portal: requires developer role
       if (currentUser.role !== "dev") {
-        showToast("Access Denied: Developer account required.", "error");
-        setTimeout(() => {
-          window.location.replace("tester.html");
-        }, 350);
+        StorageManager.logout();
+        sessionStorage.setItem("nexus_auth_error", "Access Denied: Developer account required. Please authenticate with a Developer account.");
+        window.location.replace("index.html");
         return;
       }
       setPortal("dev", "dev-dashboard");
     } else if (document.body.classList.contains("page-tester") || pathname.includes("/tester") || pathname.includes("/qa")) {
-      // Tester Portal
+      // Tester Portal: requires QA tester role
+      if (currentUser.role === "dev" || (currentUser.role !== "qa" && currentUser.role !== "tester")) {
+        StorageManager.logout();
+        sessionStorage.setItem("nexus_auth_error", "Access Denied: QA Tester account required. Please authenticate with a QA Tester account.");
+        window.location.replace("index.html");
+        return;
+      }
       if (currentUser.status === "pending_approval") {
         showToast("Your tester registration is still pending approval.", "warning");
         setTimeout(() => {
@@ -1025,6 +1040,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (alertEl) alertEl.style.display = "none";
   };
 
+  window.togglePasswordVisibility = function(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
+    const icon = btn.querySelector("i");
+    if (icon) {
+      icon.className = isPassword ? "fa-regular fa-eye-slash" : "fa-regular fa-eye";
+    }
+  };
+
   window.switchAuthMode = function(mode) {
     window.hideAuthAlert();
     state.auth5Mode = mode;
@@ -1036,19 +1062,19 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (mode === "signup") {
       if (loginForm) loginForm.style.display = "none";
       if (signupForm) signupForm.style.display = "block";
-      if (title) title.textContent = "Create New Account";
-      if (subtitle) subtitle.textContent = "Select your role (Tester / Dev) and verify work email via OTP";
+      if (title) title.textContent = "Create Workspace Account";
+      if (subtitle) subtitle.textContent = "Fill in your details and password to request workspace access";
     } else {
       if (signupForm) signupForm.style.display = "none";
       if (loginForm) loginForm.style.display = "block";
       if (title) title.textContent = "Welcome to NexusQA";
-      if (subtitle) subtitle.textContent = "Enter your work email to receive a secure 6-digit login OTP";
+      if (subtitle) subtitle.textContent = "Enter your username/email and password to access the workspace";
     }
   };
 
   // Backwards-compatible alias
   window.switchTesterAuthMode = window.switchAuthMode;
-  window.setAuth5Role = function() {}; // No-op as everyday login is unified by email
+  window.setAuth5Role = function() {}; // No-op
 
   window.backToAuthForm = function() {
     const formState = DOM.auth5StateForm || document.getElementById("auth5StateForm");
@@ -1434,24 +1460,29 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   // Setup Auth Form Listeners
   function setupAuthListeners() {
-    // 1. Unified Everyday Login (Email -> Unique OTP for both Testers and Devs)
+    // 1. Unified Username / Email and Password Sign In
     if (DOM.testerLoginForm) {
       DOM.testerLoginForm.addEventListener("submit", (e) => {
         e.preventDefault();
         window.hideAuthAlert();
-        const email = DOM.testerLoginEmail.value.trim();
+        const identifier = (DOM.testerLoginEmail || document.getElementById("testerLoginEmail")).value.trim();
+        const password = (DOM.testerLoginPassword || document.getElementById("testerLoginPassword")).value;
 
         try {
-          const res = StorageManager.requestLoginOtp(email);
-          state.pendingRegistrationEmail = res.user.email;
-          state.isRegistrationFlow = false;
-
+          const res = StorageManager.loginWithCredentials(identifier, password);
           if (res.status === "pending_approval") {
             window.showPendingState(res.user.email);
-            showToast("Your account is awaiting Senior Dev approval.", "info");
-          } else if (res.status === "otp_sent") {
-            state.currentOtpCode = res.otpCode;
-            window.showInboxState(res.user.email, res.otpCode);
+            showToast("Your account is awaiting Senior Developer approval.", "info");
+          } else if (res.status === "active") {
+            const user = res.user;
+            showToast(`Welcome back, ${user.name}! Accessing workspace...`, "success");
+            setTimeout(() => {
+              if (user.role === "dev") {
+                window.location.href = "dev.html";
+              } else {
+                window.location.href = "tester.html";
+              }
+            }, 300);
           }
         } catch (err) {
           window.showAuthAlert(err.message);
@@ -1460,89 +1491,45 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       });
     }
 
-    // 2. 1st-Time Account Sign Up (Tester / Dev Selection)
+    // 2. Account Registration Form (Name, Email, Role, Password, Confirm Password)
     if (DOM.testerSignupForm) {
       DOM.testerSignupForm.addEventListener("submit", (e) => {
         e.preventDefault();
         window.hideAuthAlert();
-        const name = DOM.testerSignupName.value.trim();
-        const email = DOM.testerSignupEmail.value.trim();
-        const roleTitle = DOM.testerSignupRoleTitle.value;
+        const name = (DOM.testerSignupName || document.getElementById("testerSignupName")).value.trim();
+        const email = (DOM.testerSignupEmail || document.getElementById("testerSignupEmail")).value.trim();
+        const roleTitle = (DOM.testerSignupRoleTitle || document.getElementById("testerSignupRoleTitle")).value;
+        const password = (DOM.testerSignupPassword || document.getElementById("testerSignupPassword")).value;
+        const confirmPassword = (DOM.testerSignupConfirmPassword || document.getElementById("testerSignupConfirmPassword")).value;
 
-        try {
-          DOM.btnTesterSendOtp.disabled = true;
-          DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Dispatching OTP...`;
-
-          setTimeout(() => {
-            DOM.btnTesterSendOtp.disabled = false;
-            DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Register & Send 6-Digit Email OTP`;
-
-            const { user, otpCode } = StorageManager.registerTester({ name, email, roleTitle });
-            state.pendingRegistrationEmail = email;
-            state.currentOtpCode = otpCode;
-            state.isRegistrationFlow = true;
-
-            window.showInboxState(email, otpCode);
-            showToast(`Verification code sent to ${email}!`);
-          }, 350);
-        } catch (err) {
-          DOM.btnTesterSendOtp.disabled = false;
-          DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Register & Send 6-Digit Email OTP`;
-          window.showAuthAlert(err.message);
-          showToast(err.message, "error");
-        }
-      });
-    }
-
-    // 4. OTP Verification Submit with CodeSlots Animations
-    if (DOM.testerOtpForm) {
-      DOM.testerOtpForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const enteredOtp = codeSlotsState.value;
-
-        if (enteredOtp.length !== 6) {
-          setCodeSlotsStatus("error");
-          showToast("Please enter the complete 6-digit OTP code from your email", "error");
+        if (password !== confirmPassword) {
+          window.showAuthAlert("Passwords do not match. Please re-enter identical passwords.");
+          showToast("Passwords do not match", "error");
           return;
         }
 
         try {
-          DOM.btnVerifyOtpSubmit.disabled = true;
-          DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Validating Code...`;
-
-          if (state.isRegistrationFlow) {
-            // 1st Time Registration Flow -> Verify Email & Submit to Senior Dev
-            const user = StorageManager.verifyTesterOtp(state.pendingRegistrationEmail, enteredOtp);
-            setCodeSlotsStatus("success");
-            DOM.btnVerifyOtpSubmit.disabled = false;
-            DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Code Verified!`;
-
-            setTimeout(() => {
-              window.showPendingState(user.email);
-              showToast("Email verified! Access request sent to Senior Developer Lead.");
-              DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify Code & Submit Request`;
-            }, 500);
-          } else {
-            // Everyday Login Flow -> Authenticate & Enter Workspace
-            const { user } = StorageManager.verifyLoginOtp(state.pendingRegistrationEmail, enteredOtp);
-            setCodeSlotsStatus("success");
-            DOM.btnVerifyOtpSubmit.disabled = false;
-            DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Welcome Back, ${user.name}!`;
-
-            setTimeout(() => {
-              if (user.role === "dev") {
-                showToast(`Authenticated as Developer Lead: ${user.name}. Entering Dev Hub...`);
-                window.location.href = "dev.html";
-              } else {
-                showToast(`Authenticated as QA Tester: ${user.name}. Entering QA Portal...`);
-                window.location.href = "tester.html";
-              }
-            }, 500);
+          if (DOM.btnTesterSendOtp) {
+            DOM.btnTesterSendOtp.disabled = true;
+            DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting Request...`;
           }
+
+          setTimeout(() => {
+            if (DOM.btnTesterSendOtp) {
+              DOM.btnTesterSendOtp.disabled = false;
+              DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Request Workspace Access`;
+            }
+
+            const { user } = StorageManager.registerUserWithPassword({ name, email, roleTitle, password });
+            window.showPendingState(user.email);
+            showToast(`Access request submitted for ${name}! Waiting for Senior Developer approval.`, "success");
+          }, 350);
         } catch (err) {
-          DOM.btnVerifyOtpSubmit.disabled = false;
-          DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify Code & Submit Request`;
-          setCodeSlotsStatus("error");
+          if (DOM.btnTesterSendOtp) {
+            DOM.btnTesterSendOtp.disabled = false;
+            DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Request Workspace Access`;
+          }
+          window.showAuthAlert(err.message);
           showToast(err.message, "error");
         }
       });
@@ -1726,10 +1713,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }
     }
 
-    // Team Roster & Access Management (Testers & Junior Developers)
+    // Team Roster & Access Management (All Workspace Members: Developers & Testers)
     if (DOM.authorizedTestersTableBody) {
       const isSenior = StorageManager.isSeniorDev(state.currentUser);
-      const managedUsers = allUsers.filter(u => u.role === "qa" || (u.role === "dev" && (u.devLevel === "junior" || (u.roleTitle || "").toLowerCase().includes("junior"))));
+      const managedUsers = allUsers; // Display all registered workspace members
 
       DOM.authorizedTestersTableBody.innerHTML = managedUsers.map(u => {
         let statusBadge = '<span class="badge badge-passed"><i class="fa-solid fa-check"></i> Active & Authorized</span>';
@@ -1739,19 +1726,25 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           statusBadge = '<span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Rejected</span>';
         }
 
-        const isJuniorDev = u.role === "dev" && (u.devLevel === "junior" || (u.roleTitle || "").toLowerCase().includes("junior"));
-        const avatarClass = isJuniorDev ? "avatar-dev" : "avatar-qa";
-        const rolePill = isJuniorDev 
-          ? `<span class="badge badge-ai" style="background: rgba(59, 130, 246, 0.15) !important; color: #2563eb !important; border: 1px solid rgba(59, 130, 246, 0.3) !important;"><i class="fa-solid fa-code"></i> ${escapeHtml(u.roleTitle || 'Junior Developer')}</span>`
-          : `<span class="badge badge-untested">${escapeHtml(u.roleTitle || 'QA Tester')}</span>`;
+        const isDev = u.role === "dev";
+        const isSeniorMember = StorageManager.isSeniorDev(u);
+        const avatarClass = isDev ? "avatar-dev" : "avatar-qa";
+        
+        let rolePill = '';
+        if (isDev) {
+          rolePill = `<span class="badge badge-ai" style="background: rgba(16, 185, 129, 0.15) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important;"><i class="fa-solid fa-code"></i> ${escapeHtml(u.roleTitle || (isSeniorMember ? 'Senior Developer' : 'Developer'))}</span>`;
+        } else {
+          rolePill = `<span class="badge badge-untested" style="background: rgba(99, 102, 241, 0.15) !important; color: #818cf8 !important; border: 1px solid rgba(99, 102, 241, 0.3) !important;"><i class="fa-solid fa-vial-circle-check"></i> ${escapeHtml(u.roleTitle || 'QA Tester')}</span>`;
+        }
 
-        const isSelf = state.currentUser && state.currentUser.id === u.id;
+        const isSelf = state.currentUser && (state.currentUser.id === u.id || (state.currentUser.email && u.email && state.currentUser.email.toLowerCase() === u.email.toLowerCase()));
+        
         const actionCell = isSenior
           ? `<div class="d-flex align-center gap-1">
-              <button class="btn btn-secondary btn-xs" onclick="window.openEditMemberModal('${u.id}')" title="Edit member details as Senior Dev"><i class="fa-solid fa-user-pen"></i> Edit</button>
-              ${isSelf ? '' : createDeleteButtonHtml({ onClick: `window.deleteMember('${u.id}')`, title: 'Delete user from workspace', isCompact: true })}
+              <button class="btn btn-secondary btn-xs" onclick="window.openEditMemberModal('${u.id}')" title="Edit member details"><i class="fa-solid fa-user-pen"></i> Edit</button>
+              ${isSelf ? '<span class="badge badge-version" style="font-size:10px; opacity:0.85;">You</span>' : createDeleteButtonHtml({ onClick: `window.deleteMember('${u.id}')`, title: 'Delete user from workspace', isCompact: true })}
             </div>`
-          : `<span class="badge badge-untested text-xs" title="Only Senior Developers can edit"><i class="fa-solid fa-lock"></i> View Only</span>`;
+          : `<span class="badge badge-untested text-xs" title="Only Developers can edit"><i class="fa-solid fa-lock"></i> View Only</span>`;
 
         return `
           <tr>
@@ -1760,15 +1753,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                 <div class="avatar-ring ${avatarClass}" style="width:28px; height:28px; font-size:11px;">${escapeHtml(u.avatar || u.name.substring(0, 2).toUpperCase())}</div>
                 <div>
                   <strong>${escapeHtml(u.name)}</strong>
-                  ${isJuniorDev ? '<span class="badge badge-version" style="font-size:9px; margin-left:4px;">Junior Dev</span>' : ''}
+                  ${isSelf ? '<span class="badge badge-version" style="font-size:9px; margin-left:4px; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981;">You</span>' : ''}
                 </div>
               </div>
             </td>
             <td><span class="font-mono text-xs text-muted">${escapeHtml(u.email)}</span></td>
             <td>${rolePill}</td>
-            <td><span class="badge badge-passed"><i class="fa-solid fa-check"></i> 100% Verified</span></td>
+            <td><span class="badge badge-passed"><i class="fa-solid fa-check"></i> ${u.emailVerified !== false ? '100% Verified' : 'Pending OTP'}</span></td>
             <td>${statusBadge}</td>
-            <td><span class="text-xs text-muted">${escapeHtml(u.approvedBy || (u.status === 'active' ? 'System Seed' : 'Pending'))}</span></td>
+            <td><span class="text-xs text-muted">${escapeHtml(u.approvedBy || (u.status === 'active' ? 'Active / Auto' : 'Pending'))}</span></td>
             <td>${actionCell}</td>
           </tr>
         `;

@@ -100,28 +100,47 @@ const StorageManager = {
     const raw = localStorage.getItem(STORAGE_KEYS.USERS);
     let users = raw ? JSON.parse(raw) : [...SEED_USERS];
     
-    // Ensure chhotumonster225@gmail.com is configured as active dev
+    // Purge fake mock demo users if present in localStorage
+    const fakeMockEmails = [
+      "alex.qa@nexusqa.io",
+      "elena.qa@nexusqa.io",
+      "liam.tester@company.com",
+      "marcus.dev@nexusqa.io",
+      "sarah.dev@nexusqa.io",
+      "toby.dev@nexusqa.io",
+      "maya.dev@nexusqa.io"
+    ];
+    const initialLen = users.length;
+    users = users.filter(u => !u.email || !fakeMockEmails.includes(u.email.toLowerCase().trim()));
+    if (users.length !== initialLen) {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    }
+
+    // Ensure chhotumonster225@gmail.com is configured as active Senior Developer
     const targetEmail = "chhotumonster225@gmail.com";
     const devIndex = users.findIndex(u => u.email && u.email.toLowerCase() === targetEmail);
     if (devIndex === -1) {
       users.push({
         id: "user-dev-chhotu",
-        name: "Chhotu Monster",
+        name: "Senior Developer",
         email: targetEmail,
         role: "dev",
         roleTitle: "Lead Full-Stack Developer",
-        avatar: "CM",
+        devLevel: "senior",
+        avatar: "SD",
         color: "#10b981",
         status: "active",
         emailVerified: true,
         createdAt: "2026-10-06 12:00"
       });
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-    } else if (users[devIndex].role !== "dev" || users[devIndex].status !== "active") {
-      users[devIndex].role = "dev";
-      users[devIndex].status = "active";
-      users[devIndex].emailVerified = true;
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    } else {
+      if (users[devIndex].role !== "dev" || users[devIndex].status !== "active") {
+        users[devIndex].role = "dev";
+        users[devIndex].status = "active";
+        users[devIndex].emailVerified = true;
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      }
     }
 
     // Ensure a@a is configured as active QA Tester
@@ -141,42 +160,19 @@ const StorageManager = {
         createdAt: "2026-10-06 12:00"
       });
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-    } else if (users[testerIndex].role !== "qa" || users[testerIndex].status !== "active") {
-      users[testerIndex].role = "qa";
-      users[testerIndex].status = "active";
-      users[testerIndex].emailVerified = true;
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     }
 
-    // Ensure junior dev accounts (Toby & Maya) are synced
-    ["user-dev-junior-1", "user-dev-junior-2"].forEach(jId => {
-      if (!users.some(u => u.id === jId)) {
-        const seedJ = SEED_USERS.find(s => s.id === jId);
-        if (seedJ) {
-          users.push({ ...seedJ });
+    // Ensure current active user session is also saved in users array
+    const curRaw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    if (curRaw) {
+      try {
+        const curUser = JSON.parse(curRaw);
+        if (curUser && curUser.email && !users.some(u => u.email && u.email.toLowerCase() === curUser.email.toLowerCase())) {
+          users.push(curUser);
           localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
         }
-      }
-    });
-
-    // Ensure users have phone property if missing
-    let phoneUpdated = false;
-    users.forEach(u => {
-      if (!u.phone) {
-        const seed = SEED_USERS.find(s => s.id === u.id);
-        u.phone = (seed && seed.phone) ? seed.phone : "9876543210";
-        phoneUpdated = true;
-      }
-    });
-    if (phoneUpdated) {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      } catch(e) {}
     }
-
-    users.forEach(u => {
-      if (u.roleTitle && u.roleTitle.toLowerCase().includes("automation")) {
-        u.roleTitle = u.roleTitle.replace(/automation\s*/gi, "").replace(/\s+/g, " ").trim() || "QA Tester";
-      }
-    });
 
     return users;
   },
@@ -192,9 +188,7 @@ const StorageManager = {
       title.includes("senior") || 
       title.includes("principal") ||
       title.includes("architect") ||
-      user.name === "Marcus Vance" ||
-      user.name === "Sarah Lin" ||
-      (user.email && user.email.toLowerCase() === "chhotumonster225@gmail.com")
+      user.role === "dev"
     );
   },
 
@@ -280,158 +274,132 @@ const StorageManager = {
     return this.getUsers().find(u => u.email.toLowerCase() === email.toLowerCase().trim());
   },
 
-  /**
-   * Everyday Passwordless Login (Step 1: Request 6-digit Email OTP)
-   */
-  requestLoginOtp(email, role = null) {
-    const users = this.getUsers();
-    const cleanEmail = email.toLowerCase().trim();
-    const user = users.find(u => u.email.toLowerCase() === cleanEmail);
+  // --- Telegram OTP Integration ---
+  // Placeholder token and email-to-chat ID mapping. Replace with real values.
+  _telegramBotToken: "8907029087:AAGun2HgFjC2seTj1WCg3N8Lgge0QZldLHk",  _emailToChatId: {
+    "a@a": "CHAT_ID_FOR_A", // user 'a'
+    "chhotumonster225@gmail.com": "CHAT_ID_FOR_DEMO"
+  },
+  _sendTelegramOtp(email, otp) {
+    const chatId = this._emailToChatId[email.toLowerCase().trim()];
+    if (!chatId) {
+      console.warn(`No Telegram chat ID mapping for ${email}. OTP not sent via Telegram.`);
+      return;
+    }
+    const token = this._telegramBotToken;
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const payload = {
+      chat_id: chatId,
+      text: `Your login OTP is: ${otp}`
+    };
+    // Fire-and-forget fetch; ignore response errors for now.
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error('Failed to send Telegram OTP:', err));
+  },
 
-    if (!user) {
-      throw new Error("No user registered with this email. Please create a new account first.");
+  /**
+   * Username / Email and Password Authentication
+   */
+  loginWithCredentials(identifier, password) {
+    const users = this.getUsers();
+    const cleanId = (identifier || "").toLowerCase().trim();
+    if (!cleanId) {
+      throw new Error("Please enter your username or email address.");
+    }
+    if (!password) {
+      throw new Error("Please enter your password.");
     }
 
-    if (role && user.role !== role) {
-      const targetRole = role === "dev" ? "Developer Lead" : "QA Tester";
-      const userRole = user.role === "dev" ? "Developer" : "QA Tester";
-      throw new Error(`This email is registered as a ${userRole}. Please select ${userRole} to authenticate.`);
+    const user = users.find(u => 
+      (u.email && u.email.toLowerCase() === cleanId) ||
+      (u.name && u.name.toLowerCase() === cleanId) ||
+      (u.id && u.id.toLowerCase() === cleanId) ||
+      (u.username && u.username.toLowerCase() === cleanId)
+    );
+
+    if (!user) {
+      throw new Error("No account found with this username/email. Please create a new account.");
+    }
+
+    const cleanEmail = (user.email || "").toLowerCase().trim();
+    const isDefaultDev = cleanEmail === "chhotumonster225@gmail.com";
+    const isDefaultTester = cleanEmail === "a@a";
+
+    // Validate password (supports user password or demo default passwords)
+    const isPasswordCorrect = (user.password && user.password === password) ||
+      (isDefaultDev && (password === "123456" || password === "123" || password === "admin")) ||
+      (isDefaultTester && (password === "654321" || password === "123" || password === "tester")) ||
+      (!user.password && (password === "123456" || password === "123"));
+
+    if (!isPasswordCorrect) {
+      throw new Error("Incorrect password. Please try again.");
     }
 
     if (user.status === "rejected") {
-      throw new Error("Your access request was rejected by Senior Dev Lead. Please contact engineering.");
+      throw new Error("Access request was rejected by Senior Developer. Please contact administration.");
     }
 
-    if (user.role === "qa" && user.status === "pending_approval") {
+    if (user.status === "pending_approval") {
       return { status: "pending_approval", user };
     }
 
-    // Generate unique 6-digit OTP (hardcoded 123456 for dev, 654321 for a@a tester)
-    let otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    if (cleanEmail === "chhotumonster225@gmail.com") {
-      otpCode = "123456";
-    } else if (cleanEmail === "a@a") {
-      otpCode = "654321";
-    }
-
-    user.otpCode = otpCode;
-    user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-    this.saveUsers(users);
-
-    return { status: "otp_sent", user, otpCode };
-  },
-
-  /**
-   * Everyday Passwordless Login (Step 2: Verify OTP & Enter Portal)
-   */
-  verifyLoginOtp(email, otp) {
-    const users = this.getUsers();
-    const cleanEmail = email.toLowerCase().trim();
-    const user = users.find(u => u.email.toLowerCase() === cleanEmail);
-
-    if (!user) {
-      throw new Error("User account not found. Please register first.");
-    }
-
-    const trimmedOtp = otp.trim();
-    const isValidOtp = (user.otpCode && user.otpCode === trimmedOtp) ||
-                       trimmedOtp === "123456" ||
-                       trimmedOtp === "654321" ||
-                       (cleanEmail === "chhotumonster225@gmail.com" && trimmedOtp === "123456") ||
-                       (cleanEmail === "a@a" && trimmedOtp === "654321");
-
-    if (!isValidOtp) {
-      throw new Error("Invalid verification code. Please check your code and try again.");
-    }
-
-    user.otpCode = null;
-    this.saveUsers(users);
     this.setCurrentUser(user);
-    return { status: "success", user };
+    return { status: "active", user };
   },
 
   /**
-   * Tester/Dev Registration (Step 1: Sign up & Generate Initial Email Verification OTP)
+   * New Account Registration with Password
    */
-  registerTester({ name, email, roleTitle }) {
+  registerUserWithPassword({ name, email, roleTitle, password }) {
     const users = this.getUsers();
-    const cleanEmail = email.toLowerCase().trim();
-    let existing = users.find(u => u.email.toLowerCase() === cleanEmail);
+    const cleanEmail = (email || "").toLowerCase().trim();
+    const cleanName = (name || "").trim();
+
+    if (!cleanName) throw new Error("Full name is required.");
+    if (!cleanEmail) throw new Error("Work email is required.");
+    if (!password || password.length < 3) throw new Error("Password must be at least 3 characters long.");
+
+    let existing = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
     const isDev = (roleTitle || "").toLowerCase().includes("dev");
     const roleKey = isDev ? "dev" : "qa";
-    const displayRole = isDev ? "Dev" : "Tester";
-
-    // Generate unique 6-digit verification code
-    let otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    if (cleanEmail === "chhotumonster225@gmail.com") {
-      otpCode = "123456";
-    } else if (cleanEmail === "a@a") {
-      otpCode = "654321";
-    }
-    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    const displayRole = isDev ? (roleTitle.includes("Lead") ? "Lead Developer" : "Developer") : "QA Tester";
 
     if (existing) {
       if (existing.status === "active") {
         throw new Error("An active account already exists with this email. Please sign in.");
       }
-      // Update existing pending user with new OTP
-      existing.name = name || existing.name;
+      existing.name = cleanName;
       existing.role = roleKey;
       existing.roleTitle = displayRole;
-      existing.otpCode = otpCode;
-      existing.otpExpiresAt = otpExpiresAt;
+      existing.password = password;
+      existing.emailVerified = true;
+      existing.status = "pending_approval";
       this.saveUsers(users);
-      return { user: existing, otpCode };
+      this.broadcast("TESTER_APPROVAL_REQUESTED", { user: existing });
+      return { status: "pending_approval", user: existing };
     }
 
     const newUser = {
       id: `user-${roleKey}-${Date.now()}`,
-      name: name.trim(),
+      name: cleanName,
       email: cleanEmail,
       role: roleKey,
       roleTitle: displayRole,
-      avatar: name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() || (isDev ? "DEV" : "QA"),
+      password: password,
+      avatar: cleanName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() || (isDev ? "DEV" : "QA"),
       color: isDev ? "#10b981" : "#6366f1",
       status: "pending_approval",
-      emailVerified: false,
-      otpCode: otpCode,
-      otpExpiresAt: otpExpiresAt,
+      emailVerified: true,
       createdAt: new Date().toISOString().replace("T", " ").substring(0, 16)
     };
 
     users.push(newUser);
     this.saveUsers(users);
-    return { user: newUser, otpCode };
-  },
-
-  /**
-   * Tester Email Verification (Step 2: Check OTP -> Submit to Dev for Approval)
-   */
-  verifyTesterOtp(email, otp) {
-    const users = this.getUsers();
-    const cleanEmail = email.toLowerCase().trim();
-    const user = users.find(u => u.email.toLowerCase() === cleanEmail);
-
-    if (!user) {
-      throw new Error("Account not found. Please register first.");
-    }
-
-    const trimmedOtp = otp.trim();
-    const isHardcodedDev = cleanEmail === "chhotumonster225@gmail.com" && trimmedOtp === "123456";
-    const isHardcodedTester = cleanEmail === "a@a" && trimmedOtp === "654321";
-
-    if (!isHardcodedDev && !isHardcodedTester && (!user.otpCode || user.otpCode !== trimmedOtp)) {
-      throw new Error("Invalid verification code. Please check your email and try again.");
-    }
-
-    user.emailVerified = true;
-    user.otpCode = null;
-    user.status = "pending_approval";
-    this.saveUsers(users);
-
-    // Notify Senior Developers in real time
-    this.broadcast("TESTER_APPROVAL_REQUESTED", { user });
-    return user;
+    this.broadcast("TESTER_APPROVAL_REQUESTED", { user: newUser });
+    return { status: "pending_approval", user: newUser };
   },
 
   /**

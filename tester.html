@@ -20,7 +20,7 @@
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="css/styles.css?v=1.0.4">
 
-  <!-- Instant Strict Auth Guard -->
+  <!-- Instant Strict Auth & QA Tester Role Guard -->
   <script>
     (function() {
       try {
@@ -30,9 +30,14 @@
           return;
         }
         var user = JSON.parse(raw);
-        if (!user || user.status === "pending_approval") {
+        if (!user || user.status === "pending_approval" || user.role === "dev" || (user.role !== "qa" && user.role !== "tester")) {
           localStorage.removeItem("nexusqa_current_user");
           localStorage.removeItem("nexus_qa_current_user");
+          if (user && user.role === "dev") {
+            sessionStorage.setItem("nexus_auth_error", "Access Denied: QA Tester account required. Please log in with your QA Tester credentials.");
+          } else if (user && user.status === "pending_approval") {
+            sessionStorage.setItem("nexus_auth_error", "Your tester registration is still pending approval.");
+          }
           window.location.replace("index.html");
           return;
         }
@@ -42,6 +47,8 @@
           window.__pendingAuthNotice = authErr;
         }
       } catch (e) {
+        localStorage.removeItem("nexusqa_current_user");
+        localStorage.removeItem("nexus_qa_current_user");
         window.location.replace("index.html");
       }
     })();

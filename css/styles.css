@@ -5532,6 +5532,26 @@ body.light-theme .sidebar-secondary-panel {
   color: #818cf8;
 }
 
+.auth5-password-toggle {
+  position: absolute;
+  right: 0.9rem;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+
+.auth5-password-toggle:hover {
+  color: #818cf8;
+  transform: scale(1.1);
+}
+
 /* Select Dropdown */
 .auth5-select-wrapper {
   position: relative;

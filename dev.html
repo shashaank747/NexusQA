@@ -31,11 +31,15 @@
         }
         var user = JSON.parse(raw);
         if (!user || user.role !== "dev") {
-          sessionStorage.setItem("nexus_auth_error", "Access Denied: You are logged in with a QA Tester account. Developer credentials are required to enter the Dev Hub.");
-          window.location.replace("tester.html");
+          localStorage.removeItem("nexusqa_current_user");
+          localStorage.removeItem("nexus_qa_current_user");
+          sessionStorage.setItem("nexus_auth_error", "Access Denied: Developer account required. Please log in with your Developer credentials.");
+          window.location.replace("index.html");
           return;
         }
       } catch (e) {
+        localStorage.removeItem("nexusqa_current_user");
+        localStorage.removeItem("nexus_qa_current_user");
         window.location.replace("index.html");
       }
     })();
@@ -378,8 +382,8 @@
           <div class="dashboard-card">
             <div class="card-header">
               <div class="card-title-group">
-                <h3><i class="fa-solid fa-users text-primary"></i> Team Roster & Access Management (Testers & Junior Developers)</h3>
-                <p class="card-subtitle">Manage workspace authorization, roles, and profiles for QA testers and Junior Developers (Senior Dev Access)</p>
+                <h3><i class="fa-solid fa-users text-primary"></i> Team Roster & Access Management</h3>
+                <p class="card-subtitle">Manage workspace authorization, roles, and profiles for all active developers and QA testers</p>
               </div>
             </div>
             <div class="card-body p-0">
