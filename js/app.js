@@ -1781,10 +1781,16 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     renderActiveView();
     updateDevApprovalsBadge();
 
-    if (msg.type === "TESTER_APPROVAL_REQUESTED") {
+    if (msg.type === "TESTER_APPROVAL_REQUESTED" || msg.type === "USERS_UPDATED") {
       updateDevApprovalsBadge();
-      if (state.currentPortal === "dev" || document.body.classList.contains("page-dev")) {
-        showToast(`🔔 New Tester Access Request from ${msg.payload.user?.name || 'Tester'}!`, "info");
+      if (typeof renderDevApprovals === "function") {
+        renderDevApprovals();
+      }
+      if (msg.type === "TESTER_APPROVAL_REQUESTED") {
+        if (state.currentPortal === "dev" || document.body.classList.contains("page-dev")) {
+          const reqRole = msg.payload?.user?.role === "dev" ? "Developer" : "QA Tester";
+          showToast(`🔔 New ${reqRole} Access Request from ${msg.payload?.user?.name || 'Member'}!`, "info");
+        }
       }
     } else if (msg.type === "TESTER_APPROVED") {
       updateDevApprovalsBadge();

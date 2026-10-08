@@ -984,6 +984,7 @@
 
             users.push(newUser);
             StorageManager.saveUsers(users);
+            StorageManager.broadcast("TESTER_APPROVAL_REQUESTED", { user: newUser });
 
             codeSlotsState.status = "idle";
             renderCodeSlots();
