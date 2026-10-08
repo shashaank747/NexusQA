@@ -1140,119 +1140,94 @@
     </div>
   </div>
 
-  <!-- MODAL: AUTO INPUT TEST CASE CARD -->
+  <!-- MODAL: AI AUTO INPUT STUDIO (ChatGPT / Gemini Style Card) -->
   <div class="modal-backdrop" id="autoInputModal" style="display: none;">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <i class="fa-solid fa-wand-magic-sparkles modal-icon text-primary"></i>
+    <div class="modal-dialog ai-studio-dialog">
+      <div class="modal-header d-flex align-center justify-between">
+        <div class="modal-title-group d-flex align-center gap-2">
+          <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-sparkles"></i></div>
           <div>
-            <h2 id="autoInputModalTitle">Auto Input Test Case</h2>
-            <p class="text-xs text-muted" style="margin: 0;">Configure automated scenario generator parameters and test structure</p>
+            <h2 id="autoInputModalTitle" style="display: flex; align-items: center; gap: 8px; font-size: 1.15rem; margin: 0;">
+              Nexus AI Auto-Input Studio
+              <span class="badge badge-primary text-xs" style="text-transform: none; letter-spacing: 0;">⚡ Gemini / ChatGPT AI Engine</span>
+            </h2>
+            <p class="text-xs text-muted" style="margin: 0;">Smart prompt-to-testcase generator with automatic entity extraction & DB sync</p>
           </div>
         </div>
-        <button class="icon-btn close-modal-btn" id="closeAutoInputModalBtn"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="modal-body">
-        <form id="autoInputForm">
-          <!-- Preset Selector Card Header -->
-          <div class="p-3 mb-3 rounded-lg" style="background: var(--bg-tertiary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #2d3748); border-radius: 8px;">
-            <div class="d-flex align-center justify-between gap-2 mb-2">
-              <label class="text-xs font-bold text-uppercase" style="letter-spacing: 0.05em; color: var(--text-secondary, #94a3b8);">
-                <i class="fa-solid fa-bolt text-amber mr-1"></i> Quick Scenario Presets
-              </label>
-              <span class="badge badge-primary text-xs"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Auto Input Card</span>
-            </div>
-            <div class="form-row">
-              <div class="form-group flex-1" style="margin-bottom: 0;">
-                <select id="autoInputPresetSelect" class="nexus-select w-100">
-                  <option value="0">⚡ OAuth 2.0 PKCE & SSO Session Persistence</option>
-                  <option value="1">🛒 Stripe Checkout 20% Coupon Calculation</option>
-                  <option value="2">🛡️ REST API 60 req/min Rate Limiting (HTTP 429)</option>
-                  <option value="3">🔍 Multi-Facet Filter & Real-Time Search</option>
-                  <option value="custom">✨ Custom Template (Define your own)</option>
-                </select>
-              </div>
-            </div>
+        <div class="d-flex align-center gap-2">
+          <div class="d-flex align-center gap-1" style="margin-right: 0.5rem;">
+            <label for="aiTargetSuite" class="text-xs text-muted font-bold" style="white-space: nowrap;">Suite:</label>
+            <select id="aiTargetSuite" class="nexus-select" style="padding: 4px 8px; font-size: 0.78rem; min-width: 140px;"></select>
           </div>
+          <button class="icon-btn-xs" id="clearAiChatBtn" title="Clear Chat Stream"><i class="fa-solid fa-rotate-left"></i></button>
+          <button class="icon-btn close-modal-btn" id="closeAutoInputModalBtn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
 
-          <!-- Configuration Fields Container (Ready for custom options) -->
-          <div id="autoInputCustomOptionsContainer">
-            <div class="form-row">
-              <div class="form-group flex-2">
-                <label for="autoInputTitle">Test Case Title <span class="text-rose">*</span></label>
-                <input type="text" id="autoInputTitle" class="nexus-input" placeholder="Generated or custom scenario title..." required>
+      <div class="modal-body ai-studio-body">
+        <!-- AI Chat / Stream Area -->
+        <div class="ai-chat-stream" id="aiChatStream">
+          <div class="ai-message-row bot-row">
+            <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-robot"></i></div>
+            <div class="ai-message-bubble">
+              <div class="d-flex align-center justify-between gap-2 mb-1">
+                <strong style="color: var(--primary-light, #a5b4fc);">Nexus AI Assistant</strong>
+                <span class="text-xs text-muted">Ready</span>
               </div>
-              <div class="form-group flex-1">
-                <label for="autoInputSuite">Target Test Suite <span class="text-rose">*</span></label>
-                <select id="autoInputSuite" class="nexus-select w-100" required></select>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label for="autoInputPriority">Priority</label>
-                <select id="autoInputPriority" class="nexus-select w-100">
-                  <option value="P0 - Critical">P0 - Critical (Blocker)</option>
-                  <option value="P1 - High" selected>P1 - High</option>
-                  <option value="P2 - Medium">P2 - Medium</option>
-                  <option value="P3 - Low">P3 - Low</option>
-                </select>
-              </div>
-              <div class="form-group flex-1">
-                <label for="autoInputType">Category / Type</label>
-                <select id="autoInputType" class="nexus-select w-100">
-                  <option value="Functional" selected>Functional</option>
-                  <option value="UI / UX">UI / UX</option>
-                  <option value="Regression">Regression</option>
-                  <option value="Smoke">Smoke</option>
-                  <option value="Integration">Integration</option>
-                  <option value="Security">Security</option>
-                  <option value="Performance">Performance</option>
-                  <option value="API">API</option>
-                </select>
-              </div>
-              <div class="form-group flex-1">
-                <label for="autoInputStatus">Initial Status</label>
-                <select id="autoInputStatus" class="nexus-select w-100">
-                  <option value="Untested" selected>Untested</option>
-                  <option value="Passed">Passed</option>
-                  <option value="Failed">Failed</option>
-                  <option value="Blocked">Blocked</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="autoInputPreconditions">Preconditions & Context</label>
-              <textarea id="autoInputPreconditions" class="nexus-textarea" rows="2" placeholder="Required test environment state, credentials, fixtures..."></textarea>
-            </div>
-
-            <div class="form-group">
-              <div class="d-flex align-center justify-between mb-1">
-                <label style="margin: 0;">Test Execution Steps & Verifications</label>
-                <button type="button" class="btn btn-outline btn-xs" id="addAutoInputStepBtn">
-                  <i class="fa-solid fa-plus"></i> Add Step
+              <p style="margin: 0 0 0.5rem 0;">
+                Type or paste your test case description in natural language or structured notes below. I will automatically extract the <strong>Test Title</strong>, <strong>Nature (Positive / Negative / Edge Case)</strong>, <strong>Bug Reference</strong>, <strong>Preconditions</strong>, and <strong>Step-by-Step Verifications</strong>, then save it to your database.
+              </p>
+              <div class="text-xs text-muted font-bold mb-1">Quick Prompt Templates:</div>
+              <div class="ai-chip-group">
+                <button type="button" class="ai-prompt-chip" data-template="positive">
+                  <i class="fa-solid fa-circle-check text-emerald mr-1"></i> Positive Checkout Flow
+                </button>
+                <button type="button" class="ai-prompt-chip" data-template="negative">
+                  <i class="fa-solid fa-triangle-exclamation text-rose mr-1"></i> Negative Password Reset
+                </button>
+                <button type="button" class="ai-prompt-chip" data-template="edge">
+                  <i class="fa-solid fa-bolt text-amber mr-1"></i> Edge API Rate Limiting
+                </button>
+                <button type="button" class="ai-prompt-chip" data-template="bug">
+                  <i class="fa-solid fa-bug text-rose mr-1"></i> Bug-Linked Deadlock Test
                 </button>
               </div>
-              <div class="steps-builder" id="autoInputStepsBuilderList"></div>
-            </div>
-
-            <div class="form-group">
-              <label for="autoInputTags">Tags (comma-separated)</label>
-              <input type="text" id="autoInputTags" class="nexus-input" placeholder="e.g. auth, security, api, automated">
             </div>
           </div>
-        </form>
+        </div>
+
+        <!-- Prompt Console Bar -->
+        <div class="ai-prompt-console-wrapper">
+          <div class="ai-prompt-box">
+            <textarea id="aiTestCasePromptInput" class="ai-prompt-textarea" placeholder="Paste or type test case prompt (e.g. Test Case 1: Positive login flow with MFA, Step 1: Navigate to /login, Step 2: Submit credentials...)..."></textarea>
+            <div class="ai-prompt-toolbar">
+              <div class="ai-tool-chips">
+                <button type="button" class="ai-prompt-chip" id="chipAddPositive">+ Positive Test</button>
+                <button type="button" class="ai-prompt-chip" id="chipAddNegative">+ Negative Test</button>
+                <button type="button" class="ai-prompt-chip" id="chipAddEdge">+ Edge Case</button>
+                <button type="button" class="ai-prompt-chip" id="chipAddBug">+ Bug ID: Auto</button>
+              </div>
+              <button type="button" class="ai-send-btn" id="aiExtractSubmitBtn">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Extract & Parse</span>
+                <kbd style="font-size: 0.65rem; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; margin-left: 2px;">Ctrl+Enter</kbd>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+
       <div class="modal-footer justify-between">
-        <button type="button" class="btn btn-ghost" id="cancelAutoInputModalBtn">Cancel</button>
         <div class="d-flex align-center gap-2">
-          <button type="button" class="btn btn-secondary" id="autoInputFillToManualBtn" title="Transfer into manual editor">
-            <i class="fa-solid fa-pen-to-square"></i> Open in Full Editor
+          <button type="button" class="btn btn-ghost" id="cancelAutoInputModalBtn">Close</button>
+          <span class="text-xs text-muted" id="aiStudioStatusText"><i class="fa-solid fa-circle-check text-emerald"></i> Ready for prompt input</span>
+        </div>
+        <div class="d-flex align-center gap-2">
+          <button type="button" class="btn btn-secondary" id="aiFillToManualBtn" title="Transfer last parsed test case into full manual editor" disabled>
+            <i class="fa-solid fa-pen-to-square"></i> Open in Manual Editor
           </button>
-          <button type="button" class="btn btn-primary" id="saveAutoInputBtn">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Create & Apply Test Case
+          <button type="button" class="btn btn-primary" id="aiSaveToDatabaseBtn" disabled>
+            <i class="fa-solid fa-cloud-arrow-up"></i> Save & Sync to Database
           </button>
         </div>
       </div>

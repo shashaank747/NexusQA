@@ -340,24 +340,22 @@ document.addEventListener("DOMContentLoaded", () => {
     editTestCaseDeleteWrap: document.getElementById("editTestCaseDeleteWrap"),
     deleteTestCaseModalBtn: document.getElementById("deleteTestCaseModalBtn"),
 
-    // Auto Input Card Modal
+    // AI Auto Input Studio Modal
     autoInputModal: document.getElementById("autoInputModal"),
-    autoInputForm: document.getElementById("autoInputForm"),
-    autoInputModalTitle: document.getElementById("autoInputModalTitle"),
-    autoInputPresetSelect: document.getElementById("autoInputPresetSelect"),
-    autoInputTitle: document.getElementById("autoInputTitle"),
-    autoInputSuite: document.getElementById("autoInputSuite"),
-    autoInputPriority: document.getElementById("autoInputPriority"),
-    autoInputType: document.getElementById("autoInputType"),
-    autoInputStatus: document.getElementById("autoInputStatus"),
-    autoInputPreconditions: document.getElementById("autoInputPreconditions"),
-    autoInputStepsBuilderList: document.getElementById("autoInputStepsBuilderList"),
-    addAutoInputStepBtn: document.getElementById("addAutoInputStepBtn"),
-    autoInputTags: document.getElementById("autoInputTags"),
+    aiTargetSuite: document.getElementById("aiTargetSuite"),
+    aiChatStream: document.getElementById("aiChatStream"),
+    aiTestCasePromptInput: document.getElementById("aiTestCasePromptInput"),
+    aiExtractSubmitBtn: document.getElementById("aiExtractSubmitBtn"),
+    aiStudioStatusText: document.getElementById("aiStudioStatusText"),
+    aiFillToManualBtn: document.getElementById("aiFillToManualBtn"),
+    aiSaveToDatabaseBtn: document.getElementById("aiSaveToDatabaseBtn"),
+    clearAiChatBtn: document.getElementById("clearAiChatBtn"),
+    chipAddPositive: document.getElementById("chipAddPositive"),
+    chipAddNegative: document.getElementById("chipAddNegative"),
+    chipAddEdge: document.getElementById("chipAddEdge"),
+    chipAddBug: document.getElementById("chipAddBug"),
     closeAutoInputModalBtn: document.getElementById("closeAutoInputModalBtn"),
     cancelAutoInputModalBtn: document.getElementById("cancelAutoInputModalBtn"),
-    saveAutoInputBtn: document.getElementById("saveAutoInputBtn"),
-    autoInputFillToManualBtn: document.getElementById("autoInputFillToManualBtn"),
     dashboardAutoInputBtn: document.getElementById("dashboardAutoInputBtn"),
     repoAutoInputBtn: document.getElementById("repoAutoInputBtn"),
     dashboardNewTestCaseBtn: document.getElementById("dashboardNewTestCaseBtn"),
@@ -3215,165 +3213,480 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   ];
 
-  function populateAutoInputSuiteDropdown() {
-    if (!DOM.autoInputSuite) return;
+  // ==========================================================================
+  // AI AUTO-INPUT STUDIO (ChatGPT / Gemini Natural Language Parser)
+  // ==========================================================================
+
+  let lastParsedAiTestCase = null;
+
+  function populateAiSuiteDropdown() {
+    if (!DOM.aiTargetSuite) return;
     const suites = StorageManager.getSuites();
-    DOM.autoInputSuite.innerHTML = suites.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
-    if (state.selectedSuiteId && state.selectedSuiteId !== "all" && DOM.autoInputSuite.querySelector(`option[value="${state.selectedSuiteId}"]`)) {
-      DOM.autoInputSuite.value = state.selectedSuiteId;
+    DOM.aiTargetSuite.innerHTML = suites.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+    if (state.selectedSuiteId && state.selectedSuiteId !== "all" && DOM.aiTargetSuite.querySelector(`option[value="${state.selectedSuiteId}"]`)) {
+      DOM.aiTargetSuite.value = state.selectedSuiteId;
     }
   }
 
-  function renderAutoInputStepRows(steps = []) {
-    if (!DOM.autoInputStepsBuilderList) return;
-    DOM.autoInputStepsBuilderList.innerHTML = "";
-    if (!steps || steps.length === 0) {
-      steps = [{ step: 1, action: "Navigate to target page / endpoint", expected: "Target view loads properly with status 200" }];
+  function parseTestCasePrompt(rawText) {
+    if (!rawText || !rawText.trim()) return null;
+    const text = rawText.trim();
+    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+    // 1. Title Extraction
+    let title = "";
+    const titleMatch = text.match(/(?:title|test\s*case(?:\s*\d+)?|scenario):\s*([^\n]+)/i);
+    if (titleMatch) {
+      title = titleMatch[1].trim();
+    } else {
+      // Look for a line starting with "Verify" or take the first clean line
+      const verifyLine = lines.find(l => /^verify\b/i.test(l));
+      title = verifyLine || lines[0].replace(/^(?:#|\*|-|\d+\.)\s*/, "");
     }
-    steps.forEach((s, idx) => addAutoInputStepRow(s.action, s.expected, idx + 1));
+    // Clean trailing punctuation or markers
+    title = title.replace(/^["']|["']$/g, "").trim();
+
+    // 2. Nature & Category (Positive, Negative, Edge Case)
+    let nature = "Positive Test";
+    let type = "Functional";
+    if (/negative|fail(?:ure)?|invalid|reject|unauthorized|blocked/i.test(text)) {
+      nature = "Negative Test";
+    } else if (/edge(?:\s*case)?|boundary|limit|overflow|concurren|stress|deadlock|timeout/i.test(text)) {
+      nature = "Edge Case";
+    }
+
+    if (/security|xss|sqli|csrf|token|auth|permission/i.test(text)) {
+      type = "Security";
+    } else if (/smoke/i.test(text)) {
+      type = "Smoke";
+    } else if (/regression/i.test(text)) {
+      type = "Regression";
+    } else if (/api|endpoint|http|rest|status\s*\d{3}/i.test(text)) {
+      type = "Integration";
+    } else if (/ui|ux|responsive|viewport|layout|css/i.test(text)) {
+      type = "UI / UX";
+    } else if (/perf|performance|lighthouse|vitals|latency/i.test(text)) {
+      type = "Performance";
+    }
+
+    // 3. Priority Extraction
+    let priority = "P1 - High";
+    if (/p0|critical|blocker|urgent/i.test(text)) {
+      priority = "P0 - Critical";
+    } else if (/p1|high/i.test(text)) {
+      priority = "P1 - High";
+    } else if (/p2|medium/i.test(text)) {
+      priority = "P2 - Medium";
+    } else if (/p3|low|minor/i.test(text)) {
+      priority = "P3 - Low";
+    }
+
+    // 4. Bug ID Calculation / Extraction
+    let bugId = "";
+    const bugMatch = text.match(/bug(?:\s*id)?:\s*([A-Za-z0-9_-]+)/i);
+    if (bugMatch) {
+      const captured = bugMatch[1].trim();
+      if (/^auto$/i.test(captured)) {
+        bugId = `BUG-${Math.floor(100 + Math.random() * 900)}`;
+      } else {
+        bugId = captured.toUpperCase();
+      }
+    } else {
+      const directBug = text.match(/\bBUG-\d+\b/i);
+      if (directBug) bugId = directBug[0].toUpperCase();
+    }
+
+    // 5. Preconditions Extraction
+    let preconditions = "";
+    const preMatch = text.match(/(?:preconditions?|context|given):\s*([^\n]+(?:\n(?!\s*(?:step|when|then|expected|tags|bug))\s*[^\n]+)*)/i);
+    if (preMatch) {
+      preconditions = preMatch[1].trim();
+    }
+
+    // 6. Steps Extraction
+    const steps = [];
+    const stepRegex = /(?:step\s*(\d+)|\b(\d+)\.|\bwhen)\s*[:.-]?\s*([^\n]+)/gi;
+    let match;
+    while ((match = stepRegex.exec(text)) !== null) {
+      const stepText = (match[3] || "").trim();
+      if (stepText && !/^expected/i.test(stepText) && !/^tags/i.test(stepText)) {
+        // Check if expected is embedded (e.g. "Action -> Expect: ...")
+        let action = stepText;
+        let expected = "Operation completes as expected.";
+        if (/(?:->|expect(?:ed)?|should\s*be|verify)\s*[:]?\s*(.+)/i.test(stepText)) {
+          const parts = stepText.split(/(?:->|expect(?:ed)?|should\s*be|verify)\s*[:]?\s*/i);
+          action = (parts[0] || "").trim();
+          expected = (parts[1] || "Verified successfully.").trim();
+        }
+        steps.push({
+          step: steps.length + 1,
+          action: action || `Execute step ${steps.length + 1}`,
+          expected: expected
+        });
+      }
+    }
+
+    // Overall Expected Result
+    let overallExpected = "";
+    const expMatch = text.match(/(?:expected(?:\s*result)?|then|outcome):\s*([^\n]+(?:\n(?!\s*(?:tags|bug|step))\s*[^\n]+)*)/i);
+    if (expMatch) {
+      overallExpected = expMatch[1].trim();
+      if (steps.length > 0) {
+        steps[steps.length - 1].expected = overallExpected;
+      }
+    }
+
+    // Fallback steps if none detected explicitly
+    if (steps.length === 0) {
+      steps.push({
+        step: 1,
+        action: "Navigate to target view / endpoint and trigger action",
+        expected: overallExpected || "Target response / UI update verified successfully"
+      });
+    }
+
+    // 7. Tags Extraction
+    let tags = [];
+    const tagMatch = text.match(/tags?:\s*([^\n]+)/i);
+    if (tagMatch) {
+      tags = tagMatch[1].split(/[,| ]+/).map(t => t.trim().toLowerCase().replace(/^#/, "")).filter(Boolean);
+    } else {
+      tags = [nature.toLowerCase().replace(" test", ""), type.toLowerCase()];
+      if (bugId) tags.push("bug-linked");
+      if (title.toLowerCase().includes("auth")) tags.push("auth");
+      if (title.toLowerCase().includes("checkout")) tags.push("checkout");
+      if (title.toLowerCase().includes("api")) tags.push("api");
+    }
+
+    const suiteId = (DOM.aiTargetSuite && DOM.aiTargetSuite.value) ? DOM.aiTargetSuite.value : "suite-auth";
+
+    return {
+      id: `TC-${Math.floor(100 + Math.random() * 900)}`,
+      title,
+      nature,
+      suiteId,
+      priority,
+      type,
+      status: "Untested",
+      bugId,
+      preconditions,
+      steps,
+      tags,
+      author: "Nexus AI Auto-Input",
+      createdAt: new Date().toISOString().replace("T", " ").substring(0, 16)
+    };
   }
 
-  function addAutoInputStepRow(actionVal = "", expectedVal = "", stepNum = null) {
-    if (!DOM.autoInputStepsBuilderList) return;
-    const currentRows = DOM.autoInputStepsBuilderList.querySelectorAll(".step-builder-row");
-    const num = stepNum || currentRows.length + 1;
+  function appendAiUserBubble(promptText) {
+    if (!DOM.aiChatStream) return;
     const row = document.createElement("div");
-    row.className = "step-builder-row";
+    row.className = "ai-message-row user-row";
     row.innerHTML = `
-      <span class="step-num-badge">${num}</span>
-      <input type="text" class="nexus-input step-input-action" placeholder="Step ${num} Action..." value="${escapeHtml(actionVal)}" required>
-      <input type="text" class="nexus-input step-input-expected" placeholder="Expected Result..." value="${escapeHtml(expectedVal)}" required>
-      <button type="button" class="icon-btn-xs remove-step-btn" title="Remove Step"><i class="fa-solid fa-xmark text-rose"></i></button>
+      <div class="ai-avatar user-avatar"><i class="fa-solid fa-user"></i></div>
+      <div class="ai-message-bubble">
+        <div class="d-flex align-center justify-between gap-2 mb-1">
+          <strong style="color: var(--primary-light, #a5b4fc);">You (QA Tester)</strong>
+          <span class="text-xs text-muted">Just now</span>
+        </div>
+        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; font-size: 0.86rem;">${escapeHtml(promptText)}</pre>
+      </div>
     `;
-    row.querySelector(".remove-step-btn").addEventListener("click", () => {
-      row.remove();
-      renumberAutoInputSteps();
-    });
-    DOM.autoInputStepsBuilderList.appendChild(row);
+    DOM.aiChatStream.appendChild(row);
+    DOM.aiChatStream.scrollTop = DOM.aiChatStream.scrollHeight;
   }
 
-  function renumberAutoInputSteps() {
-    if (!DOM.autoInputStepsBuilderList) return;
-    DOM.autoInputStepsBuilderList.querySelectorAll(".step-builder-row").forEach((row, i) => {
-      const badge = row.querySelector(".step-num-badge");
-      if (badge) badge.textContent = i + 1;
-    });
+  function appendAiBotBubble(parsed) {
+    if (!DOM.aiChatStream) return;
+    const row = document.createElement("div");
+    row.className = "ai-message-row bot-row";
+
+    let natureClass = "nature-positive";
+    if (parsed.nature === "Negative Test") natureClass = "nature-negative";
+    if (parsed.nature === "Edge Case") natureClass = "nature-edge";
+
+    const stepsHtml = parsed.steps.map(s => `
+      <div class="ai-step-item">
+        <span class="ai-step-num">Step ${s.step}:</span>
+        <div style="flex: 1;">
+          <div><strong>Action:</strong> ${escapeHtml(s.action)}</div>
+          <div class="text-xs text-muted mt-1"><i class="fa-solid fa-check-double text-emerald mr-1"></i><strong>Expected:</strong> ${escapeHtml(s.expected)}</div>
+        </div>
+      </div>
+    `).join("");
+
+    const bugBadgeHtml = parsed.bugId 
+      ? `<span class="badge badge-failed text-xs"><i class="fa-solid fa-bug mr-1"></i>Linked Bug: ${escapeHtml(parsed.bugId)}</span>`
+      : "";
+
+    row.innerHTML = `
+      <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-sparkles"></i></div>
+      <div class="ai-message-bubble" style="width: 100%; max-width: 88%;">
+        <div class="d-flex align-center justify-between gap-2 mb-2">
+          <div class="d-flex align-center gap-2">
+            <strong style="color: #ffffff;">Nexus AI Auto-Parser</strong>
+            <span class="badge badge-primary text-xs"><i class="fa-solid fa-bolt mr-1"></i>Parsed Successfully</span>
+          </div>
+          <span class="text-xs text-muted">${parsed.createdAt}</span>
+        </div>
+
+        <div class="ai-parsed-card">
+          <div class="ai-parsed-header">
+            <div>
+              <span class="ai-nature-badge ${natureClass} mr-2">${escapeHtml(parsed.nature)}</span>
+              <span class="badge badge-secondary text-xs mr-1">${escapeHtml(parsed.priority)}</span>
+              <span class="badge badge-secondary text-xs mr-1">${escapeHtml(parsed.type)}</span>
+              ${bugBadgeHtml}
+            </div>
+            <span class="test-id-pill">${parsed.id}</span>
+          </div>
+
+          <div class="ai-parsed-title mb-2">${escapeHtml(parsed.title)}</div>
+
+          ${parsed.preconditions ? `<div class="text-xs text-muted mb-2"><i class="fa-solid fa-info-circle mr-1"></i><strong>Preconditions:</strong> ${escapeHtml(parsed.preconditions)}</div>` : ""}
+
+          <div class="ai-steps-timeline">
+            ${stepsHtml}
+          </div>
+
+          <div class="d-flex align-center justify-between flex-wrap gap-2 mt-2 pt-2" style="border-top: 1px solid rgba(255,255,255,0.06);">
+            <div class="d-flex align-center gap-1 flex-wrap">
+              <span class="text-xs text-muted">Tags:</span>
+              ${parsed.tags.map(t => `<span class="badge badge-subtle text-xs">#${escapeHtml(t)}</span>`).join(" ")}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    DOM.aiChatStream.appendChild(row);
+    DOM.aiChatStream.scrollTop = DOM.aiChatStream.scrollHeight;
   }
 
-  function loadAutoInputPreset(presetKey) {
-    if (presetKey === "custom") {
-      if (DOM.autoInputTitle) DOM.autoInputTitle.value = "";
-      if (DOM.autoInputPreconditions) DOM.autoInputPreconditions.value = "";
-      if (DOM.autoInputTags) DOM.autoInputTags.value = "automated, custom";
-      renderAutoInputStepRows([]);
-      if (DOM.autoInputTitle) DOM.autoInputTitle.focus();
+  function handleExecuteAiPrompt() {
+    if (!DOM.aiTestCasePromptInput) return;
+    const promptText = DOM.aiTestCasePromptInput.value.trim();
+    if (!promptText) {
+      showToast("Please enter a test case prompt or select a quick template chip", "warning");
+      DOM.aiTestCasePromptInput.focus();
       return;
     }
 
-    const idx = parseInt(presetKey, 10);
-    const scenario = autoInputScenarios[isNaN(idx) ? 0 : idx % autoInputScenarios.length];
-    if (!scenario) return;
+    appendAiUserBubble(promptText);
+    DOM.aiTestCasePromptInput.value = "";
 
-    if (DOM.autoInputTitle) DOM.autoInputTitle.value = scenario.title;
-    populateAutoInputSuiteDropdown();
-    if (DOM.autoInputSuite) {
-      DOM.autoInputSuite.value = scenario.suiteId;
-      if (!DOM.autoInputSuite.value && DOM.autoInputSuite.options.length > 0) {
-        DOM.autoInputSuite.selectedIndex = 0;
-      }
+    if (DOM.aiStudioStatusText) {
+      DOM.aiStudioStatusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-primary"></i> Parsing test specifications...`;
     }
-    if (DOM.autoInputPriority) DOM.autoInputPriority.value = scenario.priority;
-    if (DOM.autoInputType) DOM.autoInputType.value = scenario.type;
-    if (DOM.autoInputStatus) DOM.autoInputStatus.value = scenario.status || "Untested";
-    if (DOM.autoInputPreconditions) DOM.autoInputPreconditions.value = scenario.preconditions;
-    if (DOM.autoInputTags) DOM.autoInputTags.value = (scenario.tags || []).join(", ");
-    renderAutoInputStepRows(scenario.steps || []);
+
+    setTimeout(() => {
+      const parsed = parseTestCasePrompt(promptText);
+      lastParsedAiTestCase = parsed;
+
+      appendAiBotBubble(parsed);
+
+      if (DOM.aiFillToManualBtn) DOM.aiFillToManualBtn.disabled = false;
+      if (DOM.aiSaveToDatabaseBtn) DOM.aiSaveToDatabaseBtn.disabled = false;
+
+      if (DOM.aiStudioStatusText) {
+        DOM.aiStudioStatusText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald"></i> Ready: "${escapeHtml(parsed.title.substring(0, 32))}..."`;
+      }
+
+      showToast(`⚡ AI Auto-Input: Extracted "${parsed.title.substring(0, 36)}..."`, "success");
+    }, 180);
   }
 
   function openAutoInputModal() {
-    populateAutoInputSuiteDropdown();
-    if (DOM.autoInputPresetSelect) DOM.autoInputPresetSelect.value = "0";
-    loadAutoInputPreset(0);
+    populateAiSuiteDropdown();
     if (DOM.autoInputModal) DOM.autoInputModal.style.display = "flex";
+    if (DOM.aiTestCasePromptInput) DOM.aiTestCasePromptInput.focus();
   }
 
+  // AI Prompt Template Chips
+  const promptTemplates = {
+    positive: `Test Case 1: Verify successful order checkout with 20% discount coupon applied
+Nature: Positive Test
+Bug ID: Auto
+Preconditions: Shopping cart contains items exceeding $50; promo code 'SAVE20' is active.
+Step 1: Navigate to checkout screen and enter promo code 'SAVE20' into discount input
+Step 2: Click Apply button -> Expected: Discount of 20% is calculated immediately
+Step 3: Submit payment with valid test credit card
+Expected: Order confirmation view loads with HTTP 200 OK and invoice email receipt is triggered.
+Tags: checkout, discount, positive, smoke`,
+
+    negative: `Test Case 2: Verify password reset link expires and rejects authentication after 15 minutes
+Nature: Negative Test
+Bug ID: Auto
+Preconditions: Password reset HMAC link has exceeded 15 minutes time-to-live.
+Step 1: Open the expired reset password link from email
+Step 2: Enter new password and click Submit
+Expected: Error message displayed: 'Reset link has expired. Please request a new link.'
+Tags: auth, security, negative, token`,
+
+    edge: `Test Case 3: Verify REST API rate limiter rejects 61st request with HTTP 429 Too Many Requests
+Nature: Edge Case
+Bug ID: Auto
+Preconditions: Client token authenticated with 60 requests per minute standard rate quota.
+Step 1: Dispatch 60 rapid GET requests to /api/v1/test-cases within 30 seconds
+Step 2: Dispatch 61st GET request within the same 60-second window
+Expected: Server responds with HTTP 429 Too Many Requests and Retry-After header.
+Tags: api, rate-limit, edge, performance`,
+
+    bug: `Test Case 4: Verify concurrent checkout inventory decrement prevents database deadlock
+Nature: Edge Case
+Bug ID: BUG-202
+Preconditions: Product inventory has exactly 1 unit in stock in database.
+Step 1: Trigger simultaneous checkout for 2 users at millisecond t0
+Step 2: Check database lock transaction isolation level
+Expected: One checkout succeeds; second user receives out of stock notice without server crash.
+Tags: concurrency, inventory, bug-fix, deadlock`
+  };
+
+  if (DOM.aiChatStream) {
+    DOM.aiChatStream.addEventListener("click", (e) => {
+      const chip = e.target.closest(".ai-prompt-chip[data-template]");
+      if (chip && DOM.aiTestCasePromptInput) {
+        const key = chip.getAttribute("data-template");
+        if (promptTemplates[key]) {
+          DOM.aiTestCasePromptInput.value = promptTemplates[key];
+          DOM.aiTestCasePromptInput.focus();
+        }
+      }
+    });
+  }
+
+  // Quick insertion chips in prompt toolbar
+  function insertPromptChipText(snippet) {
+    if (!DOM.aiTestCasePromptInput) return;
+    const input = DOM.aiTestCasePromptInput;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const current = input.value;
+    input.value = current.substring(0, start) + "\n" + snippet + "\n" + current.substring(end);
+    input.focus();
+  }
+
+  on(DOM.chipAddPositive, "click", () => insertPromptChipText("Nature: Positive Test"));
+  on(DOM.chipAddNegative, "click", () => insertPromptChipText("Nature: Negative Test"));
+  on(DOM.chipAddEdge, "click", () => insertPromptChipText("Nature: Edge Case"));
+  on(DOM.chipAddBug, "click", () => insertPromptChipText("Bug ID: Auto"));
+
+  on(DOM.clearAiChatBtn, "click", () => {
+    if (DOM.aiChatStream) {
+      DOM.aiChatStream.innerHTML = `
+        <div class="ai-message-row bot-row">
+          <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-robot"></i></div>
+          <div class="ai-message-bubble">
+            <div class="d-flex align-center justify-between gap-2 mb-1">
+              <strong style="color: var(--primary-light, #a5b4fc);">Nexus AI Assistant</strong>
+              <span class="text-xs text-muted">Ready</span>
+            </div>
+            <p style="margin: 0 0 0.5rem 0;">
+              Chat stream cleared. Type or paste any test case notes or prompt to auto-parse!
+            </p>
+            <div class="ai-chip-group">
+              <button type="button" class="ai-prompt-chip" data-template="positive"><i class="fa-solid fa-circle-check text-emerald mr-1"></i> Positive Checkout Flow</button>
+              <button type="button" class="ai-prompt-chip" data-template="negative"><i class="fa-solid fa-triangle-exclamation text-rose mr-1"></i> Negative Password Reset</button>
+              <button type="button" class="ai-prompt-chip" data-template="edge"><i class="fa-solid fa-bolt text-amber mr-1"></i> Edge API Rate Limiting</button>
+              <button type="button" class="ai-prompt-chip" data-template="bug"><i class="fa-solid fa-bug text-rose mr-1"></i> Bug-Linked Deadlock Test</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    lastParsedAiTestCase = null;
+    if (DOM.aiFillToManualBtn) DOM.aiFillToManualBtn.disabled = true;
+    if (DOM.aiSaveToDatabaseBtn) DOM.aiSaveToDatabaseBtn.disabled = true;
+    showToast("AI Auto-Input chat reset", "info");
+  });
+
+  on(DOM.aiExtractSubmitBtn, "click", handleExecuteAiPrompt);
+
+  if (DOM.aiTestCasePromptInput) {
+    DOM.aiTestCasePromptInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        handleExecuteAiPrompt();
+      }
+    });
+  }
+
+  // Save parsed Test Case directly to Database & Cloud
+  on(DOM.aiSaveToDatabaseBtn, "click", () => {
+    if (!lastParsedAiTestCase) {
+      showToast("No test case parsed yet. Please enter a prompt first.", "warning");
+      return;
+    }
+
+    const testCaseData = {
+      title: lastParsedAiTestCase.title,
+      suiteId: lastParsedAiTestCase.suiteId || (DOM.aiTargetSuite ? DOM.aiTargetSuite.value : "suite-auth"),
+      priority: lastParsedAiTestCase.priority || "P1 - High",
+      type: lastParsedAiTestCase.type || "Functional",
+      status: "Untested",
+      preconditions: lastParsedAiTestCase.preconditions || "",
+      tags: lastParsedAiTestCase.tags || [],
+      steps: lastParsedAiTestCase.steps || []
+    };
+
+    const saved = StorageManager.saveTestCase(testCaseData);
+
+    // If Bug ID was specified, automatically create a linked defect in database as well
+    if (lastParsedAiTestCase.bugId) {
+      const existingBugs = StorageManager.getDefects();
+      if (!existingBugs.some(b => b.id === lastParsedAiTestCase.bugId)) {
+        StorageManager.saveDefect({
+          id: lastParsedAiTestCase.bugId,
+          summary: `Issue identified during: ${lastParsedAiTestCase.title}`,
+          linkedTestCaseId: saved.id,
+          severity: lastParsedAiTestCase.priority === "P0 - Critical" ? "Critical" : "Major",
+          priority: lastParsedAiTestCase.priority === "P0 - Critical" ? "P0 - Urgent" : "P1 - High",
+          assignee: "Senior Developer",
+          reportedBy: "QA Tester (Auto-AI)",
+          status: "Open",
+          description: `Automatically created bug tracking card for test case ${saved.id}. Preconditions: ${lastParsedAiTestCase.preconditions || "None"}`
+        });
+      }
+    }
+
+    renderTestCaseTable();
+    renderSuitesSidebar();
+    renderMetrics();
+    renderDashboard();
+    renderKanban();
+
+    showToast(`⚡ Saved Test Case ${saved.id} to Database & Supabase!`, "success");
+    if (DOM.aiStudioStatusText) {
+      DOM.aiStudioStatusText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald"></i> Saved ${saved.id} to DB`;
+    }
+  });
+
+  // Transfer parsed Test Case to Manual Full Modal
+  on(DOM.aiFillToManualBtn, "click", () => {
+    if (!lastParsedAiTestCase) return;
+    openCreateTestCaseModal();
+
+    if (DOM.tcTitle) DOM.tcTitle.value = lastParsedAiTestCase.title || "";
+    if (DOM.tcSuite) DOM.tcSuite.value = lastParsedAiTestCase.suiteId || "suite-auth";
+    if (DOM.tcPriority) DOM.tcPriority.value = lastParsedAiTestCase.priority || "P1 - High";
+    if (DOM.tcType) DOM.tcType.value = lastParsedAiTestCase.type || "Functional";
+    if (DOM.tcPreconditions) DOM.tcPreconditions.value = lastParsedAiTestCase.preconditions || "";
+    if (DOM.tcTags) DOM.tcTags.value = (lastParsedAiTestCase.tags || []).join(", ");
+    renderStepRows(lastParsedAiTestCase.steps || []);
+
+    if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none";
+    if (DOM.testCaseModal) DOM.testCaseModal.style.display = "flex";
+    showToast("Transferred AI parsed test case into Manual Editor", "info");
+  });
+
+  // Action button triggers
   on(DOM.autoInputTestCaseBtn, "click", openAutoInputModal);
   on(DOM.dashboardAutoInputBtn, "click", openAutoInputModal);
   on(DOM.repoAutoInputBtn, "click", openAutoInputModal);
   on(DOM.dashboardNewTestCaseBtn, "click", openCreateTestCaseModal);
   on(DOM.createNewTestCaseBtn, "click", openCreateTestCaseModal);
   on(DOM.emptyCreateBtn, "click", openCreateTestCaseModal);
-  on(DOM.addAutoInputStepBtn, "click", () => addAutoInputStepRow());
-  on(DOM.autoInputPresetSelect, "change", (e) => loadAutoInputPreset(e.target.value));
-
   on(DOM.closeAutoInputModalBtn, "click", () => { if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none"; });
   on(DOM.cancelAutoInputModalBtn, "click", () => { if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none"; });
-
-  on(DOM.saveAutoInputBtn, "click", () => {
-    const title = DOM.autoInputTitle ? DOM.autoInputTitle.value.trim() : "";
-    if (!title) {
-      showToast("Please enter a test case title", "error");
-      if (DOM.autoInputTitle) DOM.autoInputTitle.focus();
-      return;
-    }
-
-    const steps = [];
-    if (DOM.autoInputStepsBuilderList) {
-      DOM.autoInputStepsBuilderList.querySelectorAll(".step-builder-row").forEach((row, idx) => {
-        const action = row.querySelector(".step-input-action").value.trim();
-        const expected = row.querySelector(".step-input-expected").value.trim();
-        if (action || expected) {
-          steps.push({ step: idx + 1, action: action || `Execute step ${idx + 1}`, expected: expected || "Operation completes successfully." });
-        }
-      });
-    }
-
-    const tags = DOM.autoInputTags ? DOM.autoInputTags.value.split(",").map(t => t.trim().toLowerCase()).filter(Boolean) : [];
-    const testCaseData = {
-      title,
-      suiteId: DOM.autoInputSuite ? DOM.autoInputSuite.value : "general",
-      priority: DOM.autoInputPriority ? DOM.autoInputPriority.value : "P1 - High",
-      type: DOM.autoInputType ? DOM.autoInputType.value : "Functional",
-      status: DOM.autoInputStatus ? DOM.autoInputStatus.value : "Untested",
-      preconditions: DOM.autoInputPreconditions ? DOM.autoInputPreconditions.value.trim() : "",
-      tags,
-      steps
-    };
-
-    const saved = StorageManager.saveTestCase(testCaseData);
-    if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none";
-    renderTestCaseTable();
-    renderSuitesSidebar();
-    renderMetrics();
-    renderDashboard();
-    renderKanban();
-    showToast(`⚡ Auto Input: Created Test Case ${saved.id || ""}`, "success");
-  });
-
-  on(DOM.autoInputFillToManualBtn, "click", () => {
-    openCreateTestCaseModal();
-    if (DOM.tcTitle) DOM.tcTitle.value = DOM.autoInputTitle ? DOM.autoInputTitle.value : "";
-    if (DOM.tcSuite && DOM.autoInputSuite) DOM.tcSuite.value = DOM.autoInputSuite.value;
-    if (DOM.tcPriority && DOM.autoInputPriority) DOM.tcPriority.value = DOM.autoInputPriority.value;
-    if (DOM.tcType && DOM.autoInputType) DOM.tcType.value = DOM.autoInputType.value;
-    if (DOM.tcStatus && DOM.autoInputStatus) DOM.tcStatus.value = DOM.autoInputStatus.value;
-    if (DOM.tcPreconditions && DOM.autoInputPreconditions) DOM.tcPreconditions.value = DOM.autoInputPreconditions.value;
-    if (DOM.tcTags && DOM.autoInputTags) DOM.tcTags.value = DOM.autoInputTags.value;
-
-    const steps = [];
-    if (DOM.autoInputStepsBuilderList) {
-      DOM.autoInputStepsBuilderList.querySelectorAll(".step-builder-row").forEach((row, idx) => {
-        const action = row.querySelector(".step-input-action").value.trim();
-        const expected = row.querySelector(".step-input-expected").value.trim();
-        if (action || expected) steps.push({ step: idx + 1, action, expected });
-      });
-    }
-    renderStepRows(steps);
-
-    if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none";
-    if (DOM.testCaseModal) DOM.testCaseModal.style.display = "flex";
-    showToast("Transferred Auto Input data into Manual Editor", "info");
-  });
 
   on(DOM.closeTestCaseModalBtn, "click", () => { if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none"; });
   on(DOM.cancelTestCaseModalBtn, "click", () => { if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none"; });
