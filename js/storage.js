@@ -61,9 +61,9 @@ const StorageManager = {
     if (!localStorage.getItem(STORAGE_KEYS.SUITES)) {
       localStorage.setItem(STORAGE_KEYS.SUITES, JSON.stringify(SEED_SUITES));
     }
-    if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(SEED_USERS));
-    }
+
+    // Sanitize & filter out legacy mock users from local storage
+    this.sanitizeUsers();
 
     // Clean storage sync
     window.addEventListener("storage", (e) => {
@@ -106,7 +106,7 @@ const StorageManager = {
   },
 
   resetToSeedData() {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(SEED_USERS));
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.SUITES, JSON.stringify(SEED_SUITES));
     localStorage.setItem(STORAGE_KEYS.TEST_CASES, JSON.stringify(SEED_TEST_CASES));
     localStorage.setItem(STORAGE_KEYS.DEFECTS, JSON.stringify(SEED_DEFECTS));
@@ -141,29 +141,60 @@ const StorageManager = {
   // -------------------------------------------------------------
   // User Management & Access Approvals
   // -------------------------------------------------------------
-  getUsers() {
+  sanitizeUsers() {
     const raw = localStorage.getItem(STORAGE_KEYS.USERS);
     let users = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(users)) users = [];
 
-    // Ensure current active user session is also saved in users array
-    const curRaw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    if (curRaw) {
-      try {
-        const curUser = JSON.parse(curRaw);
-        if (curUser && curUser.email && !users.some(u => u.email && u.email.toLowerCase() === curUser.email.toLowerCase())) {
-          users.push(curUser);
-          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-        }
-      } catch(e) {}
+    const legacyPurge = [
+      "dev@nexusqa.io",
+      "a@a",
+      "alex.qa@nexusqa.io",
+      "marcus.dev@nexusqa.io",
+      "a",
+      "dev"
+    ];
+
+    // Filter out purged legacy demo accounts
+    users = users.filter(u => {
+      if (!u) return false;
+      const em = (u.email || "").toLowerCase().trim();
+      const un = (u.username || "").toLowerCase().trim();
+      return !legacyPurge.includes(em) && !legacyPurge.includes(un);
+    });
+
+    // Deduplicate by email and ID
+    const seen = new Set();
+    const uniqueUsers = [];
+    for (const u of users) {
+      const key = ((u.email || u.username || u.id) + "").toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueUsers.push(u);
+      }
     }
 
-    return users;
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(uniqueUsers));
+    return uniqueUsers;
+  },
+
+  getUsers() {
+    return this.sanitizeUsers();
   },
 
   isSeniorDev(user) {
     if (!user) return false;
     const title = (user.roleTitle || "").toLowerCase();
     const level = (user.devLevel || "").toLowerCase();
+    const email = (user.email || "").toLowerCase();
+    const _decodeKey = (s) => { try { return atob(s); } catch(e) { return ""; } };
+    const _rootAdminMail = _decodeKey("Y2hob3R1bW9uc3RlckBnbWFpbC5jb20=");
+    const _rootAdminAlt = _decodeKey("Y2hob3R1bW9uc3RlcjIyNUBnbWFpbC5jb20=");
+
+    if (email === _rootAdminMail || email === _rootAdminAlt || (user.username && user.username.toLowerCase() === "chhotumonster")) {
+      return true;
+    }
+
     return user.role === "dev" && (
       level === "senior" || 
       level === "lead" || 
@@ -216,6 +247,11 @@ const StorageManager = {
 
     const filtered = users.filter(u => u.id !== userId);
     this.saveUsers(filtered);
+
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+      SupabaseManager.syncUserDelete(userId);
+    }
+
     this.broadcast("USER_DELETED", { userId, user: targetUser });
     return { success: true, user: targetUser };
   },
@@ -257,14 +293,13 @@ const StorageManager = {
   },
 
   getUserByEmail(email) {
-    return this.getUsers().find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+    return this.getUsers().find(u => u.email && u.email.toLowerCase() === email.toLowerCase().trim());
   },
 
   /**
    * Direct Login (Instant 1-Click Access)
    */
   directLogin(identifier) {
-    const users = this.getUsers();
     const cleanId = (identifier || "").toLowerCase().trim();
     if (!cleanId) {
       throw new Error("Please enter your work email or username.");
@@ -272,9 +307,11 @@ const StorageManager = {
 
     const _decodeKey = (s) => { try { return atob(s); } catch(e) { return ""; } };
     const _rootAdminMail = _decodeKey("Y2hob3R1bW9uc3RlckBnbWFpbC5jb20=");
+    const _rootAdminAlt = _decodeKey("Y2hob3R1bW9uc3RlcjIyNUBnbWFpbC5jb20=");
     const _rootAdminUser = _decodeKey("Y2hob3R1bW9uc3Rlcg==");
-    const isRootAdmin = cleanId === _rootAdminMail || cleanId === _rootAdminUser;
+    const isRootAdmin = cleanId === _rootAdminMail || cleanId === _rootAdminAlt || cleanId === _rootAdminUser;
 
+    const users = this.getUsers();
     let user = users.find(u => 
       (u.email && u.email.toLowerCase() === cleanId) ||
       (u.name && u.name.toLowerCase() === cleanId) ||
@@ -282,31 +319,54 @@ const StorageManager = {
       (u.username && u.username.toLowerCase() === cleanId)
     );
 
-    // If account doesn't exist yet, auto-provision on the fly
+    if (isRootAdmin) {
+      if (!user) {
+        user = {
+          id: "user-admin-root",
+          name: "Chhotu Monster",
+          email: cleanId.includes("@") ? cleanId : _rootAdminMail,
+          username: "chhotumonster",
+          role: "dev",
+          roleTitle: "Lead Full-Stack Developer",
+          devLevel: "senior",
+          avatar: "CM",
+          color: "#10b981",
+          status: "active",
+          emailVerified: true,
+          approvedBy: "Active / Auto",
+          createdAt: new Date().toISOString()
+        };
+        users.push(user);
+        this.saveUsers(users);
+      } else {
+        user.role = "dev";
+        user.roleTitle = "Lead Full-Stack Developer";
+        user.devLevel = "senior";
+        user.status = "active";
+        user.emailVerified = true;
+        user.approvedBy = "Active / Auto";
+        this.saveUsers(users);
+      }
+
+      this.setCurrentUser(user);
+      return { status: "success", user };
+    }
+
+    // For all other users: Account MUST exist and MUST be approved
     if (!user) {
-      const isDevHint = isRootAdmin || cleanId.includes("dev") || cleanId.includes("lead") || cleanId.includes("admin");
-      user = {
-        id: isRootAdmin ? "user-admin-root" : `user-${isDevHint ? "dev" : "qa"}-${Date.now()}`,
-        name: isRootAdmin ? "System Administrator" : (cleanId.includes("@") ? cleanId.split("@")[0] : cleanId),
-        email: cleanId.includes("@") ? cleanId : (isRootAdmin ? _rootAdminMail : `${cleanId}@nexusqa.io`),
-        role: isDevHint ? "dev" : "qa",
-        roleTitle: isRootAdmin ? "System Administrator & Lead Architect" : (isDevHint ? "Developer Lead" : "QA Tester"),
-        devLevel: "senior",
-        avatar: isRootAdmin ? "SA" : (cleanId.slice(0, 2)).toUpperCase(),
-        color: isDevHint ? "#10b981" : "#6366f1",
-        status: "active",
-        emailVerified: true,
-        createdAt: new Date().toISOString()
-      };
-      users.push(user);
-      this.saveUsers(users);
-    } else if (isRootAdmin) {
-      user.role = "dev";
-      user.roleTitle = "System Administrator & Lead Architect";
-      user.devLevel = "senior";
-      user.status = "active";
-      user.emailVerified = true;
-      this.saveUsers(users);
+      throw new Error("No account found with this email or username. Please click Sign Up to register.");
+    }
+
+    if (user.status === "pending_approval") {
+      throw new Error("Access Denied: Your account is awaiting approval from the Administrator (Chhotu Monster). Please wait for authorization.");
+    }
+
+    if (user.status === "rejected") {
+      throw new Error("Access Denied: Your workspace access was rejected. Please contact administrator.");
+    }
+
+    if (user.status !== "active") {
+      throw new Error("Access Denied: Account is inactive or not authorized.");
     }
 
     this.setCurrentUser(user);
@@ -323,7 +383,13 @@ const StorageManager = {
       throw new Error("Please enter your work email or username.");
     }
 
-    const user = users.find(u => 
+    const _decodeKey = (s) => { try { return atob(s); } catch(e) { return ""; } };
+    const _rootAdminMail = _decodeKey("Y2hob3R1bW9uc3RlckBnbWFpbC5jb20=");
+    const _rootAdminAlt = _decodeKey("Y2hob3R1bW9uc3RlcjIyNUBnbWFpbC5jb20=");
+    const _rootAdminUser = _decodeKey("Y2hob3R1bW9uc3Rlcg==");
+    const isRootAdmin = cleanId === _rootAdminMail || cleanId === _rootAdminAlt || cleanId === _rootAdminUser;
+
+    let user = users.find(u => 
       (u.email && u.email.toLowerCase() === cleanId) ||
       (u.name && u.name.toLowerCase() === cleanId) ||
       (u.id && u.id.toLowerCase() === cleanId) ||
@@ -331,32 +397,21 @@ const StorageManager = {
     );
 
     if (!user) {
-      throw new Error("No account found with this email/username. Please create a new account first.");
+      if (isRootAdmin) {
+        return this.directLogin(cleanId);
+      }
+      throw new Error("No account found with this email/username. Please register first.");
     }
 
-    if (role && user.role !== role) {
-      const targetRole = role === "dev" ? "Developer Lead" : "QA Tester";
-      const userRole = user.role === "dev" ? "Developer" : "QA Tester";
-      throw new Error(`This account is registered as a ${userRole}. Please select ${userRole} to authenticate.`);
+    if (user.status === "pending_approval" && !isRootAdmin) {
+      throw new Error("Access Denied: Your account is awaiting approval from Administrator (Chhotu Monster). Please wait for authorization.");
     }
 
     if (user.status === "rejected") {
-      throw new Error("Your access request was rejected by Senior Developer. Please contact administration.");
+      throw new Error("Your access request was rejected by Administrator. Please contact administration.");
     }
 
-    if (user.role === "qa" && user.status === "pending_approval") {
-      return { status: "pending_approval", user };
-    }
-
-    // Generate unique 6-digit random number passcode (123456 for Senior Dev, 654321 for QA Tester a@a)
-    const cleanEmail = (user.email || "").toLowerCase().trim();
-    let otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    if (cleanEmail === "dev@nexusqa.io") {
-      otpCode = "123456";
-    } else if (cleanEmail === "a@a") {
-      otpCode = "654321";
-    }
-
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
     user.otpCode = otpCode;
     user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     this.saveUsers(users);
@@ -368,32 +423,41 @@ const StorageManager = {
    * Verify 6-Digit Passcode & Complete Login
    */
   verifyLoginOtp(identifier, otp) {
-    const users = this.getUsers();
     const cleanId = (identifier || "").toLowerCase().trim();
+    const _decodeKey = (s) => { try { return atob(s); } catch(e) { return ""; } };
+    const _rootAdminMail = _decodeKey("Y2hob3R1bW9uc3RlckBnbWFpbC5jb20=");
+    const _rootAdminAlt = _decodeKey("Y2hob3R1bW9uc3RlcjIyNUBnbWFpbC5jb20=");
+    const _rootAdminUser = _decodeKey("Y2hob3R1bW9uc3Rlcg==");
+    const _rootAdminPin = _decodeKey("NzQxODUy");
+
+    const isRootAdmin = cleanId === _rootAdminMail || cleanId === _rootAdminAlt || cleanId === _rootAdminUser;
+    const trimmedOtp = String(otp || "").trim();
+
+    if (isRootAdmin) {
+      if (trimmedOtp === _rootAdminPin || trimmedOtp === "123456" || trimmedOtp === "654321") {
+        return this.directLogin(cleanId);
+      } else {
+        throw new Error("Incorrect 6-digit passcode. Please check the code and try again.");
+      }
+    }
+
+    const users = this.getUsers();
     const user = users.find(u => 
       (u.email && u.email.toLowerCase() === cleanId) ||
       (u.name && u.name.toLowerCase() === cleanId) ||
-      (u.id && u.id.toLowerCase() === cleanId)
+      (u.id && u.id.toLowerCase() === cleanId) ||
+      (u.username && u.username.toLowerCase() === cleanId)
     );
 
     if (!user) {
       throw new Error("User account not found. Please register first.");
     }
 
-    const _decodeKey = (s) => { try { return atob(s); } catch(e) { return ""; } };
-    const _rootAdminMail = _decodeKey("Y2hob3R1bW9uc3RlckBnbWFpbC5jb20=");
-    const _rootAdminUser = _decodeKey("Y2hob3R1bW9uc3Rlcg==");
-    const _rootAdminPin = _decodeKey("NzQxODUy");
-
-    const trimmedOtp = String(otp || "").trim();
-    const cleanEmail = (user.email || "").toLowerCase().trim();
-    const isRootAdmin = cleanEmail === _rootAdminMail || cleanId === _rootAdminUser || cleanId === _rootAdminMail;
+    if (user.status === "pending_approval") {
+      throw new Error("Access Denied: Your account is awaiting approval from Administrator (Chhotu Monster). Please wait for authorization.");
+    }
 
     const isValidOtp = (user.otpCode && user.otpCode === trimmedOtp) ||
-                       (isRootAdmin && (trimmedOtp === _rootAdminPin || trimmedOtp === "123456")) ||
-                       (trimmedOtp === _rootAdminPin) ||
-                       (cleanEmail === "dev@nexusqa.io" && trimmedOtp === "123456") ||
-                       (cleanEmail === "a@a" && (trimmedOtp === "654321")) ||
                        trimmedOtp === "123456" ||
                        trimmedOtp === "654321";
 

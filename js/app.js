@@ -1015,6 +1015,20 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       return;
     }
 
+    if (currentUser.status === "pending_approval") {
+      StorageManager.logout();
+      sessionStorage.setItem("nexus_auth_error", "Access Denied: Your account is awaiting approval from Administrator (Chhotu Monster). Please wait for authorization.");
+      window.location.replace("index.html");
+      return;
+    }
+
+    if (currentUser.status === "rejected") {
+      StorageManager.logout();
+      sessionStorage.setItem("nexus_auth_error", "Access Denied: Your workspace access request was rejected.");
+      window.location.replace("index.html");
+      return;
+    }
+
     if (document.body.classList.contains("page-dev") || pathname.includes("/dev")) {
       // Developer Portal: requires developer role
       if (currentUser.role !== "dev") {
@@ -1030,14 +1044,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         StorageManager.logout();
         sessionStorage.setItem("nexus_auth_error", "Access Denied: QA Tester account required. Please authenticate with a QA Tester account.");
         window.location.replace("index.html");
-        return;
-      }
-      if (currentUser.status === "pending_approval") {
-        showToast("Your tester registration is still pending approval.", "warning");
-        setTimeout(() => {
-          StorageManager.logout();
-          window.location.replace("index.html");
-        }, 350);
         return;
       }
       if (window.__pendingAuthNotice) {
