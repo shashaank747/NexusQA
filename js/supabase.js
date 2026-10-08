@@ -349,11 +349,11 @@ const SupabaseManager = {
       if (suitesRes.data && suitesRes.data.length > 0) {
         StorageManager.saveSuites(suitesRes.data, false);
       }
-      if (testCasesRes.data && testCasesRes.data.length > 0) {
+      if (testCasesRes.data) {
         const mapped = testCasesRes.data.map(tc => this.mapTestCaseFromDB(tc));
         StorageManager.saveTestCases(mapped, false);
       }
-      if (defectsRes.data && defectsRes.data.length > 0) {
+      if (defectsRes.data) {
         const mapped = defectsRes.data.map(d => this.mapDefectFromDB(d));
         StorageManager.saveDefects(mapped, false);
       }
@@ -361,6 +361,21 @@ const SupabaseManager = {
       return true;
     } catch (err) {
       console.error("Error fetching data from Supabase:", err);
+      return false;
+    }
+  },
+
+  async clearAllFromSupabase() {
+    if (!this.client || !this.isConnected) return false;
+    try {
+      await Promise.all([
+        this.client.from("nexus_defects").delete().neq("id", "___dummy___"),
+        this.client.from("nexus_test_cases").delete().neq("id", "___dummy___")
+      ]);
+      console.log("⚡ Cleared all test cases and defects from Supabase.");
+      return true;
+    } catch (err) {
+      console.error("Error clearing Supabase database:", err);
       return false;
     }
   },

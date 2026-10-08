@@ -23,8 +23,43 @@ const StorageManager = {
    * Initialize local store with seed data if empty & connect to Supabase
    */
   async init() {
-    if (!localStorage.getItem(STORAGE_KEYS.TEST_CASES)) {
-      this.resetToSeedData();
+    // Clean old mock seed data if present
+    const rawTc = localStorage.getItem(STORAGE_KEYS.TEST_CASES);
+    if (rawTc) {
+      try {
+        const parsedTc = JSON.parse(rawTc);
+        if (Array.isArray(parsedTc) && parsedTc.some(t => t.id === "TC-101" || t.id === "TC-102")) {
+          localStorage.setItem(STORAGE_KEYS.TEST_CASES, JSON.stringify([]));
+        }
+      } catch(e) {}
+    } else {
+      localStorage.setItem(STORAGE_KEYS.TEST_CASES, JSON.stringify([]));
+    }
+
+    const rawDefects = localStorage.getItem(STORAGE_KEYS.DEFECTS);
+    if (rawDefects) {
+      try {
+        const parsedDefects = JSON.parse(rawDefects);
+        if (Array.isArray(parsedDefects) && parsedDefects.some(d => d.id === "BUG-201" || d.id === "BUG-202")) {
+          localStorage.setItem(STORAGE_KEYS.DEFECTS, JSON.stringify([]));
+        }
+      } catch(e) {}
+    } else {
+      localStorage.setItem(STORAGE_KEYS.DEFECTS, JSON.stringify([]));
+    }
+
+    const rawRuns = localStorage.getItem(STORAGE_KEYS.TEST_RUNS);
+    if (rawRuns) {
+      try {
+        const parsedRuns = JSON.parse(rawRuns);
+        if (Array.isArray(parsedRuns) && parsedRuns.some(r => r.id === "RUN-801")) {
+          localStorage.setItem(STORAGE_KEYS.TEST_RUNS, JSON.stringify([]));
+        }
+      } catch(e) {}
+    }
+
+    if (!localStorage.getItem(STORAGE_KEYS.SUITES)) {
+      localStorage.setItem(STORAGE_KEYS.SUITES, JSON.stringify(SEED_SUITES));
     }
     if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(SEED_USERS));
@@ -76,12 +111,22 @@ const StorageManager = {
     localStorage.setItem(STORAGE_KEYS.TEST_CASES, JSON.stringify(SEED_TEST_CASES));
     localStorage.setItem(STORAGE_KEYS.DEFECTS, JSON.stringify(SEED_DEFECTS));
     localStorage.setItem(STORAGE_KEYS.TEST_RUNS, JSON.stringify(SEED_TEST_RUNS));
-    localStorage.setItem(STORAGE_KEYS.ACTIVE_RUN_ID, "RUN-801");
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_RUN_ID, "");
     this.broadcast("RESET_DATA");
 
     if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
       SupabaseManager.pushAllLocalToSupabase();
     }
+  },
+
+  clearAllBugsAndTestCases() {
+    this.saveTestCases([], true);
+    this.saveDefects([], true);
+    this.saveTestRuns([], true);
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+      SupabaseManager.clearAllFromSupabase();
+    }
+    this.broadcast("CLEAR_BUGS_AND_TEST_CASES");
   },
 
   wipeAll() {
