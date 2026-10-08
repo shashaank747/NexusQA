@@ -859,9 +859,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   }
 
   // =========================================================================
-  function initTheme() {
-    const savedTheme = localStorage.getItem("nexusqa_theme") || "light";
-    if (savedTheme === "dark") {
+  function applyTheme(theme) {
+    const isDark = theme === "dark";
+    if (isDark) {
       document.body.classList.remove("light-theme");
       document.body.classList.add("dark-theme");
       if (DOM.themeSwitchCheckbox) DOM.themeSwitchCheckbox.checked = true;
@@ -871,12 +871,46 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     } else {
       document.body.classList.add("light-theme");
       document.body.classList.remove("dark-theme");
-      localStorage.setItem("nexusqa_theme", "light");
       if (DOM.themeSwitchCheckbox) DOM.themeSwitchCheckbox.checked = false;
       if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
         DOM.themeToggleBtn.querySelector("i").className = "fa-solid fa-sun";
       }
     }
+    localStorage.setItem("nexusqa_theme", isDark ? "dark" : "light");
+
+    // Persist to user profile in database
+    const currentUser = StorageManager.getCurrentUser();
+    if (currentUser && currentUser.id) {
+      currentUser.theme = isDark ? "dark" : "light";
+      StorageManager.updateUser(currentUser.id, { theme: isDark ? "dark" : "light" });
+    }
+  }
+
+  function initTheme() {
+    let theme = "light"; // Default bright light theme
+    const currentUser = StorageManager.getCurrentUser();
+    if (currentUser && currentUser.theme) {
+      theme = currentUser.theme;
+    } else {
+      theme = localStorage.getItem("nexusqa_theme") || "light";
+    }
+
+    if (theme === "dark") {
+      document.body.classList.remove("light-theme");
+      document.body.classList.add("dark-theme");
+      if (DOM.themeSwitchCheckbox) DOM.themeSwitchCheckbox.checked = true;
+      if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
+        DOM.themeToggleBtn.querySelector("i").className = "fa-solid fa-moon";
+      }
+    } else {
+      document.body.classList.add("light-theme");
+      document.body.classList.remove("dark-theme");
+      if (DOM.themeSwitchCheckbox) DOM.themeSwitchCheckbox.checked = false;
+      if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
+        DOM.themeToggleBtn.querySelector("i").className = "fa-solid fa-sun";
+      }
+    }
+    localStorage.setItem("nexusqa_theme", theme);
   }
 
   function initSidebarState() {
@@ -2047,32 +2081,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   });
 
   on(DOM.themeToggleBtn, "click", () => {
-    const isLight = document.body.classList.toggle("light-theme");
-    if (isLight) {
-      document.body.classList.remove("dark-theme");
-      localStorage.setItem("nexusqa_theme", "light");
-      if (DOM.themeSwitchCheckbox) DOM.themeSwitchCheckbox.checked = false;
-    } else {
-      document.body.classList.add("dark-theme");
-      localStorage.setItem("nexusqa_theme", "dark");
-      if (DOM.themeSwitchCheckbox) DOM.themeSwitchCheckbox.checked = true;
-    }
-    if (DOM.themeToggleBtn && DOM.themeToggleBtn.querySelector("i")) {
-      DOM.themeToggleBtn.querySelector("i").className = isLight ? "fa-solid fa-sun" : "fa-solid fa-moon";
-    }
+    const isCurrentlyDark = document.body.classList.contains("dark-theme");
+    applyTheme(isCurrentlyDark ? "light" : "dark");
   });
 
   on(DOM.themeSwitchCheckbox, "change", (e) => {
-    const isChecked = e.target.checked;
-    if (isChecked) {
-      document.body.classList.remove("light-theme");
-      document.body.classList.add("dark-theme");
-      localStorage.setItem("nexusqa_theme", "dark");
-    } else {
-      document.body.classList.add("light-theme");
-      document.body.classList.remove("dark-theme");
-      localStorage.setItem("nexusqa_theme", "light");
-    }
+    applyTheme(e.target.checked ? "dark" : "light");
   });
 
   function showToast(message, type = "success") {
