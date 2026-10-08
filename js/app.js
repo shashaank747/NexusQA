@@ -2123,6 +2123,21 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       else item.classList.remove("active");
     });
 
+    const titles = {
+      dashboard: "Quality Analytics",
+      "jira-board": "Jira Agile Kanban Board",
+      "test-cases": "Test Repository",
+      defects: "Defects & Bug Tracking",
+      "ai-generator": "Voice & AI Chat Studio",
+      suites: "Suites & Modules",
+      "dev-dashboard": "Dev Defect Command Center",
+      "dev-approvals": "Employees & Access Control",
+      "dev-kanban": "Bug Triage Kanban",
+      "dev-failures": "Failed Test Diagnostics",
+      settings: "My Profile & Account",
+      "404": "Error 404 - Not Found"
+    };
+
     let hasMatchingPanel = false;
     if (DOM.viewPanels) {
       DOM.viewPanels.forEach(panel => {
@@ -2158,20 +2173,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       notFoundPanel.classList.remove("active-view");
     }
 
-    const titles = {
-      dashboard: "Quality Analytics",
-      "jira-board": "Jira Agile Kanban Board",
-      "test-cases": "Test Repository",
-      defects: "Defects & Bug Tracking",
-      "ai-generator": "Voice & AI Chat Studio",
-      suites: "Suites & Modules",
-      "dev-dashboard": "Dev Defect Command Center",
-      "dev-approvals": "Employees & Access Control",
-      "dev-kanban": "Bug Triage Kanban",
-      "dev-failures": "Failed Test Diagnostics",
-      settings: "My Profile & Account",
-      "404": "Error 404 - Not Found"
-    };
     if (DOM.currentCrumb) DOM.currentCrumb.textContent = titles[viewName] || "Error 404";
     if (DOM.sidebar) DOM.sidebar.classList.remove("mobile-open");
 
