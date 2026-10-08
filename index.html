@@ -22,11 +22,14 @@
 </head>
 <body class="light-theme page-landing-auth">
 
-  <!-- Background Decorative Aurora & Grid Effects -->
-  <div class="auth-bg-mesh">
-    <div class="auth-bg-orb auth-bg-orb-1"></div>
-    <div class="auth-bg-orb auth-bg-orb-2"></div>
-    <div class="auth-bg-orb auth-bg-orb-3"></div>
+  <!-- Background Interactive Motion Mesh & Physics Canvas -->
+  <div class="auth-bg-mesh" id="authBgMesh">
+    <canvas id="authInteractiveCanvas" class="auth-interactive-canvas"></canvas>
+    <div class="auth-mouse-spotlight" id="authMouseSpotlight"></div>
+    <div class="auth-bg-orb auth-bg-orb-1" id="authOrb1"></div>
+    <div class="auth-bg-orb auth-bg-orb-2" id="authOrb2"></div>
+    <div class="auth-bg-orb auth-bg-orb-3" id="authOrb3"></div>
+    <div class="auth-bg-orb auth-bg-orb-4" id="authOrb4"></div>
     <div class="auth-grid-overlay"></div>
     <div class="auth-vignette-overlay"></div>
   </div>
@@ -327,5 +330,6 @@
   <script src="js/supabase.js?v=1.0.4"></script>
   <script src="js/storage.js?v=1.0.4"></script>
   <script src="js/app.js?v=1.0.4"></script>
+  <script src="js/auth-motion.js?v=1.0.5"></script>
 </body>
 </html>
