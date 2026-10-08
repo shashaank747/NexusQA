@@ -378,46 +378,71 @@
           </div>
         </div>
 
-        <!-- Password Field -->
-        <div id="passwordFieldGroup" class="flex flex-col gap-1">
-          <div class="field" id="field-password">
-            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
-            </svg>
-            <input id="passwordInput" placeholder="Password (Optional / any password)" class="input-field" type="password" oninput="handlePasswordStrength(this.value)" />
-            <!-- Toggle password visibility button -->
-            <button type="button" onclick="togglePasswordVisibility('passwordInput', this)" class="text-neutral-500 hover:text-white p-1 transition-colors focus:outline-none" title="Toggle password visibility">
-              <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-                <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
-              </svg>
-            </button>
+        <!-- 6-Digit Passcode Input Section (Just below Username) -->
+        <div id="otpFieldGroup" class="flex flex-col gap-1.5 mt-1">
+          <div class="flex items-center justify-between text-xs text-neutral-400 px-1">
+            <span class="flex items-center gap-1.5 font-medium text-neutral-300">
+              <i class="fa-solid fa-shield-halved text-indigo-400 text-[11px]"></i>
+              <span>6-Digit Security Passcode</span>
+            </span>
+            <span class="text-[10px] text-neutral-500 font-mono tracking-wider">AUTO-VERIFIED</span>
           </div>
-          
-          <!-- Password strength meter for registration -->
-          <div id="strengthContainer" class="hidden mt-1 px-1">
-            <div class="flex gap-1.5 mb-1">
-              <div id="bar1" class="meter-seg"></div>
-              <div id="bar2" class="meter-seg"></div>
-              <div id="bar3" class="meter-seg"></div>
-            </div>
-            <div class="flex justify-between items-center text-[11px] text-neutral-400">
-              <span id="strengthText">Password strength: optional</span>
-              <span class="text-neutral-500">Min 4 chars</span>
-            </div>
-          </div>
-          <span id="passwordError" class="text-[11px] text-red-400 px-3 hidden"></span>
-        </div>
 
-        <!-- Confirm Password Field (Sign Up Only) -->
-        <div id="confirmPasswordFieldGroup" class="hidden flex-col gap-1">
-          <div class="field" id="field-confirm-password">
-            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M9.5 6.5a1.5 1.5 0 0 1-1-1.415V2.5A1.5 1.5 0 0 1 10 1h4a1.5 1.5 0 0 1 1.5 1.5v2.585A1.5 1.5 0 0 1 14.5 6.5H14v2h.5A1.5 1.5 0 0 1 16 10v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 9 14v-4a1.5 1.5 0 0 1 1.5-1.5H11v-2h-1.5zM1 3.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 4a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 4a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
-            </svg>
-            <input id="confirmPasswordInput" placeholder="Confirm Password" class="input-field" type="password" />
+          <!-- CodeSlots Row Container -->
+          <div class="code-slots-wrapper" style="margin: 4px 0 2px 0;">
+            <div class="code-slots" id="otpCodeSlots" style="--cs-accent: #6366f1; --cs-ink: #818cf8; --cs-slot: #171717; --cs-digit: #ffffff; --cs-danger: #f43f5e; --cs-size: 46px; --cs-height: 52px; --cs-gap: 8px; --cs-radius: 12px; --cs-font: 20px;">
+              <div class="code-slots__row" id="codeSlotsRow" data-status="idle" data-focused="">
+                <input
+                  id="codeSlotsInput"
+                  class="code-slots__input"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  pattern="[0-9]*"
+                  value=""
+                  maxlength="6"
+                  aria-label="6-Digit security passcode"
+                />
+                <span class="code-slots__slot" data-active="" data-index="0" style="box-shadow: inset 2px 4px 8px rgb(5, 5, 5); background: #171717; border: 1px solid rgba(255, 255, 255, 0.08);">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+                <span class="code-slots__slot" data-index="1" style="box-shadow: inset 2px 4px 8px rgb(5, 5, 5); background: #171717; border: 1px solid rgba(255, 255, 255, 0.08);">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+                <span class="code-slots__slot" data-index="2" style="box-shadow: inset 2px 4px 8px rgb(5, 5, 5); background: #171717; border: 1px solid rgba(255, 255, 255, 0.08);">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+                <span class="code-slots__slot" data-index="3" style="box-shadow: inset 2px 4px 8px rgb(5, 5, 5); background: #171717; border: 1px solid rgba(255, 255, 255, 0.08);">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+                <span class="code-slots__slot" data-index="4" style="box-shadow: inset 2px 4px 8px rgb(5, 5, 5); background: #171717; border: 1px solid rgba(255, 255, 255, 0.08);">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+                <span class="code-slots__slot" data-index="5" style="box-shadow: inset 2px 4px 8px rgb(5, 5, 5); background: #171717; border: 1px solid rgba(255, 255, 255, 0.08);">
+                  <span class="code-slots__fill"></span>
+                  <span class="code-slots__digit"></span>
+                </span>
+
+                <span class="code-slots__wash" aria-hidden="true">
+                  <span class="code-slots__check">
+                    <svg class="cs-tick-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </span>
+                </span>
+                <span class="code-slots__caret" id="codeSlotsCaret" aria-hidden="true" data-show="">
+                  <span class="code-slots__caret-line"></span>
+                </span>
+              </div>
+              <span id="codeSlotsSrCount" class="code-slots__sr" aria-live="polite">0 of 6 digits entered</span>
+            </div>
           </div>
-          <span id="confirmError" class="text-[11px] text-red-400 px-3 hidden"></span>
+          <span id="otpError" class="text-[11px] text-red-400 px-3 hidden text-center"></span>
         </div>
 
         <!-- Options Row (Remember me) -->
@@ -494,6 +519,106 @@
     const passwordInput = document.getElementById('passwordInput');
     const confirmPasswordInput = document.getElementById('confirmPasswordInput');
 
+    // CodeSlots Controller for 6-Digit Passcode
+    const codeSlotsState = {
+      length: 6,
+      value: "",
+      active: 0,
+      focused: false,
+      status: "idle",
+      slotSize: 46,
+      gap: 8,
+      pitch: 54
+    };
+
+    const codeSlotsRow = document.getElementById("codeSlotsRow");
+    const codeSlotsInput = document.getElementById("codeSlotsInput");
+    const codeSlotsCaret = document.getElementById("codeSlotsCaret");
+    const codeSlotsSrCount = document.getElementById("codeSlotsSrCount");
+
+    function renderCodeSlots() {
+      if (!codeSlotsRow) return;
+      const digits = codeSlotsState.value.split("");
+      const slots = codeSlotsRow.querySelectorAll(".code-slots__slot");
+
+      slots.forEach((slot, idx) => {
+        const digitEl = slot.querySelector(".code-slots__digit");
+        const char = digits[idx] || "";
+        
+        if (char) {
+          slot.setAttribute("data-filled", "");
+          if (digitEl) digitEl.textContent = char;
+        } else {
+          slot.removeAttribute("data-filled");
+          if (digitEl) digitEl.textContent = "";
+        }
+
+        if (codeSlotsState.focused && idx === codeSlotsState.active && codeSlotsState.status !== "success") {
+          slot.setAttribute("data-active", "");
+        } else {
+          slot.removeAttribute("data-active");
+        }
+      });
+
+      if (codeSlotsCaret) {
+        const showCaret = codeSlotsState.focused && 
+                          codeSlotsState.status !== "success" && 
+                          codeSlotsState.status !== "error" && 
+                          !digits[codeSlotsState.active];
+        if (showCaret) {
+          codeSlotsCaret.setAttribute("data-show", "");
+          const x = codeSlotsState.active * codeSlotsState.pitch + (codeSlotsState.slotSize / 2) - 1;
+          codeSlotsCaret.style.transform = `translateX(${x}px)`;
+        } else {
+          codeSlotsCaret.removeAttribute("data-show");
+        }
+      }
+
+      codeSlotsRow.setAttribute("data-status", codeSlotsState.status);
+      if (codeSlotsState.focused) {
+        codeSlotsRow.setAttribute("data-focused", "");
+      } else {
+        codeSlotsRow.removeAttribute("data-focused");
+      }
+
+      if (codeSlotsSrCount) {
+        codeSlotsSrCount.textContent = `${digits.length} of ${codeSlotsState.length} digits entered`;
+      }
+    }
+
+    if (codeSlotsInput) {
+      codeSlotsInput.addEventListener("input", (e) => {
+        const clean = (e.target.value || "").replace(/\D/g, "").slice(0, codeSlotsState.length);
+        codeSlotsState.value = clean;
+        codeSlotsState.active = Math.min(clean.length, codeSlotsState.length - 1);
+        e.target.value = clean;
+        renderCodeSlots();
+
+        if (clean.length === codeSlotsState.length) {
+          // Auto submit when 6 digits are complete and username is present
+          if (userInput.value.trim()) {
+            handleFormSubmit(new Event("submit"));
+          }
+        }
+      });
+
+      codeSlotsInput.addEventListener("focus", () => {
+        codeSlotsState.focused = true;
+        renderCodeSlots();
+      });
+
+      codeSlotsInput.addEventListener("blur", () => {
+        codeSlotsState.focused = false;
+        renderCodeSlots();
+      });
+
+      if (codeSlotsRow) {
+        codeSlotsRow.addEventListener("click", () => {
+          codeSlotsInput.focus();
+        });
+      }
+    }
+
     /**
      * Switch UI between Login, Sign Up, and Forgot Password modes
      */
@@ -511,9 +636,7 @@
 
         nameFieldGroup.classList.add('hidden');
         roleFieldGroup.classList.add('hidden');
-        passwordFieldGroup.classList.remove('hidden');
-        confirmPasswordFieldGroup.classList.add('hidden');
-        strengthContainer.classList.add('hidden');
+        otpFieldGroup.classList.remove('hidden');
         optionsRow.classList.remove('hidden');
 
         submitBtnText.textContent = 'Sign In to Workspace';
@@ -534,9 +657,7 @@
 
         nameFieldGroup.classList.remove('hidden');
         roleFieldGroup.classList.remove('hidden');
-        passwordFieldGroup.classList.remove('hidden');
-        confirmPasswordFieldGroup.classList.remove('hidden');
-        strengthContainer.classList.remove('hidden');
+        otpFieldGroup.classList.remove('hidden');
         optionsRow.classList.remove('hidden');
 
         submitBtnText.textContent = 'Create & Enter Workspace';
@@ -556,9 +677,7 @@
 
         nameFieldGroup.classList.add('hidden');
         roleFieldGroup.classList.add('hidden');
-        passwordFieldGroup.classList.add('hidden');
-        confirmPasswordFieldGroup.classList.add('hidden');
-        strengthContainer.classList.add('hidden');
+        otpFieldGroup.classList.add('hidden');
         optionsRow.classList.add('hidden');
 
         submitBtnText.textContent = 'Send Reset Link';
@@ -581,76 +700,17 @@
     }
 
     /**
-     * Show / Hide password visibility
-     */
-    function togglePasswordVisibility(fieldId, btnElement) {
-      const input = document.getElementById(fieldId);
-      if (input.type === 'password') {
-        input.type = 'text';
-        btnElement.classList.add('text-indigo-400');
-      } else {
-        input.type = 'password';
-        btnElement.classList.remove('text-indigo-400');
-      }
-    }
-
-    /**
-     * Password strength evaluation
-     */
-    function handlePasswordStrength(pass) {
-      if (currentMode !== 'signup') return;
-
-      const bar1 = document.getElementById('bar1');
-      const bar2 = document.getElementById('bar2');
-      const bar3 = document.getElementById('bar3');
-      const text = document.getElementById('strengthText');
-
-      if (!pass || pass.length === 0) {
-        bar1.style.backgroundColor = '#282828';
-        bar2.style.backgroundColor = '#282828';
-        bar3.style.backgroundColor = '#282828';
-        text.textContent = 'Password strength: optional';
-        return;
-      }
-
-      let score = 0;
-      if (pass.length >= 4) score++;
-      if (pass.length >= 8 && /[A-Z0-9]/.test(pass)) score++;
-      if (pass.length >= 10) score++;
-
-      if (score === 1) {
-        bar1.style.backgroundColor = '#ef4444';
-        bar2.style.backgroundColor = '#282828';
-        bar3.style.backgroundColor = '#282828';
-        text.textContent = 'Strength: Basic';
-        text.className = 'text-[11px] text-red-400';
-      } else if (score === 2) {
-        bar1.style.backgroundColor = '#f59e0b';
-        bar2.style.backgroundColor = '#f59e0b';
-        bar3.style.backgroundColor = '#282828';
-        text.textContent = 'Strength: Medium';
-        text.className = 'text-[11px] text-yellow-400';
-      } else {
-        bar1.style.backgroundColor = '#10b981';
-        bar2.style.backgroundColor = '#10b981';
-        bar3.style.backgroundColor = '#10b981';
-        text.textContent = 'Strength: Strong';
-        text.className = 'text-[11px] text-emerald-400';
-      }
-    }
-
-    /**
      * Form Validation & Submission
      */
     function handleFormSubmit(e) {
-      e.preventDefault();
+      if (e && e.preventDefault) e.preventDefault();
       if (isSubmitting) return;
 
       clearErrors();
       let hasError = false;
 
       const userVal = userInput.value.trim();
-      const passVal = passwordInput.value;
+      const otpVal = codeSlotsState.value;
 
       // Username / Email validation
       if (!userVal) {
@@ -666,12 +726,6 @@
         const nameVal = fullNameInput.value.trim();
         if (!nameVal) {
           showFieldError('nameError', 'field-name', 'Full name is required');
-          hasError = true;
-        }
-
-        const confirmVal = confirmPasswordInput.value;
-        if (passVal && confirmVal !== passVal) {
-          showFieldError('confirmError', 'field-confirm-password', 'Passwords do not match');
           hasError = true;
         }
       }
@@ -706,12 +760,16 @@
               color: selectedRole === 'dev' ? '#10b981' : '#6366f1',
               status: 'active',
               emailVerified: true,
+              otpCode: otpVal || "123456",
               createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
             };
 
             users.push(newUser);
             StorageManager.saveUsers(users);
             StorageManager.setCurrentUser(newUser);
+
+            codeSlotsState.status = "success";
+            renderCodeSlots();
 
             showToast(`Account created! Welcome, ${newUser.name}`, 'success');
             setLoading(false);
@@ -725,6 +783,9 @@
           // LOGIN MODE: Direct login with role routing
           const result = StorageManager.directLogin(userVal);
           if (result && result.user) {
+            codeSlotsState.status = "success";
+            renderCodeSlots();
+
             const targetUrl = result.user.role === 'dev' ? 'dev.html' : 'tester.html';
             showToast(`Welcome back, ${result.user.name || result.user.email}!`, 'success');
             setLoading(false);
@@ -736,6 +797,8 @@
           }
 
         } catch (err) {
+          codeSlotsState.status = "error";
+          renderCodeSlots();
           setLoading(false);
           showInlineError(err.message || "Authentication failed. Please check credentials.");
         }
