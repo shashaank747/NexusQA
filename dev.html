@@ -130,9 +130,14 @@
         <!-- 1. Primary Compact Icon Rail (Always Slim) -->
         <div class="sidebar-primary-rail">
           <div class="rail-top">
-            <button type="button" class="sidebar-burger-btn" id="sidebarBurgerBtn" title="Toggle Secondary Panel" aria-label="Toggle Secondary Panel">
-              <i class="fa-solid fa-bars"></i>
-            </button>
+            <div class="uiverse-hamburger-switch" id="sidebarBurgerSwitch" title="Toggle Secondary Panel">
+              <input class="label-check" id="sidebar-label-check" type="checkbox" />
+              <label for="sidebar-label-check" class="hamburger-label" id="sidebarBurgerBtn" aria-label="Toggle Secondary Panel">
+                <div class="line1"></div>
+                <div class="line2"></div>
+                <div class="line3"></div>
+              </label>
+            </div>
             <div class="rail-divider"></div>
             <ul class="rail-nav-list">
               <li class="rail-nav-item active" data-view="dev-dashboard" title="Dev Defect Dashboard">

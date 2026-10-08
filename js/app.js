@@ -979,6 +979,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       DOM.sidebar.classList.add("collapsed");
       document.body.classList.add("sidebar-collapsed");
     }
+    const checkInput = document.getElementById("sidebar-label-check");
+    if (checkInput) checkInput.checked = isCollapsed;
   }
 
   function initRouting() {
@@ -2183,11 +2185,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   });
 
-  const toggleSidebarCollapse = () => {
+  const toggleSidebarCollapse = (e) => {
     if (DOM.sidebar) {
       const isNowCollapsed = DOM.sidebar.classList.toggle("collapsed");
       document.body.classList.toggle("sidebar-collapsed", isNowCollapsed);
       localStorage.setItem("nexusqa_sidebar_collapsed", isNowCollapsed ? "true" : "false");
+      const checkInput = document.getElementById("sidebar-label-check");
+      if (checkInput) checkInput.checked = isNowCollapsed;
     }
   };
 
