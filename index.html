@@ -446,28 +446,6 @@
         <!-- Forgot Password / Switch Trigger -->
         <button type="button" id="forgotBtn" onclick="switchMode('forgot')" class="button3">Forgot Password</button>
 
-        <!-- Social Separator & Logins -->
-        <div id="socialSection" class="pt-2 border-t border-neutral-800/80">
-          <div class="text-center text-[11px] uppercase tracking-wider text-neutral-500 mb-3">Or continue with</div>
-          <div class="grid grid-cols-2 gap-2">
-            <button type="button" onclick="handleSocialAuth('Google')" class="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#1f1f1f] hover:bg-black border border-neutral-800 hover:border-neutral-700 text-xs text-neutral-300 transition-all">
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24">
-                <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/>
-                <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.8z"/>
-                <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.2c0 2.8.7 5.5 1.9 7.8l3.7-2.9z"/>
-                <path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16.5C3.7 20.3 7.5 23.5 12 23.5z"/>
-              </svg>
-              <span>Google</span>
-            </button>
-            <button type="button" onclick="handleSocialAuth('GitHub')" class="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#1f1f1f] hover:bg-black border border-neutral-800 hover:border-neutral-700 text-xs text-neutral-300 transition-all">
-              <svg class="w-3.5 h-3.5 fill-current text-neutral-300" viewBox="0 0 16 16">
-                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
-              </svg>
-              <span>GitHub</span>
-            </button>
-          </div>
-        </div>
-
       </form>
     </div>
 
@@ -505,7 +483,6 @@
     const forgotBtn = document.getElementById('forgotBtn');
     const submitBtnText = document.getElementById('submitBtnText');
     const toggleAltBtn = document.getElementById('toggleAltBtn');
-    const socialSection = document.getElementById('socialSection');
     const btnSpinner = document.getElementById('btnSpinner');
     const authInlineAlert = document.getElementById('authInlineAlert');
     const authInlineAlertText = document.getElementById('authInlineAlertText');
@@ -538,7 +515,6 @@
         confirmPasswordFieldGroup.classList.add('hidden');
         strengthContainer.classList.add('hidden');
         optionsRow.classList.remove('hidden');
-        socialSection.classList.remove('hidden');
 
         submitBtnText.textContent = 'Sign In to Workspace';
         toggleAltBtn.textContent = 'Sign Up';
@@ -562,7 +538,6 @@
         confirmPasswordFieldGroup.classList.remove('hidden');
         strengthContainer.classList.remove('hidden');
         optionsRow.classList.remove('hidden');
-        socialSection.classList.remove('hidden');
 
         submitBtnText.textContent = 'Create & Enter Workspace';
         toggleAltBtn.textContent = 'Sign In';
@@ -585,7 +560,6 @@
         confirmPasswordFieldGroup.classList.add('hidden');
         strengthContainer.classList.add('hidden');
         optionsRow.classList.add('hidden');
-        socialSection.classList.add('hidden');
 
         submitBtnText.textContent = 'Send Reset Link';
         toggleAltBtn.style.display = 'none';
@@ -809,34 +783,8 @@
       submitBtn.disabled = loading;
       if (loading) {
         btnSpinner.classList.remove('hidden');
-        submitBtnText.textContent = 'Authenticating...';
-      } else {
-        btnSpinner.classList.add('hidden');
         submitBtnText.textContent = currentMode === 'login' ? 'Sign In to Workspace' : (currentMode === 'signup' ? 'Create & Enter Workspace' : 'Send Reset Link');
       }
-    }
-
-    function handleSocialAuth(provider) {
-      showToast(`Initiating authentic handshake with ${provider}...`, 'info');
-      setTimeout(() => {
-        const role = provider === 'GitHub' ? 'dev' : 'qa';
-        const user = {
-          id: `oauth-${provider.toLowerCase()}-${Date.now()}`,
-          name: `${provider} Engineer`,
-          email: `${provider.toLowerCase()}_user@nexusqa.io`,
-          role: role,
-          roleTitle: role === 'dev' ? 'Developer Lead' : 'QA Tester',
-          avatar: provider === 'GitHub' ? 'GH' : 'GG',
-          color: role === 'dev' ? '#10b981' : '#6366f1',
-          status: 'active',
-          emailVerified: true
-        };
-        StorageManager.setCurrentUser(user);
-        showToast(`Connected with ${provider}! Redirecting...`, 'success');
-        setTimeout(() => {
-          window.location.href = role === 'dev' ? 'dev.html' : 'tester.html';
-        }, 600);
-      }, 700);
     }
 
     /**
