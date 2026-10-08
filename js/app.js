@@ -30,7 +30,12 @@ document.addEventListener("DOMContentLoaded", () => {
     devOnlyMyBugs: false,
     pendingRegistrationEmail: "",
     currentOtpCode: "",
-    otpTimerInterval: null
+    otpTimerInterval: null,
+    jiraFilter: "all",
+    jiraSearchQuery: "",
+    activeJiraIssueKey: null,
+    activeRunnerTestCaseId: null,
+    activeRunnerStepStatuses: {}
   };
 
   // Cache DOM Elements
@@ -407,7 +412,66 @@ document.addEventListener("DOMContentLoaded", () => {
     previewCardEmail: document.getElementById("previewCardEmail"),
     previewCardPhone: document.getElementById("previewCardPhone"),
     previewCardUserId: document.getElementById("previewCardUserId"),
-    userProfileToggle: document.getElementById("userProfileToggle")
+    userProfileToggle: document.getElementById("userProfileToggle"),
+
+    // Jira Agile Kanban Board & Xray Runner Elements
+    jiraBoardCountBadge: document.getElementById("jiraBoardCountBadge"),
+    jiraRefreshBoardBtn: document.getElementById("jiraRefreshBoardBtn"),
+    jiraCreateIssueBtn: document.getElementById("jiraCreateIssueBtn"),
+    jiraQuickFilters: document.getElementById("jiraQuickFilters"),
+    jiraFilterAllCount: document.getElementById("jiraFilterAllCount"),
+    jiraFilterBugsCount: document.getElementById("jiraFilterBugsCount"),
+    jiraFilterTestsCount: document.getElementById("jiraFilterTestsCount"),
+    jiraFilterBlockerCount: document.getElementById("jiraFilterBlockerCount"),
+    jiraFilterRetestCount: document.getElementById("jiraFilterRetestCount"),
+    jiraSearchInput: document.getElementById("jiraSearchInput"),
+    jiraBoardGrid: document.getElementById("jiraBoardGrid"),
+    jiraColBacklog: document.getElementById("jiraColBacklog"),
+    jiraColInProgress: document.getElementById("jiraColInProgress"),
+    jiraColDevFix: document.getElementById("jiraColDevFix"),
+    jiraColRetest: document.getElementById("jiraColRetest"),
+    jiraColDone: document.getElementById("jiraColDone"),
+    jiraCountBacklog: document.getElementById("jiraCountBacklog"),
+    jiraCountInProgress: document.getElementById("jiraCountInProgress"),
+    jiraCountDevFix: document.getElementById("jiraCountDevFix"),
+    jiraCountRetest: document.getElementById("jiraCountRetest"),
+    jiraCountDone: document.getElementById("jiraCountDone"),
+
+    // Jira Issue Detail Modal / Drawer
+    jiraIssueModal: document.getElementById("jiraIssueModal"),
+    closeJiraIssueModalBtn: document.getElementById("closeJiraIssueModalBtn"),
+    jiraIssueTypeBadge: document.getElementById("jiraIssueTypeBadge"),
+    jiraIssueKeyLabel: document.getElementById("jiraIssueKeyLabel"),
+    jiraIssueTitleLabel: document.getElementById("jiraIssueTitleLabel"),
+    jiraIssueDescBox: document.getElementById("jiraIssueDescBox"),
+    jiraStepsContainerSection: document.getElementById("jiraStepsContainerSection"),
+    jiraIssueStepsTableBody: document.getElementById("jiraIssueStepsTableBody"),
+    jiraCommentsStream: document.getElementById("jiraCommentsStream"),
+    jiraCommentCountBadge: document.getElementById("jiraCommentCountBadge"),
+    jiraNewCommentInput: document.getElementById("jiraNewCommentInput"),
+    jiraAddCommentBtn: document.getElementById("jiraAddCommentBtn"),
+    jiraStatusSelector: document.getElementById("jiraStatusSelector"),
+    jiraIssuePriorityLabel: document.getElementById("jiraIssuePriorityLabel"),
+    jiraIssueSeverityLabel: document.getElementById("jiraIssueSeverityLabel"),
+    jiraIssueAssigneeLabel: document.getElementById("jiraIssueAssigneeLabel"),
+    jiraIssueReporterLabel: document.getElementById("jiraIssueReporterLabel"),
+    jiraIssueCreatedDate: document.getElementById("jiraIssueCreatedDate"),
+    jiraIssueUpdatedDate: document.getElementById("jiraIssueUpdatedDate"),
+    jiraExecuteIssueBtn: document.getElementById("jiraExecuteIssueBtn"),
+    jiraCreateLinkedBugBtn: document.getElementById("jiraCreateLinkedBugBtn"),
+
+    // Jira Test Execution Runner
+    jiraTestRunnerModal: document.getElementById("jiraTestRunnerModal"),
+    closeJiraRunnerModalBtn: document.getElementById("closeJiraRunnerModalBtn"),
+    cancelRunnerModalBtn: document.getElementById("cancelRunnerModalBtn"),
+    runnerModalTitle: document.getElementById("runnerModalTitle"),
+    runnerTestKeyBadge: document.getElementById("runnerTestKeyBadge"),
+    runnerTestCaseName: document.getElementById("runnerTestCaseName"),
+    runnerPreconditionsLabel: document.getElementById("runnerPreconditionsLabel"),
+    runnerStepProgressBadge: document.getElementById("runnerStepProgressBadge"),
+    runnerStepsListContainer: document.getElementById("runnerStepsListContainer"),
+    runnerFailAndBugBtn: document.getElementById("runnerFailAndBugBtn"),
+    runnerCompletePassBtn: document.getElementById("runnerCompletePassBtn")
   };
 
   // Safe Event Listener Helper
@@ -1953,6 +2017,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       if (state.currentView === "dev-failures") renderDevFailures();
     } else {
       if (state.currentView === "dashboard") renderDashboard();
+      if (state.currentView === "jira-board") renderJiraBoard();
       if (state.currentView === "test-cases") renderRepository();
       if (state.currentView === "defects") renderDefects();
     }
@@ -1988,6 +2053,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     const titles = {
       dashboard: "Quality Analytics",
+      "jira-board": "Jira Agile Kanban Board",
       "test-cases": "Test Repository",
       defects: "Defects & Bug Tracking",
       "ai-generator": "Voice & AI Chat Studio",
@@ -2006,6 +2072,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     window.scrollTo(0, 0);
 
     if (viewName === "dashboard") renderDashboard();
+    if (viewName === "jira-board") renderJiraBoard();
     if (viewName === "test-cases") renderRepository();
     if (viewName === "defects") renderDefects();
     if (viewName === "ai-generator") renderAIGeneratorSuiteDropdown();
@@ -3830,6 +3897,687 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
   if (DOM.importAllAITestsBtn) {
     DOM.importAllAITestsBtn.addEventListener("click", window.saveAllGeneratedAITests);
+  }
+
+  // =========================================================================
+  // JIRA QA AGILE KANBAN BOARD & XRAY TEST RUNNER CONTROLLER
+  // =========================================================================
+
+  /**
+   * Unified Issue Aggregator: Merges Test Cases & Defects into Jira Issue Objects
+   */
+  function getJiraUnifiedIssues() {
+    const testCases = StorageManager.getTestCases();
+    const defects = StorageManager.getDefects();
+    const issues = [];
+
+    // 1. Map Test Cases (Type: Test / Xray Test Issue)
+    testCases.forEach(tc => {
+      let jiraStatus = "backlog";
+      if (tc.status === "Passed") jiraStatus = "done";
+      else if (tc.status === "Failed") jiraStatus = "retest";
+      else if (tc.status === "Blocked") jiraStatus = "dev-fix";
+      else if (tc.status === "Executing" || tc.status === "In Progress") jiraStatus = "in-progress";
+      else jiraStatus = "backlog"; // Untested
+
+      issues.push({
+        key: tc.id,
+        rawId: tc.id,
+        type: "test",
+        title: tc.title || "Untitled Test Case",
+        description: tc.preconditions || "Standard test execution preconditions and boundaries.",
+        priority: tc.priority || "P2 - Medium",
+        severity: "Medium",
+        jiraStatus: jiraStatus,
+        domainStatus: tc.status || "Untested",
+        assignee: tc.author || "QA Tester",
+        reporter: tc.author || "QA Lead",
+        steps: tc.steps || [],
+        tags: tc.tags || ["Regression"],
+        comments: tc.comments || [
+          {
+            id: "tc-c1",
+            author: tc.author || "QA Tester",
+            avatar: "QA",
+            date: tc.lastRun || "Sprint 24",
+            text: `Test case authored for suite coverage. Current status: ${tc.status || 'Untested'}.`
+          }
+        ],
+        suiteId: tc.suiteId || "",
+        created: tc.created_at || "Sprint 24",
+        updated: tc.lastRun || "Recently"
+      });
+    });
+
+    // 2. Map Defects (Type: Bug / Jira Defect Issue)
+    defects.forEach(d => {
+      let jiraStatus = "backlog";
+      if (d.status === "Resolved & Verified" || d.status === "Closed") jiraStatus = "done";
+      else if (d.status === "Fixed - Ready for QA") jiraStatus = "retest";
+      else if (d.status === "In Review") jiraStatus = "dev-fix";
+      else if (d.status === "In Progress") jiraStatus = "in-progress";
+      else jiraStatus = "backlog"; // Open
+
+      issues.push({
+        key: d.id,
+        rawId: d.id,
+        type: "bug",
+        title: d.summary || "Untitled Bug Report",
+        description: d.description || "Steps to reproduce not provided.",
+        priority: d.priority || "P1 - High",
+        severity: d.severity || "Major",
+        jiraStatus: jiraStatus,
+        domainStatus: d.status || "Open",
+        assignee: d.assignee || "Marcus Vance",
+        reporter: d.reportedBy || "QA Tester",
+        steps: [],
+        linkedTestCaseId: d.linkedTestCaseId || "",
+        tags: [d.severity, d.priority],
+        comments: d.comments || [
+          {
+            id: "bug-c1",
+            author: d.reportedBy || "QA Tester",
+            avatar: "QA",
+            date: d.createdAt || "Sprint 24",
+            text: `Bug ticket logged with severity ${d.severity}. Assigned to ${d.assignee || 'Dev Team'}.`
+          }
+        ],
+        created: d.createdAt || "Sprint 24",
+        updated: d.updatedAt || "Just now"
+      });
+    });
+
+    return issues;
+  }
+
+  /**
+   * Main Jira Kanban Board Renderer
+   */
+  function renderJiraBoard() {
+    const allIssues = getJiraUnifiedIssues();
+
+    // 1. Compute & Update Quick Filter Counters
+    const totalCount = allIssues.length;
+    const bugsCount = allIssues.filter(i => i.type === "bug").length;
+    const testsCount = allIssues.filter(i => i.type === "test").length;
+    const blockerCount = allIssues.filter(i => i.priority.includes("P0") || i.severity === "Critical").length;
+    const retestCount = allIssues.filter(i => i.jiraStatus === "retest").length;
+
+    if (DOM.jiraFilterAllCount) DOM.jiraFilterAllCount.textContent = totalCount;
+    if (DOM.jiraFilterBugsCount) DOM.jiraFilterBugsCount.textContent = bugsCount;
+    if (DOM.jiraFilterTestsCount) DOM.jiraFilterTestsCount.textContent = testsCount;
+    if (DOM.jiraFilterBlockerCount) DOM.jiraFilterBlockerCount.textContent = blockerCount;
+    if (DOM.jiraFilterRetestCount) DOM.jiraFilterRetestCount.textContent = retestCount;
+    if (DOM.jiraBoardCountBadge) DOM.jiraBoardCountBadge.textContent = totalCount;
+
+    // 2. Filter Issues based on Active Quick Filter
+    let filtered = allIssues;
+    const activeFilter = state.jiraFilter || "all";
+
+    if (activeFilter === "bugs") {
+      filtered = filtered.filter(i => i.type === "bug");
+    } else if (activeFilter === "tests") {
+      filtered = filtered.filter(i => i.type === "test");
+    } else if (activeFilter === "blocker") {
+      filtered = filtered.filter(i => i.priority.includes("P0") || i.severity === "Critical");
+    } else if (activeFilter === "retest") {
+      filtered = filtered.filter(i => i.jiraStatus === "retest");
+    } else if (activeFilter === "my-issues") {
+      const curUser = state.currentUser ? state.currentUser.name.toLowerCase() : "";
+      filtered = filtered.filter(i => (i.assignee && i.assignee.toLowerCase().includes(curUser)) || (i.reporter && i.reporter.toLowerCase().includes(curUser)));
+    }
+
+    // 3. Filter by Search Query
+    if (state.jiraSearchQuery) {
+      const q = state.jiraSearchQuery.toLowerCase();
+      filtered = filtered.filter(i => 
+        i.key.toLowerCase().includes(q) ||
+        i.title.toLowerCase().includes(q) ||
+        i.description.toLowerCase().includes(q) ||
+        i.assignee.toLowerCase().includes(q) ||
+        i.tags.some(t => String(t).toLowerCase().includes(q))
+      );
+    }
+
+    // 4. Distribute into 5 Jira Kanban Columns
+    const backlogIssues = filtered.filter(i => i.jiraStatus === "backlog");
+    const inProgressIssues = filtered.filter(i => i.jiraStatus === "in-progress");
+    const devFixIssues = filtered.filter(i => i.jiraStatus === "dev-fix");
+    const retestIssues = filtered.filter(i => i.jiraStatus === "retest");
+    const doneIssues = filtered.filter(i => i.jiraStatus === "done");
+
+    // 5. Update Column Counters
+    if (DOM.jiraCountBacklog) DOM.jiraCountBacklog.textContent = backlogIssues.length;
+    if (DOM.jiraCountInProgress) DOM.jiraCountInProgress.textContent = inProgressIssues.length;
+    if (DOM.jiraCountDevFix) DOM.jiraCountDevFix.textContent = devFixIssues.length;
+    if (DOM.jiraCountRetest) DOM.jiraCountRetest.textContent = retestIssues.length;
+    if (DOM.jiraCountDone) DOM.jiraCountDone.textContent = doneIssues.length;
+
+    // 6. Render Column HTML
+    renderJiraColumnList(DOM.jiraColBacklog, backlogIssues, "backlog");
+    renderJiraColumnList(DOM.jiraColInProgress, inProgressIssues, "in-progress");
+    renderJiraColumnList(DOM.jiraColDevFix, devFixIssues, "dev-fix");
+    renderJiraColumnList(DOM.jiraColRetest, retestIssues, "retest");
+    renderJiraColumnList(DOM.jiraColDone, doneIssues, "done");
+
+    // 7. Setup Drag and Drop Listeners on Columns
+    setupJiraBoardDragAndDrop();
+  }
+
+  /**
+   * Render Cards for a Single Jira Kanban Column
+   */
+  function renderJiraColumnList(container, issues, columnKey) {
+    if (!container) return;
+
+    if (issues.length === 0) {
+      container.innerHTML = `
+        <div class="jira-empty-stage">
+          <i class="fa-solid fa-inbox"></i>
+          <span>No issues in this stage</span>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = issues.map(item => {
+      const isBug = item.type === "bug";
+      const typeBadgeHtml = isBug
+        ? `<span class="jira-type-icon jira-type-bug" title="Bug Defect"><i class="fa-solid fa-bug"></i></span>`
+        : `<span class="jira-type-icon jira-type-test" title="Manual / Xray Test Case"><i class="fa-solid fa-flask-vial"></i></span>`;
+
+      let priorityClass = "badge-p2";
+      if (item.priority.includes("P0")) priorityClass = "badge-p0";
+      else if (item.priority.includes("P1")) priorityClass = "badge-p1";
+      else if (item.priority.includes("P3")) priorityClass = "badge-p3";
+
+      const avatarInitials = (item.assignee || "QA")
+        .split(" ")
+        .map(n => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
+
+      const quickActionBtn = !isBug
+        ? `<button type="button" class="btn-jira-card-action btn-runner" onclick="event.stopPropagation(); window.openJiraTestRunner('${item.key}')" title="Execute Test Runner"><i class="fa-solid fa-play"></i> Run</button>`
+        : `<button type="button" class="btn-jira-card-action btn-drawer" onclick="event.stopPropagation(); window.openJiraIssueModal('${item.key}')" title="View Defect Drawer"><i class="fa-solid fa-arrow-up-right-from-square"></i> Details</button>`;
+
+      return `
+        <div class="jira-issue-card ${isBug ? 'card-type-bug' : 'card-type-test'}" 
+             draggable="true" 
+             data-issue-key="${item.key}" 
+             onclick="window.openJiraIssueModal('${item.key}')">
+          
+          <div class="jira-card-header">
+            <div class="d-flex align-center gap-1">
+              ${typeBadgeHtml}
+              <span class="jira-key-badge">${item.key}</span>
+            </div>
+            <span class="badge ${priorityClass} text-xs">${escapeHtml(item.priority.split(" - ")[0] || item.priority)}</span>
+          </div>
+
+          <div class="jira-card-title">${escapeHtml(item.title)}</div>
+
+          ${item.linkedTestCaseId ? `<div class="jira-card-linked"><i class="fa-solid fa-link text-cyan"></i> Linked: <strong>${item.linkedTestCaseId}</strong></div>` : ''}
+
+          <div class="jira-card-footer">
+            <div class="d-flex align-center gap-1">
+              <div class="jira-avatar-sm" title="Assignee: ${escapeHtml(item.assignee)}">${avatarInitials}</div>
+              <span class="text-xs text-muted" style="max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(item.assignee)}</span>
+            </div>
+            <div class="d-flex align-center gap-1">
+              ${quickActionBtn}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  /**
+   * Drag & Drop Event Wire-up
+   */
+  let draggedIssueKey = null;
+
+  function setupJiraBoardDragAndDrop() {
+    const cards = document.querySelectorAll(".jira-issue-card");
+    const columns = document.querySelectorAll(".jira-card-list");
+
+    cards.forEach(card => {
+      card.addEventListener("dragstart", (e) => {
+        draggedIssueKey = card.getAttribute("data-issue-key");
+        card.classList.add("is-dragging");
+        e.dataTransfer.setData("text/plain", draggedIssueKey);
+        e.dataTransfer.effectAllowed = "move";
+      });
+
+      card.addEventListener("dragend", () => {
+        card.classList.remove("is-dragging");
+        draggedIssueKey = null;
+        document.querySelectorAll(".jira-card-list").forEach(c => c.classList.remove("drag-over"));
+      });
+    });
+
+    columns.forEach(col => {
+      col.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        col.classList.add("drag-over");
+      });
+
+      col.addEventListener("dragleave", (e) => {
+        if (!col.contains(e.relatedTarget)) {
+          col.classList.remove("drag-over");
+        }
+      });
+
+      col.addEventListener("drop", (e) => {
+        e.preventDefault();
+        col.classList.remove("drag-over");
+        const key = e.dataTransfer.getData("text/plain") || draggedIssueKey;
+        const targetStatus = col.getAttribute("data-status");
+        if (key && targetStatus) {
+          transitionJiraIssue(key, targetStatus);
+        }
+      });
+    });
+  }
+
+  /**
+   * Transition Issue Status (Kanban Drag/Drop & Drawer Select)
+   */
+  function transitionJiraIssue(issueKey, newStatusKey) {
+    if (!issueKey) return;
+
+    if (issueKey.startsWith("TC-")) {
+      const tc = StorageManager.getTestCaseById(issueKey);
+      if (tc) {
+        let domainStatus = "Untested";
+        if (newStatusKey === "done") domainStatus = "Passed";
+        else if (newStatusKey === "retest") domainStatus = "Failed";
+        else if (newStatusKey === "dev-fix") domainStatus = "Blocked";
+        else if (newStatusKey === "in-progress") domainStatus = "Executing";
+        else domainStatus = "Untested";
+
+        tc.status = domainStatus;
+        tc.lastRun = new Date().toISOString().replace("T", " ").substring(0, 16);
+        StorageManager.updateTestCase(tc);
+        showToast(`Test Case ${issueKey} transitioned to status '${domainStatus}'!`, "success");
+      }
+    } else if (issueKey.startsWith("BUG-")) {
+      const defect = StorageManager.getDefectById(issueKey);
+      if (defect) {
+        let domainStatus = "Open";
+        if (newStatusKey === "done") domainStatus = "Resolved & Verified";
+        else if (newStatusKey === "retest") domainStatus = "Fixed - Ready for QA";
+        else if (newStatusKey === "dev-fix") domainStatus = "In Review";
+        else if (newStatusKey === "in-progress") domainStatus = "In Progress";
+        else domainStatus = "Open";
+
+        defect.status = domainStatus;
+        defect.updatedAt = new Date().toISOString().replace("T", " ").substring(0, 16);
+        StorageManager.updateDefect(defect);
+        showToast(`Defect ${issueKey} transitioned to status '${domainStatus}'!`, "success");
+      }
+    }
+
+    renderJiraBoard();
+    if (state.currentView === "dashboard") renderDashboard();
+    if (state.currentView === "test-cases") renderRepository();
+    if (state.currentView === "defects") renderDefects();
+  }
+
+  /**
+   * Open Jira Issue Detail Drawer / Modal
+   */
+  window.openJiraIssueModal = function(issueKey) {
+    const allIssues = getJiraUnifiedIssues();
+    const issue = allIssues.find(i => i.key === issueKey);
+    if (!issue) {
+      showToast("Issue not found", "error");
+      return;
+    }
+
+    state.activeJiraIssueKey = issueKey;
+
+    // 1. Header & Badges
+    if (DOM.jiraIssueKeyLabel) DOM.jiraIssueKeyLabel.textContent = issue.key;
+    if (DOM.jiraIssueTitleLabel) DOM.jiraIssueTitleLabel.textContent = issue.title;
+
+    if (DOM.jiraIssueTypeBadge) {
+      if (issue.type === "bug") {
+        DOM.jiraIssueTypeBadge.className = "badge badge-p0";
+        DOM.jiraIssueTypeBadge.innerHTML = `<i class="fa-solid fa-bug"></i> BUG DEFECT`;
+      } else {
+        DOM.jiraIssueTypeBadge.className = "badge badge-ai";
+        DOM.jiraIssueTypeBadge.innerHTML = `<i class="fa-solid fa-flask-vial"></i> XRAY TEST CASE`;
+      }
+    }
+
+    // 2. Main Content
+    if (DOM.jiraIssueDescBox) DOM.jiraIssueDescBox.textContent = issue.description || "No description provided.";
+
+    // 3. Execution Steps (For Test Cases)
+    if (DOM.jiraStepsContainerSection) {
+      if (issue.type === "test" && issue.steps && issue.steps.length > 0) {
+        DOM.jiraStepsContainerSection.style.display = "block";
+        if (DOM.jiraIssueStepsTableBody) {
+          DOM.jiraIssueStepsTableBody.innerHTML = issue.steps.map((s, idx) => `
+            <tr>
+              <td><strong>${s.step || idx + 1}</strong></td>
+              <td>${escapeHtml(s.action)}</td>
+              <td>${escapeHtml(s.expected)}</td>
+              <td><span class="badge ${issue.domainStatus === 'Passed' ? 'badge-passed' : issue.domainStatus === 'Failed' ? 'badge-failed' : 'badge-untested'} text-xs">${issue.domainStatus}</span></td>
+            </tr>
+          `).join("");
+        }
+      } else if (issue.type === "bug" && issue.linkedTestCaseId) {
+        DOM.jiraStepsContainerSection.style.display = "block";
+        if (DOM.jiraIssueStepsTableBody) {
+          DOM.jiraIssueStepsTableBody.innerHTML = `
+            <tr>
+              <td><i class="fa-solid fa-link text-cyan"></i></td>
+              <td colspan="2">Linked to Test Case: <strong>${escapeHtml(issue.linkedTestCaseId)}</strong></td>
+              <td><button class="btn btn-secondary btn-xs" onclick="window.openJiraIssueModal('${issue.linkedTestCaseId}')">Open Test Case</button></td>
+            </tr>
+          `;
+        }
+      } else {
+        DOM.jiraStepsContainerSection.style.display = "none";
+      }
+    }
+
+    // 4. Activity & Comments
+    renderJiraComments(issue);
+
+    // 5. Sidebar Metadata
+    if (DOM.jiraStatusSelector) DOM.jiraStatusSelector.value = issue.jiraStatus;
+    if (DOM.jiraIssuePriorityLabel) DOM.jiraIssuePriorityLabel.textContent = issue.priority;
+    if (DOM.jiraIssueSeverityLabel) DOM.jiraIssueSeverityLabel.textContent = issue.severity;
+    if (DOM.jiraIssueAssigneeLabel) DOM.jiraIssueAssigneeLabel.textContent = issue.assignee;
+    if (DOM.jiraIssueReporterLabel) DOM.jiraIssueReporterLabel.textContent = issue.reporter;
+    if (DOM.jiraIssueCreatedDate) DOM.jiraIssueCreatedDate.textContent = issue.created;
+    if (DOM.jiraIssueUpdatedDate) DOM.jiraIssueUpdatedDate.textContent = issue.updated;
+
+    // 6. Action Buttons
+    if (DOM.jiraExecuteIssueBtn) {
+      if (issue.type === "test") {
+        DOM.jiraExecuteIssueBtn.style.display = "block";
+        DOM.jiraExecuteIssueBtn.innerHTML = `<i class="fa-solid fa-play"></i> Execute Test Runner`;
+        DOM.jiraExecuteIssueBtn.onclick = () => {
+          if (DOM.jiraIssueModal) DOM.jiraIssueModal.style.display = "none";
+          window.openJiraTestRunner(issue.key);
+        };
+      } else {
+        DOM.jiraExecuteIssueBtn.style.display = "block";
+        DOM.jiraExecuteIssueBtn.innerHTML = `<i class="fa-solid fa-check-double text-emerald"></i> Mark Fixed & Retest`;
+        DOM.jiraExecuteIssueBtn.onclick = () => {
+          transitionJiraIssue(issue.key, "retest");
+          if (DOM.jiraIssueModal) DOM.jiraIssueModal.style.display = "none";
+        };
+      }
+    }
+
+    if (DOM.jiraCreateLinkedBugBtn) {
+      DOM.jiraCreateLinkedBugBtn.onclick = () => {
+        if (DOM.jiraIssueModal) DOM.jiraIssueModal.style.display = "none";
+        if (DOM.createNewBugBtn) DOM.createNewBugBtn.click();
+        if (DOM.bugLinkedTest) DOM.bugLinkedTest.value = issue.key;
+        if (DOM.bugSummary) DOM.bugSummary.value = `Bug found during execution of ${issue.key}: ${issue.title}`;
+      };
+    }
+
+    if (DOM.jiraIssueModal) DOM.jiraIssueModal.style.display = "flex";
+  };
+
+  function renderJiraComments(issue) {
+    if (!DOM.jiraCommentsStream) return;
+    const comments = issue.comments || [];
+    if (DOM.jiraCommentCountBadge) DOM.jiraCommentCountBadge.textContent = `${comments.length} comment${comments.length === 1 ? '' : 's'}`;
+
+    if (comments.length === 0) {
+      DOM.jiraCommentsStream.innerHTML = `<div class="text-muted text-xs p-2">No comments recorded on this issue yet.</div>`;
+      return;
+    }
+
+    DOM.jiraCommentsStream.innerHTML = comments.map(c => `
+      <div class="jira-comment-item">
+        <div class="jira-comment-avatar">${escapeHtml(c.avatar || (c.author ? c.author.substring(0, 2).toUpperCase() : 'QA'))}</div>
+        <div class="jira-comment-body">
+          <div class="jira-comment-header">
+            <strong>${escapeHtml(c.author || 'QA Tester')}</strong>
+            <span class="text-xs text-muted">${escapeHtml(c.date || 'Just now')}</span>
+          </div>
+          <div class="jira-comment-text">${escapeHtml(c.text)}</div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  window.addJiraComment = function() {
+    if (!DOM.jiraNewCommentInput || !state.activeJiraIssueKey) return;
+    const text = DOM.jiraNewCommentInput.value.trim();
+    if (!text) return;
+
+    const curUser = state.currentUser || { name: "QA Tester", avatar: "QA" };
+    const newComment = {
+      id: "c-" + Date.now(),
+      author: curUser.name,
+      avatar: curUser.avatar || curUser.name.substring(0, 2).toUpperCase(),
+      date: new Date().toLocaleString(),
+      text: text
+    };
+
+    if (state.activeJiraIssueKey.startsWith("TC-")) {
+      const tc = StorageManager.getTestCaseById(state.activeJiraIssueKey);
+      if (tc) {
+        tc.comments = tc.comments || [];
+        tc.comments.push(newComment);
+        StorageManager.updateTestCase(tc);
+      }
+    } else if (state.activeJiraIssueKey.startsWith("BUG-")) {
+      const defect = StorageManager.getDefectById(state.activeJiraIssueKey);
+      if (defect) {
+        defect.comments = defect.comments || [];
+        defect.comments.push(newComment);
+        StorageManager.updateDefect(defect);
+      }
+    }
+
+    DOM.jiraNewCommentInput.value = "";
+    showToast("Comment added to Jira issue stream!");
+    const all = getJiraUnifiedIssues();
+    const updated = all.find(i => i.key === state.activeJiraIssueKey);
+    if (updated) renderJiraComments(updated);
+  };
+
+  if (DOM.jiraAddCommentBtn) {
+    DOM.jiraAddCommentBtn.addEventListener("click", window.addJiraComment);
+  }
+
+  if (DOM.jiraNewCommentInput) {
+    DOM.jiraNewCommentInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        window.addJiraComment();
+      }
+    });
+  }
+
+  if (DOM.jiraStatusSelector) {
+    DOM.jiraStatusSelector.addEventListener("change", (e) => {
+      if (state.activeJiraIssueKey) {
+        transitionJiraIssue(state.activeJiraIssueKey, e.target.value);
+      }
+    });
+  }
+
+  if (DOM.closeJiraIssueModalBtn) {
+    DOM.closeJiraIssueModalBtn.addEventListener("click", () => {
+      if (DOM.jiraIssueModal) DOM.jiraIssueModal.style.display = "none";
+    });
+  }
+
+  // =========================================================================
+  // XRAY STEP-BY-STEP TEST EXECUTION RUNNER
+  // =========================================================================
+  window.openJiraTestRunner = function(testCaseId) {
+    const tc = StorageManager.getTestCaseById(testCaseId);
+    if (!tc) {
+      showToast("Test Case not found", "error");
+      return;
+    }
+
+    state.activeRunnerTestCaseId = testCaseId;
+    state.activeRunnerStepStatuses = {};
+
+    if (DOM.runnerTestKeyBadge) DOM.runnerTestKeyBadge.textContent = tc.id;
+    if (DOM.runnerTestCaseName) DOM.runnerTestCaseName.textContent = tc.title;
+    if (DOM.runnerPreconditionsLabel) DOM.runnerPreconditionsLabel.textContent = `Preconditions: ${tc.preconditions || 'None specified'}`;
+
+    const steps = tc.steps && tc.steps.length > 0 ? tc.steps : [
+      { step: 1, action: "Launch application and navigate to target route", expected: "Page renders without console errors." },
+      { step: 2, action: "Perform test operations matching scenario", expected: "Operation succeeds with expected feedback." },
+      { step: 3, action: "Verify state changes and visual validations", expected: "All assertions pass cleanly." }
+    ];
+
+    steps.forEach((s, idx) => {
+      state.activeRunnerStepStatuses[idx] = "untested";
+    });
+
+    renderRunnerSteps(steps);
+    if (DOM.jiraTestRunnerModal) DOM.jiraTestRunnerModal.style.display = "flex";
+  };
+
+  function renderRunnerSteps(steps) {
+    if (!DOM.runnerStepsListContainer) return;
+
+    if (DOM.runnerStepProgressBadge) {
+      const passedCount = Object.values(state.activeRunnerStepStatuses).filter(s => s === "passed").length;
+      DOM.runnerStepProgressBadge.textContent = `${passedCount} of ${steps.length} Steps Verified`;
+    }
+
+    DOM.runnerStepsListContainer.innerHTML = steps.map((s, idx) => {
+      const currentStepStatus = state.activeRunnerStepStatuses[idx] || "untested";
+      let statusClass = "step-untested";
+      if (currentStepStatus === "passed") statusClass = "step-passed";
+      else if (currentStepStatus === "failed") statusClass = "step-failed";
+      else if (currentStepStatus === "blocked") statusClass = "step-blocked";
+
+      return `
+        <div class="jira-runner-step-card ${statusClass}" id="runnerStepCard-${idx}">
+          <div class="step-card-num">${s.step || idx + 1}</div>
+          <div class="step-card-content">
+            <div class="step-card-action"><strong>Action:</strong> ${escapeHtml(s.action)}</div>
+            <div class="step-card-expected"><strong>Expected:</strong> ${escapeHtml(s.expected)}</div>
+          </div>
+          <div class="step-card-actions">
+            <button type="button" class="btn-step-action btn-step-pass ${currentStepStatus === 'passed' ? 'active' : ''}" onclick="window.setRunnerStepStatus(${idx}, 'passed')">
+              <i class="fa-solid fa-check"></i> Pass
+            </button>
+            <button type="button" class="btn-step-action btn-step-fail ${currentStepStatus === 'failed' ? 'active' : ''}" onclick="window.setRunnerStepStatus(${idx}, 'failed')">
+              <i class="fa-solid fa-xmark"></i> Fail
+            </button>
+            <button type="button" class="btn-step-action btn-step-block ${currentStepStatus === 'blocked' ? 'active' : ''}" onclick="window.setRunnerStepStatus(${idx}, 'blocked')">
+              <i class="fa-solid fa-ban"></i> Block
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  window.setRunnerStepStatus = function(stepIndex, status) {
+    state.activeRunnerStepStatuses[stepIndex] = status;
+    const tc = StorageManager.getTestCaseById(state.activeRunnerTestCaseId);
+    const steps = tc && tc.steps && tc.steps.length > 0 ? tc.steps : [
+      { step: 1, action: "Launch application and navigate to target route", expected: "Page renders without console errors." },
+      { step: 2, action: "Perform test operations matching scenario", expected: "Operation succeeds with expected feedback." },
+      { step: 3, action: "Verify state changes and visual validations", expected: "All assertions pass cleanly." }
+    ];
+    renderRunnerSteps(steps);
+  };
+
+  if (DOM.runnerCompletePassBtn) {
+    DOM.runnerCompletePassBtn.addEventListener("click", () => {
+      if (!state.activeRunnerTestCaseId) return;
+      const tc = StorageManager.getTestCaseById(state.activeRunnerTestCaseId);
+      if (tc) {
+        tc.status = "Passed";
+        tc.lastRun = new Date().toISOString().replace("T", " ").substring(0, 16);
+        StorageManager.updateTestCase(tc);
+        showToast(`🎉 Test Execution for ${tc.id} completed successfully as PASSED!`, "success");
+      }
+      if (DOM.jiraTestRunnerModal) DOM.jiraTestRunnerModal.style.display = "none";
+      renderJiraBoard();
+      renderDashboard();
+      renderRepository();
+    });
+  }
+
+  if (DOM.runnerFailAndBugBtn) {
+    DOM.runnerFailAndBugBtn.addEventListener("click", () => {
+      if (!state.activeRunnerTestCaseId) return;
+      const tc = StorageManager.getTestCaseById(state.activeRunnerTestCaseId);
+      if (tc) {
+        tc.status = "Failed";
+        tc.lastRun = new Date().toISOString().replace("T", " ").substring(0, 16);
+        StorageManager.updateTestCase(tc);
+      }
+
+      if (DOM.jiraTestRunnerModal) DOM.jiraTestRunnerModal.style.display = "none";
+      if (DOM.createNewBugBtn) DOM.createNewBugBtn.click();
+      if (DOM.bugLinkedTest) DOM.bugLinkedTest.value = state.activeRunnerTestCaseId;
+      if (DOM.bugSeverity) DOM.bugSeverity.value = "Critical";
+      if (DOM.bugPriority) DOM.bugPriority.value = "P0 - Urgent";
+      if (DOM.bugSummary) DOM.bugSummary.value = `Step assertion failed during execution of ${state.activeRunnerTestCaseId}`;
+      showToast(`Flagged ${state.activeRunnerTestCaseId} as FAILED. Pre-populated defect ticket for developer fix!`, "error");
+      renderJiraBoard();
+    });
+  }
+
+  if (DOM.closeJiraRunnerModalBtn) {
+    DOM.closeJiraRunnerModalBtn.addEventListener("click", () => {
+      if (DOM.jiraTestRunnerModal) DOM.jiraTestRunnerModal.style.display = "none";
+    });
+  }
+
+  if (DOM.cancelRunnerModalBtn) {
+    DOM.cancelRunnerModalBtn.addEventListener("click", () => {
+      if (DOM.jiraTestRunnerModal) DOM.jiraTestRunnerModal.style.display = "none";
+    });
+  }
+
+  // Jira Board Controls Listeners
+  if (DOM.jiraQuickFilters) {
+    DOM.jiraQuickFilters.querySelectorAll(".jira-filter-pill").forEach(pill => {
+      pill.addEventListener("click", () => {
+        DOM.jiraQuickFilters.querySelectorAll(".jira-filter-pill").forEach(p => p.classList.remove("active"));
+        pill.classList.add("active");
+        state.jiraFilter = pill.getAttribute("data-filter") || "all";
+        renderJiraBoard();
+      });
+    });
+  }
+
+  if (DOM.jiraSearchInput) {
+    DOM.jiraSearchInput.addEventListener("input", (e) => {
+      state.jiraSearchQuery = e.target.value.trim();
+      renderJiraBoard();
+    });
+  }
+
+  if (DOM.jiraRefreshBoardBtn) {
+    DOM.jiraRefreshBoardBtn.addEventListener("click", () => {
+      renderJiraBoard();
+      showToast("Jira Agile Board refreshed!");
+    });
+  }
+
+  if (DOM.jiraCreateIssueBtn) {
+    DOM.jiraCreateIssueBtn.addEventListener("click", () => {
+      openCreateTestCaseModal();
+    });
   }
 
   // Suites
