@@ -263,8 +263,8 @@
               <button class="btn btn-primary btn-sm" id="dashboardNewTestCaseBtn">
                 <i class="fa-solid fa-plus"></i> Create Test Case
               </button>
-              <button class="btn btn-outline btn-sm auto-input-pill" id="dashboardAutoInputBtn" title="Open Auto Input card">
-                <i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Auto Input
+              <button class="auto-input-pill" id="dashboardAutoInputBtn" title="Open Auto Input AI card">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Input
               </button>
             </div>
           </div>
@@ -514,7 +514,7 @@
               <button class="btn btn-outline btn-sm" id="importTestsBtn"><i class="fa-solid fa-file-import"></i> Import JSON</button>
               <button class="btn btn-outline btn-sm" id="exportTestsBtn"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
               <button class="btn btn-primary btn-sm" id="createNewTestCaseBtn"><i class="fa-solid fa-plus"></i> Create Test Case</button>
-              <button class="btn btn-outline btn-sm auto-input-pill" id="repoAutoInputBtn" title="Open Auto Input card"><i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Auto Input</button>
+              <button class="auto-input-pill" id="repoAutoInputBtn" title="Open Auto Input AI card"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto Input</button>
             </div>
           </div>
 
@@ -1124,16 +1124,18 @@
         </form>
       </div>
       <div class="modal-footer justify-between">
-        <div class="styled-delete-wrapper" id="editTestCaseDeleteWrap" style="display: none;">
-          <button type="button" class="button" id="deleteTestCaseModalBtn" title="Delete Test Case">
-            <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
-          </button>
-        </div>
         <div class="d-flex align-center gap-2">
+          <div class="styled-delete-wrapper" id="editTestCaseDeleteWrap" style="display: none;">
+            <button type="button" class="button" id="deleteTestCaseModalBtn" title="Delete Test Case">
+              <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+            </button>
+          </div>
           <button type="button" class="btn btn-ghost" id="cancelTestCaseModalBtn">Cancel</button>
           <button type="button" class="btn btn-primary" id="saveTestCaseBtn"><i class="fa-solid fa-floppy-disk"></i> Save Test Case</button>
-          <button type="button" class="btn btn-outline btn-sm auto-input-pill" id="autoInputTestCaseBtn" title="Open Auto Input card">
-            <i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Auto Input
+        </div>
+        <div class="d-flex align-center">
+          <button type="button" class="auto-input-pill" id="autoInputTestCaseBtn" title="Open Auto Input AI card">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Input
           </button>
         </div>
       </div>
