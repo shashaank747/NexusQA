@@ -42,60 +42,47 @@
       padding: 1rem;
     }
 
-    /* Ambient dynamic glow background */
+    /* Ambient dynamic glow background (GPU-accelerated) */
     .glow-orb-1 {
-      position: absolute;
+      position: fixed;
       width: 450px;
       height: 450px;
-      background: radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, rgba(17, 24, 39, 0) 70%);
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(17, 24, 39, 0) 70%);
       top: 15%;
       left: 15%;
       border-radius: 50%;
-      filter: blur(50px);
-      animation: floatSlow 12s infinite alternate ease-in-out;
+      filter: blur(40px);
+      animation: floatSlow 14s infinite alternate ease-in-out;
       pointer-events: none;
       z-index: 1;
+      will-change: transform;
+      transform: translate3d(0, 0, 0);
     }
 
     .glow-orb-2 {
-      position: absolute;
+      position: fixed;
       width: 500px;
       height: 500px;
-      background: radial-gradient(circle, rgba(236, 72, 153, 0.09) 0%, rgba(17, 24, 39, 0) 70%);
+      background: radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, rgba(17, 24, 39, 0) 70%);
       bottom: 10%;
       right: 15%;
       border-radius: 50%;
-      filter: blur(60px);
-      animation: floatSlow2 15s infinite alternate ease-in-out;
+      filter: blur(50px);
+      animation: floatSlow2 16s infinite alternate ease-in-out;
       pointer-events: none;
       z-index: 1;
+      will-change: transform;
+      transform: translate3d(0, 0, 0);
     }
 
     @keyframes floatSlow {
-      0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(40px, 30px) scale(1.1); }
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(30px, 20px, 0) scale(1.06); }
     }
 
     @keyframes floatSlow2 {
-      0% { transform: translate(0, 0) scale(1.1); }
-      100% { transform: translate(-35px, -45px) scale(0.95); }
-    }
-
-    /* Background Interactive Canvas */
-    .auth-canvas-container {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    #authInteractiveCanvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+      0% { transform: translate3d(0, 0, 0) scale(1.06); }
+      100% { transform: translate3d(-25px, -35px, 0) scale(0.96); }
     }
 
     /* Form container incorporating signature design */
@@ -484,11 +471,6 @@
   <div class="glow-orb-1"></div>
   <div class="glow-orb-2"></div>
 
-  <!-- Background Interactive Canvas Container -->
-  <div class="auth-canvas-container">
-    <canvas id="authInteractiveCanvas"></canvas>
-  </div>
-
   <!-- Main View Container -->
   <div class="w-full flex items-center justify-center relative z-10 py-6">
     
@@ -666,7 +648,6 @@
   <script src="js/data.js"></script>
   <script src="js/supabase.js"></script>
   <script src="js/storage.js"></script>
-  <script src="js/auth-motion.js"></script>
 
   <script>
     // State machine
