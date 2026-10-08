@@ -181,9 +181,6 @@
               <li class="rail-nav-item active" data-view="dashboard" title="Quality Dashboard">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-chart-pie"></i></button>
               </li>
-              <li class="rail-nav-item" data-view="jira-board" title="Jira Agile Kanban Board">
-                <button type="button" class="rail-nav-btn"><i class="fa-brands fa-jira" style="color:#0052cc;"></i></button>
-              </li>
               <li class="rail-nav-item" data-view="test-cases" title="Test Cases & Logs">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-flask-vial"></i></button>
               </li>
@@ -226,13 +223,6 @@
                 <a href="javascript:void(0)" class="nav-link">
                   <i class="fa-solid fa-chart-pie"></i>
                   <span>Quality Dashboard</span>
-                </a>
-              </li>
-              <li class="nav-item" data-view="jira-board">
-                <a href="javascript:void(0)" class="nav-link">
-                  <i class="fa-brands fa-jira" style="color:#0052cc;"></i>
-                  <span>Jira Agile Board</span>
-                  <span class="nav-badge" id="jiraBoardCountBadge" style="background:#0052cc; color:#ffffff;">0</span>
                 </a>
               </li>
               <li class="nav-item" data-view="test-cases">
@@ -441,99 +431,7 @@
           </div>
         </section>
 
-        <!-- QA VIEW: JIRA AGILE KANBAN BOARD -->
-        <section class="view-panel" id="view-jira-board">
-          <div class="jira-board-header">
-            <div class="jira-breadcrumb">
-              <i class="fa-solid fa-folder"></i>
-              <a href="javascript:void(0)">Projects</a>
-              <span>/</span>
-              <a href="javascript:void(0)">NexusQA Core Platform</a>
-              <span>/</span>
-              <span class="text-primary font-weight-bold">Sprint 24 Board</span>
-            </div>
-            
-            <div class="d-flex align-center justify-between flex-wrap gap-3">
-              <div>
-                <h1 class="view-title d-flex align-center gap-2">
-                  <i class="fa-brands fa-jira" style="color:#0052cc;"></i>
-                  <span>Jira QA Agile Kanban Board</span>
-                </h1>
-                <p class="view-subtitle">Interactive Jira & Xray issue lifecycle management for manual test cases and defects.</p>
-              </div>
 
-              <div class="view-actions">
-                <button class="btn btn-outline btn-sm" id="jiraRefreshBoardBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Board</button>
-                <button class="btn btn-primary btn-sm" id="jiraCreateIssueBtn"><i class="fa-solid fa-plus"></i> Create Jira Issue</button>
-              </div>
-            </div>
-
-            <!-- Jira Quick Filters Bar -->
-            <div class="jira-board-controls">
-              <div class="jira-quick-filters" id="jiraQuickFilters">
-                <button class="jira-filter-pill active" data-filter="all">All Issues <span class="badge-count" id="jiraFilterAllCount">0</span></button>
-                <button class="jira-filter-pill" data-filter="bugs"><i class="fa-solid fa-bug text-rose"></i> Only Bugs <span class="badge-count" id="jiraFilterBugsCount">0</span></button>
-                <button class="jira-filter-pill" data-filter="tests"><i class="fa-solid fa-flask-vial text-purple"></i> Only Tests <span class="badge-count" id="jiraFilterTestsCount">0</span></button>
-                <button class="jira-filter-pill" data-filter="blocker"><i class="fa-solid fa-fire text-amber"></i> P0 / Blockers <span class="badge-count" id="jiraFilterBlockerCount">0</span></button>
-                <button class="jira-filter-pill" data-filter="retest"><i class="fa-solid fa-rotate text-emerald"></i> Ready for Retest <span class="badge-count" id="jiraFilterRetestCount">0</span></button>
-                <button class="jira-filter-pill" data-filter="my-issues"><i class="fa-solid fa-user-check"></i> Assigned to Me</button>
-              </div>
-
-              <div class="search-box" style="min-width: 240px;">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="jiraSearchInput" placeholder="Search by key, summary, tag...">
-              </div>
-            </div>
-          </div>
-
-          <!-- 5-Column Jira Kanban Board Grid -->
-          <div class="jira-board-grid" id="jiraBoardGrid">
-            <!-- Column 1: Backlog / To Do -->
-            <div class="jira-column" data-column="backlog">
-              <div class="jira-column-header">
-                <span class="jira-column-title"><span class="jira-col-dot dot-todo"></span> TO DO / BACKLOG</span>
-                <span class="jira-column-counter" id="jiraCountBacklog">0</span>
-              </div>
-              <div class="jira-card-list" id="jiraColBacklog" data-status="backlog"></div>
-            </div>
-
-            <!-- Column 2: In Testing -->
-            <div class="jira-column" data-column="in-progress">
-              <div class="jira-column-header">
-                <span class="jira-column-title"><span class="jira-col-dot dot-progress"></span> IN TESTING / ACTIVE</span>
-                <span class="jira-column-counter" id="jiraCountInProgress">0</span>
-              </div>
-              <div class="jira-card-list" id="jiraColInProgress" data-status="in-progress"></div>
-            </div>
-
-            <!-- Column 3: Dev Fix / In Review -->
-            <div class="jira-column" data-column="dev-fix">
-              <div class="jira-column-header">
-                <span class="jira-column-title"><span class="jira-col-dot dot-review"></span> DEV FIX / IN REVIEW</span>
-                <span class="jira-column-counter" id="jiraCountDevFix">0</span>
-              </div>
-              <div class="jira-card-list" id="jiraColDevFix" data-status="dev-fix"></div>
-            </div>
-
-            <!-- Column 4: Ready for Retest -->
-            <div class="jira-column" data-column="retest">
-              <div class="jira-column-header">
-                <span class="jira-column-title"><span class="jira-col-dot dot-retest"></span> READY FOR RETEST</span>
-                <span class="jira-column-counter" id="jiraCountRetest">0</span>
-              </div>
-              <div class="jira-card-list" id="jiraColRetest" data-status="retest"></div>
-            </div>
-
-            <!-- Column 5: Done / Closed -->
-            <div class="jira-column" data-column="done">
-              <div class="jira-column-header">
-                <span class="jira-column-title"><span class="jira-col-dot dot-done"></span> DONE / CLOSED</span>
-                <span class="jira-column-counter" id="jiraCountDone">0</span>
-              </div>
-              <div class="jira-card-list" id="jiraColDone" data-status="done"></div>
-            </div>
-          </div>
-        </section>
 
         <!-- QA VIEW 2: REPOSITORY -->
         <section class="view-panel" id="view-test-cases">
@@ -1693,160 +1591,7 @@
     </div>
   </div>
 
-  <!-- MODAL: JIRA ISSUE DETAIL DRAWER -->
-  <div class="modal-backdrop" id="jiraIssueModal" style="display: none;">
-    <div class="modal-dialog modal-lg" style="max-width: 900px;">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <span class="badge" id="jiraIssueTypeBadge" style="background: rgba(0,82,204,0.15); color: #0052cc; font-weight:700;"><i class="fa-solid fa-bug"></i> BUG</span>
-          <span class="font-mono text-primary font-weight-bold" id="jiraIssueKeyLabel" style="font-size: 1.1rem; margin-left: 8px;">BUG-101</span>
-        </div>
-        <div class="d-flex align-center gap-2">
-          <button class="icon-btn close-modal-btn" id="closeJiraIssueModalBtn"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-      </div>
 
-      <div class="modal-body">
-        <div class="jira-drawer-grid">
-          <!-- Left Column: Details, Description, Steps, Comments -->
-          <div class="jira-drawer-main">
-            <h2 id="jiraIssueTitleLabel" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 12px; line-height: 1.35;">Issue Summary</h2>
-            
-            <div class="jira-detail-section">
-              <div class="jira-detail-title">Description / Scenario</div>
-              <div id="jiraIssueDescBox" class="p-3 border-rounded" style="background: var(--bg-card-secondary, #f8fafc); font-size: 0.88rem; line-height: 1.5; border-radius: 8px;">No description provided.</div>
-            </div>
-
-            <div class="jira-detail-section" id="jiraStepsContainerSection">
-              <div class="jira-detail-title">Execution Steps & Verification</div>
-              <div class="table-responsive">
-                <table class="jira-step-table">
-                  <thead>
-                    <tr>
-                      <th width="50">#</th>
-                      <th>Step Action</th>
-                      <th>Expected Result</th>
-                      <th width="100">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody id="jiraIssueStepsTableBody"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Activity / Comments Stream -->
-            <div class="jira-detail-section mt-4">
-              <div class="jira-detail-title d-flex align-center justify-between">
-                <span>Activity & Comments</span>
-                <span class="text-xs text-muted" id="jiraCommentCountBadge">0 comments</span>
-              </div>
-              <div class="jira-comments-stream" id="jiraCommentsStream"></div>
-              
-              <div class="d-flex gap-2 mt-3">
-                <input type="text" id="jiraNewCommentInput" class="nexus-input flex-1" placeholder="Add a comment to this issue (Press Enter to post)...">
-                <button type="button" class="btn btn-secondary btn-sm" id="jiraAddCommentBtn"><i class="fa-solid fa-paper-plane"></i> Comment</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Right Column: Status Transition, Assignee, Reporter, Priority, Environment -->
-          <div class="jira-drawer-sidebar">
-            <div class="jira-detail-section">
-              <div class="jira-detail-title">Workflow Status</div>
-              <select id="jiraStatusSelector" class="nexus-select w-100" style="font-weight: 700;">
-                <option value="backlog">📋 Backlog / To Do</option>
-                <option value="in-progress">🧪 In Testing / Active</option>
-                <option value="dev-fix">🛠️ Dev Fix / In Review</option>
-                <option value="retest">🔄 Ready for Retest</option>
-                <option value="done">✅ Done / Closed</option>
-              </select>
-            </div>
-
-            <div class="jira-detail-section">
-              <div class="jira-detail-title">Priority & Severity</div>
-              <div class="d-flex gap-2">
-                <span class="badge badge-danger flex-1 text-center" id="jiraIssuePriorityLabel">P1 - High</span>
-                <span class="badge badge-untested flex-1 text-center" id="jiraIssueSeverityLabel">Major</span>
-              </div>
-            </div>
-
-            <div class="jira-detail-section">
-              <div class="jira-detail-title">People</div>
-              <div class="d-flex flex-column gap-2" style="font-size: 0.82rem;">
-                <div class="d-flex align-center justify-between">
-                  <span class="text-muted">Assignee:</span>
-                  <strong id="jiraIssueAssigneeLabel">Unassigned</strong>
-                </div>
-                <div class="d-flex align-center justify-between">
-                  <span class="text-muted">Reporter:</span>
-                  <span id="jiraIssueReporterLabel">QA Tester</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="jira-detail-section">
-              <div class="jira-detail-title">Dates & Metadata</div>
-              <div class="d-flex flex-column gap-1 text-xs text-muted">
-                <div>Created: <span id="jiraIssueCreatedDate">Recently</span></div>
-                <div>Updated: <span id="jiraIssueUpdatedDate">Just now</span></div>
-              </div>
-            </div>
-
-            <div class="mt-4 pt-3 border-top d-flex flex-column gap-2">
-              <button type="button" class="btn btn-primary btn-sm w-100" id="jiraExecuteIssueBtn">
-                <i class="fa-solid fa-play"></i> Execute Test Runner
-              </button>
-              <button type="button" class="btn btn-outline btn-sm w-100" id="jiraCreateLinkedBugBtn">
-                <i class="fa-solid fa-bug text-rose"></i> Log Linked Defect
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: JIRA XRAY STEP-BY-STEP TEST RUNNER -->
-  <div class="modal-backdrop" id="jiraTestRunnerModal" style="display: none;">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <i class="fa-solid fa-circle-play text-emerald modal-icon"></i>
-          <div>
-            <h2 id="runnerModalTitle">Test Execution Runner</h2>
-            <span class="text-xs text-muted" id="runnerTestKeyBadge">TC-101</span>
-          </div>
-        </div>
-        <button class="icon-btn close-modal-btn" id="closeJiraRunnerModalBtn"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <div class="modal-body">
-        <div class="jira-runner-header">
-          <div>
-            <h3 id="runnerTestCaseName" style="font-size: 1rem; margin:0 0 4px 0;">User Login via Password</h3>
-            <span class="text-xs text-muted" id="runnerPreconditionsLabel">Preconditions: User account exists in database</span>
-          </div>
-          <div class="d-flex align-center gap-2">
-            <span class="badge badge-version" id="runnerStepProgressBadge">Step 1 of 3</span>
-          </div>
-        </div>
-
-        <div id="runnerStepsListContainer"></div>
-      </div>
-
-      <div class="modal-footer justify-between">
-        <button type="button" class="btn btn-outline btn-sm text-rose" id="runnerFailAndBugBtn">
-          <i class="fa-solid fa-bug"></i> Log Defect for Failed Step
-        </button>
-        <div class="d-flex gap-2">
-          <button type="button" class="btn btn-ghost" id="cancelRunnerModalBtn">Close Runner</button>
-          <button type="button" class="btn btn-emerald" id="runnerCompletePassBtn">
-            <i class="fa-solid fa-circle-check"></i> Complete Run as Passed
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Floating Back to Top Button Component -->
   <div class="styled-back-to-top-wrapper" id="scrollToTopWrapper">
