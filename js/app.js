@@ -1230,7 +1230,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     setTimeout(() => {
       if (state.auth5Role === "dev") {
-        const { user } = StorageManager.directLogin("chhotumonster225@gmail.com");
+        const { user } = StorageManager.directLogin("dev@nexusqa.io");
         showToast(`Authenticated via ${providerName} as Developer Lead: ${user.name}!`);
         setTimeout(() => { window.location.href = "dev.html"; }, 400);
       } else {
@@ -1242,7 +1242,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   };
 
   window.quickDemoLogin = function(role) {
-    const email = role === "dev" ? "chhotumonster225@gmail.com" : "a@a";
+    const email = role === "dev" ? "dev@nexusqa.io" : "a@a";
     const emailInput = DOM.testerLoginEmail || document.getElementById("testerLoginEmail");
     if (emailInput) emailInput.value = email;
     
@@ -1719,7 +1719,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         if (user) {
           const cleanEmail = user.email.toLowerCase().trim();
           let otpCode = String(Math.floor(100000 + Math.random() * 900000));
-          if (cleanEmail === "chhotumonster225@gmail.com") {
+          if (cleanEmail === "dev@nexusqa.io") {
             otpCode = "123456";
           } else if (cleanEmail === "a@a") {
             otpCode = "654321";

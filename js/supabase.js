@@ -85,7 +85,7 @@ const SupabaseManager = {
         const users = StorageManager.getUsers();
         let user = users.find(u => u.email && u.email.toLowerCase() === email);
         if (!user) {
-          const isDev = email === "chhotumonster225@gmail.com" || email.includes("dev");
+          const isDev = email === "dev@nexusqa.io" || email.includes("dev") || email.includes("lead");
           user = {
             id: `user-${session.user.id.substring(0, 8)}`,
             name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, l => l.toUpperCase()),

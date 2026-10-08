@@ -12,6 +12,10 @@
   </div>
 </div>
 
+> [!CAUTION]
+> ### 🛑 PROPRIETARY & CONFIDENTIAL — STRICTLY DO NOT CLONE OR REPRODUCE
+> **This repository, conversational AI QA algorithms, 22-column tracking engine, dataset schemas, and UI design systems are private and proprietary intellectual property. Unauthorized cloning, downloading, copying, redistribution, public forking, scraping, indexing, or commercial reproduction of any part of this codebase is strictly prohibited.**
+
 ---
 
 ## 📖 Table of Contents
@@ -320,10 +324,10 @@ NexusQA connects to Supabase for cloud sync and multi-user collaboration:
 
 ## 🔑 Demo Login Credentials
 
-| Role | Email | 6-Digit OTP | Target Portal |
+| Role | Email / Identifier | Passcode | Target Portal |
 | :--- | :--- | :--- | :--- |
-| **QA Tester** | `a@a` | `123456` | [`tester.html`](file:///c:/Users/Shashaank%20Sajjanar/Desktop/Random%20Projects/QA/tester.html) (`/qa`) |
-| **Lead Developer** | `chhotumonster225@gmail.com` | `123456` | [`dev.html`](file:///c:/Users/Shashaank%20Sajjanar/Desktop/Random%20Projects/QA/dev.html) (`/dev`) |
+| **QA Tester** | `a@a` | `654321` | [`tester.html`](file:///c:/Users/Shashaank%20Sajjanar/Desktop/Random%20Projects/QA/tester.html) (`/qa`) |
+| **Lead Developer** | `dev@nexusqa.io` | `123456` | [`dev.html`](file:///c:/Users/Shashaank%20Sajjanar/Desktop/Random%20Projects/QA/dev.html) (`/dev`) |
 
 ---
 
@@ -339,6 +343,7 @@ QA/
 ├── css/
 │   └── styles.css                     # Design System, Glassmorphism, Theme & AI Studio UI
 ├── js/
+│   ├── auth-motion.js                 # Interactive Physics Canvas Background
 │   ├── data.js                        # Controlled Dropdowns, 22-Col Schema & Seed Benchmarks
 │   ├── qa-assistant.js                # CampusOS Conversational QA Engine & NLP Parser
 │   ├── storage.js                     # LocalStorage State Manager & BroadcastSync
@@ -363,9 +368,13 @@ This repository includes [`vercel.json`](file:///c:/Users/Shashaank%20Sajjanar/D
 ```bash
 npx vercel
 ```
-Or import the GitHub repository into your [Vercel Dashboard](https://vercel.com) for automatic CI/CD on every push.
+Or import the repository into your [Vercel Dashboard](https://vercel.com) for automatic CI/CD on every push.
 
 ---
 
-## 📄 License
-MIT License. Built for NexusQA & CampusOS Quality Engineering.
+## 📄 License & Proprietary Rights
+
+> [!CAUTION]
+> **STRICTLY PROPRIETARY & CONFIDENTIAL — DO NOT CLONE OR REPRODUCE**
+> 
+> All rights reserved. **No one is permitted to clone, fork, copy, scrape, reverse-engineer, distribute, or reproduce any portion of this repository**, source code, conversational QA algorithms, 22-column schema engine, or UI architecture in any format without prior written consent.

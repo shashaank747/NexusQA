@@ -161,14 +161,15 @@ const StorageManager = {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     }
 
-    // Ensure chhotumonster225@gmail.com is configured as active Senior Developer
-    const targetEmail = "chhotumonster225@gmail.com";
+    // Ensure dev@nexusqa.io is configured as active Senior Developer
+    const targetEmail = "dev@nexusqa.io";
     const devIndex = users.findIndex(u => u.email && u.email.toLowerCase() === targetEmail);
     if (devIndex === -1) {
       users.push({
-        id: "user-dev-chhotu",
+        id: "user-dev-lead",
         name: "Senior Developer",
         email: targetEmail,
+        username: "dev",
         role: "dev",
         roleTitle: "Lead Full-Stack Developer",
         devLevel: "senior",
@@ -397,7 +398,7 @@ const StorageManager = {
     // Generate unique 6-digit random number passcode (123456 for Senior Dev, 654321 for QA Tester a@a)
     const cleanEmail = (user.email || "").toLowerCase().trim();
     let otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    if (cleanEmail === "chhotumonster225@gmail.com") {
+    if (cleanEmail === "dev@nexusqa.io") {
       otpCode = "123456";
     } else if (cleanEmail === "a@a") {
       otpCode = "654321";
@@ -429,8 +430,8 @@ const StorageManager = {
     const trimmedOtp = String(otp || "").trim();
     const cleanEmail = (user.email || "").toLowerCase().trim();
     const isValidOtp = (user.otpCode && user.otpCode === trimmedOtp) ||
-                       (cleanEmail === "chhotumonster225@gmail.com" && (trimmedOtp === "123456" || trimmedOtp === "123456")) ||
-                       (cleanEmail === "a@a" && (trimmedOtp === "654321" || trimmedOtp === "654321")) ||
+                       (cleanEmail === "dev@nexusqa.io" && trimmedOtp === "123456") ||
+                       (cleanEmail === "a@a" && (trimmedOtp === "654321")) ||
                        trimmedOtp === "123456" ||
                        trimmedOtp === "654321";
 
@@ -462,7 +463,7 @@ const StorageManager = {
 
     // Generate unique 6-digit verification code
     let otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    if (cleanEmail === "chhotumonster225@gmail.com") {
+    if (cleanEmail === "dev@nexusqa.io") {
       otpCode = "123456";
     } else if (cleanEmail === "a@a") {
       otpCode = "654321";
@@ -514,7 +515,7 @@ const StorageManager = {
     }
 
     const trimmedOtp = String(otp || "").trim();
-    const isHardcodedDev = cleanEmail === "chhotumonster225@gmail.com" && trimmedOtp === "123456";
+    const isHardcodedDev = cleanEmail === "dev@nexusqa.io" && trimmedOtp === "123456";
     const isHardcodedTester = cleanEmail === "a@a" && trimmedOtp === "654321";
 
     if (!isHardcodedDev && !isHardcodedTester && (!user.otpCode || user.otpCode !== trimmedOtp)) {

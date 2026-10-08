@@ -5,9 +5,10 @@
 
 const SEED_USERS = [
   {
-    id: "user-dev-chhotu",
+    id: "user-dev-lead",
     name: "Senior Developer",
-    email: "chhotumonster225@gmail.com",
+    email: "dev@nexusqa.io",
+    username: "dev",
     phone: "9876543210",
     role: "dev",
     roleTitle: "Lead Full-Stack Developer",
