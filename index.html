@@ -552,7 +552,7 @@
           <!-- CodeSlots Row Container -->
           <div class="code-slots-wrapper" style="margin: 4px 0 2px 0;">
             <div class="code-slots" id="otpCodeSlots" style="--cs-accent: #6366f1; --cs-ink: #818cf8; --cs-slot: #171717; --cs-digit: #ffffff; --cs-danger: #f43f5e; --cs-size: 46px; --cs-height: 52px; --cs-gap: 8px; --cs-radius: 12px; --cs-font: 20px;">
-              <div class="code-slots__row" id="codeSlotsRow" data-status="idle" data-focused="">
+              <div class="code-slots__row" id="codeSlotsRow" data-status="idle">
                 <input
                   id="codeSlotsInput"
                   class="code-slots__input"
@@ -562,9 +562,10 @@
                   pattern="[0-9]*"
                   value=""
                   maxlength="6"
+                  tabindex="-1"
                   aria-label="6-Digit security passcode"
                 />
-                <span class="code-slots__slot" data-active="" data-index="0" style="box-shadow: inset 2px 4px 8px rgb(5, 5, 5); background: #171717; border: 1px solid rgba(255, 255, 255, 0.08);">
+                <span class="code-slots__slot" data-index="0" style="box-shadow: inset 2px 4px 8px rgb(5, 5, 5); background: #171717; border: 1px solid rgba(255, 255, 255, 0.08);">
                   <span class="code-slots__fill"></span>
                   <span class="code-slots__digit"></span>
                 </span>
