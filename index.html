@@ -68,16 +68,16 @@
         </div>
 
         <div class="auth5-divider">
-          <span>or sign in with credentials</span>
+          <span>or sign in with workspace email</span>
         </div>
 
         <!-- In-Card Error / Warning Alert Banner (Front of User) -->
         <div id="authInlineAlert" class="auth-inline-alert alert-error" style="display: none;">
           <i class="fa-solid fa-circle-exclamation"></i>
-          <span id="authInlineAlertText">Invalid username or password.</span>
+          <span id="authInlineAlertText">Invalid username or email.</span>
         </div>
 
-        <!-- Unified Password Login Form -->
+        <!-- Unified Passcode Login Form (Email -> 6-Digit Squares) -->
         <form id="testerLoginForm" class="auth5-form">
           <div class="auth5-form-group">
             <label class="auth5-label">
@@ -89,22 +89,9 @@
             </div>
           </div>
 
-          <div class="auth5-form-group">
-            <label class="auth5-label">
-              <span>Password</span>
-            </label>
-            <div class="auth5-input-wrapper">
-              <i class="fa-solid fa-lock auth5-input-icon"></i>
-              <input type="password" id="testerLoginPassword" class="auth5-input" placeholder="••••••••" required autocomplete="current-password">
-              <button type="button" class="auth5-password-toggle" onclick="window.togglePasswordVisibility('testerLoginPassword', this)" title="Toggle password visibility">
-                <i class="fa-regular fa-eye"></i>
-              </button>
-            </div>
-          </div>
-
           <button type="submit" class="auth5-submit-btn" id="btnTesterLoginSubmit">
-            <span>Sign In to Workspace</span>
-            <i class="fa-solid fa-arrow-right-to-bracket"></i>
+            <span>Continue to 6-Digit Passcode</span>
+            <i class="fa-solid fa-arrow-right"></i>
           </button>
 
           <!-- Modern Redesigned Switcher Pill -->
@@ -121,7 +108,7 @@
         <form id="testerSignupForm" class="auth5-form" style="display: none;">
           <div class="auth-info-banner mb-3">
             <i class="fa-solid fa-circle-info"></i>
-            <span><strong>Step 1:</strong> Enter details & password ➔ <strong>Step 2:</strong> Senior Developer approves workspace access.</span>
+            <span><strong>Step 1:</strong> Enter details & verify 6-digit code ➔ <strong>Step 2:</strong> Senior Dev grants workspace access.</span>
           </div>
 
           <div class="auth5-form-group">
@@ -151,30 +138,8 @@
             </div>
           </div>
 
-          <div class="auth5-form-group">
-            <label class="auth5-label"><span>Password</span></label>
-            <div class="auth5-input-wrapper">
-              <i class="fa-solid fa-lock auth5-input-icon"></i>
-              <input type="password" id="testerSignupPassword" class="auth5-input" placeholder="Create a password (min 4 chars)" required autocomplete="new-password">
-              <button type="button" class="auth5-password-toggle" onclick="window.togglePasswordVisibility('testerSignupPassword', this)" title="Toggle password visibility">
-                <i class="fa-regular fa-eye"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="auth5-form-group">
-            <label class="auth5-label"><span>Confirm Password</span></label>
-            <div class="auth5-input-wrapper">
-              <i class="fa-solid fa-shield-halved auth5-input-icon"></i>
-              <input type="password" id="testerSignupConfirmPassword" class="auth5-input" placeholder="Re-enter password" required autocomplete="new-password">
-              <button type="button" class="auth5-password-toggle" onclick="window.togglePasswordVisibility('testerSignupConfirmPassword', this)" title="Toggle password visibility">
-                <i class="fa-regular fa-eye"></i>
-              </button>
-            </div>
-          </div>
-
           <button type="submit" class="auth5-submit-btn" id="btnTesterSendOtp">
-            <span>Request Workspace Access</span>
+            <span>Request Access & Send 6-Digit Passcode</span>
             <i class="fa-solid fa-paper-plane"></i>
           </button>
 
@@ -189,13 +154,13 @@
         </form>
       </div>
 
-      <!-- 4. STATE B: CHECK YOUR INBOX (State Swap with <CodeSlots /> & Resend Cooldown) -->
+      <!-- 4. STATE B: 6-DIGIT SQUARES PASSCODE (State Swap with <CodeSlots /> & Tick Animation) -->
       <div class="auth5-inbox-state" id="auth5InboxState" style="display: none;">
         <div class="auth5-inbox-icon-wrap">
-          <i class="fa-solid fa-envelope-open-text"></i>
+          <i class="fa-solid fa-shield-halved"></i>
         </div>
-        <h2 class="auth5-title">Check your inbox</h2>
-        <p class="auth5-subtitle">We sent a 6-digit verification code to</p>
+        <h2 class="auth5-title">Enter 6-Digit Passcode</h2>
+        <p class="auth5-subtitle">Enter your 6-digit security PIN for</p>
 
         <div class="auth5-email-chip">
           <span id="otpRecipientEmailLabel">tester@company.com</span>

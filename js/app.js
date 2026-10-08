@@ -1161,12 +1161,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       if (loginForm) loginForm.style.display = "none";
       if (signupForm) signupForm.style.display = "block";
       if (title) title.textContent = "Create Workspace Account";
-      if (subtitle) subtitle.textContent = "Fill in your details and password to request workspace access";
+      if (subtitle) subtitle.textContent = "Enter your details to receive a 6-digit verification passcode";
     } else {
       if (signupForm) signupForm.style.display = "none";
       if (loginForm) loginForm.style.display = "block";
       if (title) title.textContent = "Welcome to NexusQA";
-      if (subtitle) subtitle.textContent = "Enter your username/email and password to access the workspace";
+      if (subtitle) subtitle.textContent = "Enter your username/email to continue with your 6-digit passcode";
     }
   };
 
@@ -1558,29 +1558,24 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   // Setup Auth Form Listeners
   function setupAuthListeners() {
-    // 1. Unified Username / Email and Password Sign In
+    // 1. Unified Username / Email Sign In -> Transition to 6-Digit Squares Passcode
     if (DOM.testerLoginForm) {
       DOM.testerLoginForm.addEventListener("submit", (e) => {
         e.preventDefault();
         window.hideAuthAlert();
         const identifier = (DOM.testerLoginEmail || document.getElementById("testerLoginEmail")).value.trim();
-        const password = (DOM.testerLoginPassword || document.getElementById("testerLoginPassword")).value;
 
         try {
-          const res = StorageManager.loginWithCredentials(identifier, password);
+          const res = StorageManager.requestLoginOtp(identifier);
+          state.pendingRegistrationEmail = res.user.email;
+          state.isRegistrationFlow = false;
+
           if (res.status === "pending_approval") {
             window.showPendingState(res.user.email);
-            showToast("Your account is awaiting Senior Developer approval.", "info");
-          } else if (res.status === "active") {
-            const user = res.user;
-            showToast(`Welcome back, ${user.name}! Accessing workspace...`, "success");
-            setTimeout(() => {
-              if (user.role === "dev") {
-                window.location.href = "dev.html";
-              } else {
-                window.location.href = "tester.html";
-              }
-            }, 300);
+            showToast("Your account is awaiting Senior Dev approval.", "info");
+          } else if (res.status === "otp_sent") {
+            state.currentOtpCode = res.otpCode;
+            window.showInboxState(res.user.email, res.otpCode);
           }
         } catch (err) {
           window.showAuthAlert(err.message);
@@ -1589,7 +1584,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       });
     }
 
-    // 2. Account Registration Form (Name, Email, Role, Password, Confirm Password)
+    // 2. Account Registration Form (Name, Email, Role) -> 6-Digit Squares Verification
     if (DOM.testerSignupForm) {
       DOM.testerSignupForm.addEventListener("submit", (e) => {
         e.preventDefault();
@@ -1597,35 +1592,30 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         const name = (DOM.testerSignupName || document.getElementById("testerSignupName")).value.trim();
         const email = (DOM.testerSignupEmail || document.getElementById("testerSignupEmail")).value.trim();
         const roleTitle = (DOM.testerSignupRoleTitle || document.getElementById("testerSignupRoleTitle")).value;
-        const password = (DOM.testerSignupPassword || document.getElementById("testerSignupPassword")).value;
-        const confirmPassword = (DOM.testerSignupConfirmPassword || document.getElementById("testerSignupConfirmPassword")).value;
-
-        if (password !== confirmPassword) {
-          window.showAuthAlert("Passwords do not match. Please re-enter identical passwords.");
-          showToast("Passwords do not match", "error");
-          return;
-        }
 
         try {
           if (DOM.btnTesterSendOtp) {
             DOM.btnTesterSendOtp.disabled = true;
-            DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting Request...`;
+            DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Generating 6-Digit Passcode...`;
           }
 
           setTimeout(() => {
             if (DOM.btnTesterSendOtp) {
               DOM.btnTesterSendOtp.disabled = false;
-              DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Request Workspace Access`;
+              DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Request Access & Send 6-Digit Passcode`;
             }
 
-            const { user } = StorageManager.registerUserWithPassword({ name, email, roleTitle, password });
-            window.showPendingState(user.email);
-            showToast(`Access request submitted for ${name}! Waiting for Senior Developer approval.`, "success");
+            const { user, otpCode } = StorageManager.registerTester({ name, email, roleTitle });
+            state.pendingRegistrationEmail = user.email;
+            state.isRegistrationFlow = true;
+            state.currentOtpCode = otpCode;
+            window.showInboxState(user.email, otpCode);
+            showToast(`6-Digit Passcode sent for ${name}! Please enter the code below.`, "info");
           }, 350);
         } catch (err) {
           if (DOM.btnTesterSendOtp) {
             DOM.btnTesterSendOtp.disabled = false;
-            DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Request Workspace Access`;
+            DOM.btnTesterSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Request Access & Send 6-Digit Passcode`;
           }
           window.showAuthAlert(err.message);
           showToast(err.message, "error");
@@ -1633,7 +1623,71 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       });
     }
 
-    // Resend OTP
+    // 3. 6-Digit Squares Passcode Verification Form (<CodeSlots />)
+    if (DOM.testerOtpForm) {
+      DOM.testerOtpForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const enteredOtp = codeSlotsState.value;
+
+        if (enteredOtp.length !== 6) {
+          setCodeSlotsStatus("error");
+          showToast("Please enter the complete 6-digit numeric passcode", "error");
+          return;
+        }
+
+        try {
+          if (DOM.btnVerifyOtpSubmit) {
+            DOM.btnVerifyOtpSubmit.disabled = true;
+            DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Validating Passcode...`;
+          }
+
+          if (state.isRegistrationFlow) {
+            // Registration -> Verify 6-digit code & notify Senior Dev
+            const user = StorageManager.verifyTesterOtp(state.pendingRegistrationEmail, enteredOtp);
+            setCodeSlotsStatus("success");
+            if (DOM.btnVerifyOtpSubmit) {
+              DOM.btnVerifyOtpSubmit.disabled = false;
+              DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Code Verified!`;
+            }
+
+            setTimeout(() => {
+              window.showPendingState(user.email);
+              showToast("Passcode verified! Access request sent to Senior Developer Lead.");
+              if (DOM.btnVerifyOtpSubmit) {
+                DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify Code & Enter Workspace`;
+              }
+            }, 600);
+          } else {
+            // Everyday Login -> Verify 6-digit code & authenticate
+            const { user } = StorageManager.verifyLoginOtp(state.pendingRegistrationEmail, enteredOtp);
+            setCodeSlotsStatus("success");
+            if (DOM.btnVerifyOtpSubmit) {
+              DOM.btnVerifyOtpSubmit.disabled = false;
+              DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-check"></i> Welcome Back, ${user.name}!`;
+            }
+
+            setTimeout(() => {
+              if (user.role === "dev") {
+                showToast(`Authenticated as Developer Lead: ${user.name}. Entering Dev Hub...`);
+                window.location.href = "dev.html";
+              } else {
+                showToast(`Authenticated as QA Tester: ${user.name}. Entering QA Portal...`);
+                window.location.href = "tester.html";
+              }
+            }, 600);
+          }
+        } catch (err) {
+          if (DOM.btnVerifyOtpSubmit) {
+            DOM.btnVerifyOtpSubmit.disabled = false;
+            DOM.btnVerifyOtpSubmit.innerHTML = `<i class="fa-solid fa-shield-check"></i> Verify Code & Enter Workspace`;
+          }
+          setCodeSlotsStatus("error");
+          showToast(err.message, "error");
+        }
+      });
+    }
+
+    // Resend 6-Digit Passcode
     if (DOM.btnResendOtp) {
       DOM.btnResendOtp.addEventListener("click", () => {
         if (!state.pendingRegistrationEmail) return;
@@ -1652,8 +1706,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           StorageManager.saveUsers(users);
           state.currentOtpCode = otpCode;
 
+          const badgeEl = document.getElementById("simulatedOtpCodeBadge");
+          if (badgeEl) badgeEl.textContent = otpCode;
+
           startResendCooldown(60);
           startOtpTimer(900);
+          showToast(`New 6-digit passcode sent to ${user.email}: [ ${otpCode} ]`, "info");
         }
       });
     }

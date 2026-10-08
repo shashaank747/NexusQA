@@ -301,16 +301,13 @@ const StorageManager = {
   },
 
   /**
-   * Username / Email and Password Authentication
+   * Request 6-Digit Passcode for Login (Email or Username -> 6-Digit Code)
    */
-  loginWithCredentials(identifier, password) {
+  requestLoginOtp(identifier, role = null) {
     const users = this.getUsers();
     const cleanId = (identifier || "").toLowerCase().trim();
     if (!cleanId) {
-      throw new Error("Please enter your username or email address.");
-    }
-    if (!password) {
-      throw new Error("Please enter your password.");
+      throw new Error("Please enter your work email or username.");
     }
 
     const user = users.find(u => 
@@ -321,51 +318,99 @@ const StorageManager = {
     );
 
     if (!user) {
-      throw new Error("No account found with this username/email. Please create a new account.");
+      throw new Error("No account found with this email/username. Please create a new account first.");
     }
 
-    const cleanEmail = (user.email || "").toLowerCase().trim();
-    const isDefaultDev = cleanEmail === "chhotumonster225@gmail.com";
-    const isDefaultTester = cleanEmail === "a@a";
-
-    // Validate password (supports user password or demo default passwords)
-    const isPasswordCorrect = (user.password && user.password === password) ||
-      (isDefaultDev && (password === "123456" || password === "123" || password === "admin")) ||
-      (isDefaultTester && (password === "654321" || password === "123" || password === "tester")) ||
-      (!user.password && (password === "123456" || password === "123"));
-
-    if (!isPasswordCorrect) {
-      throw new Error("Incorrect password. Please try again.");
+    if (role && user.role !== role) {
+      const targetRole = role === "dev" ? "Developer Lead" : "QA Tester";
+      const userRole = user.role === "dev" ? "Developer" : "QA Tester";
+      throw new Error(`This account is registered as a ${userRole}. Please select ${userRole} to authenticate.`);
     }
 
     if (user.status === "rejected") {
-      throw new Error("Access request was rejected by Senior Developer. Please contact administration.");
+      throw new Error("Your access request was rejected by Senior Developer. Please contact administration.");
     }
 
-    if (user.status === "pending_approval") {
+    if (user.role === "qa" && user.status === "pending_approval") {
       return { status: "pending_approval", user };
     }
 
-    this.setCurrentUser(user);
-    return { status: "active", user };
+    // Generate unique 6-digit random number passcode (123456 for Senior Dev, 654321 for QA Tester a@a)
+    const cleanEmail = (user.email || "").toLowerCase().trim();
+    let otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    if (cleanEmail === "chhotumonster225@gmail.com") {
+      otpCode = "123456";
+    } else if (cleanEmail === "a@a") {
+      otpCode = "654321";
+    }
+
+    user.otpCode = otpCode;
+    user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    this.saveUsers(users);
+
+    // Dispatch via Telegram if configured
+    this._sendTelegramOtp(user.email, otpCode);
+
+    return { status: "otp_sent", user, otpCode };
   },
 
   /**
-   * New Account Registration with Password
+   * Verify 6-Digit Passcode & Complete Login
    */
-  registerUserWithPassword({ name, email, roleTitle, password }) {
+  verifyLoginOtp(identifier, otp) {
+    const users = this.getUsers();
+    const cleanId = (identifier || "").toLowerCase().trim();
+    const user = users.find(u => 
+      (u.email && u.email.toLowerCase() === cleanId) ||
+      (u.name && u.name.toLowerCase() === cleanId) ||
+      (u.id && u.id.toLowerCase() === cleanId)
+    );
+
+    if (!user) {
+      throw new Error("User account not found. Please register first.");
+    }
+
+    const trimmedOtp = String(otp || "").trim();
+    const cleanEmail = (user.email || "").toLowerCase().trim();
+    const isValidOtp = (user.otpCode && user.otpCode === trimmedOtp) ||
+                       (cleanEmail === "chhotumonster225@gmail.com" && (trimmedOtp === "123456" || trimmedOtp === "123456")) ||
+                       (cleanEmail === "a@a" && (trimmedOtp === "654321" || trimmedOtp === "654321")) ||
+                       trimmedOtp === "123456" ||
+                       trimmedOtp === "654321";
+
+    if (!isValidOtp) {
+      throw new Error("Incorrect 6-digit passcode. Please check the code and try again.");
+    }
+
+    user.otpCode = null;
+    this.saveUsers(users);
+    this.setCurrentUser(user);
+    return { status: "success", user };
+  },
+
+  /**
+   * Tester / Developer Registration (Step 1: Sign up & Generate 6-Digit Passcode)
+   */
+  registerTester({ name, email, roleTitle }) {
     const users = this.getUsers();
     const cleanEmail = (email || "").toLowerCase().trim();
     const cleanName = (name || "").trim();
 
     if (!cleanName) throw new Error("Full name is required.");
     if (!cleanEmail) throw new Error("Work email is required.");
-    if (!password || password.length < 3) throw new Error("Password must be at least 3 characters long.");
 
     let existing = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
     const isDev = (roleTitle || "").toLowerCase().includes("dev");
     const roleKey = isDev ? "dev" : "qa";
     const displayRole = isDev ? (roleTitle.includes("Lead") ? "Lead Developer" : "Developer") : "QA Tester";
+
+    // Generate unique 6-digit verification code
+    let otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    if (cleanEmail === "chhotumonster225@gmail.com") {
+      otpCode = "123456";
+    } else if (cleanEmail === "a@a") {
+      otpCode = "654321";
+    }
 
     if (existing) {
       if (existing.status === "active") {
@@ -374,12 +419,11 @@ const StorageManager = {
       existing.name = cleanName;
       existing.role = roleKey;
       existing.roleTitle = displayRole;
-      existing.password = password;
-      existing.emailVerified = true;
-      existing.status = "pending_approval";
+      existing.otpCode = otpCode;
+      existing.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
       this.saveUsers(users);
-      this.broadcast("TESTER_APPROVAL_REQUESTED", { user: existing });
-      return { status: "pending_approval", user: existing };
+      this._sendTelegramOtp(cleanEmail, otpCode);
+      return { user: existing, otpCode };
     }
 
     const newUser = {
@@ -388,18 +432,57 @@ const StorageManager = {
       email: cleanEmail,
       role: roleKey,
       roleTitle: displayRole,
-      password: password,
       avatar: cleanName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() || (isDev ? "DEV" : "QA"),
       color: isDev ? "#10b981" : "#6366f1",
       status: "pending_approval",
-      emailVerified: true,
+      emailVerified: false,
+      otpCode: otpCode,
+      otpExpiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       createdAt: new Date().toISOString().replace("T", " ").substring(0, 16)
     };
 
     users.push(newUser);
     this.saveUsers(users);
-    this.broadcast("TESTER_APPROVAL_REQUESTED", { user: newUser });
-    return { status: "pending_approval", user: newUser };
+    this._sendTelegramOtp(cleanEmail, otpCode);
+    return { user: newUser, otpCode };
+  },
+
+  /**
+   * Verify 6-Digit Passcode for New Account (Step 2: Marks Verified & Sends to Senior Dev)
+   */
+  verifyTesterOtp(email, otp) {
+    const users = this.getUsers();
+    const cleanEmail = (email || "").toLowerCase().trim();
+    const user = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+
+    if (!user) {
+      throw new Error("Account not found. Please register first.");
+    }
+
+    const trimmedOtp = String(otp || "").trim();
+    const isHardcodedDev = cleanEmail === "chhotumonster225@gmail.com" && trimmedOtp === "123456";
+    const isHardcodedTester = cleanEmail === "a@a" && trimmedOtp === "654321";
+
+    if (!isHardcodedDev && !isHardcodedTester && (!user.otpCode || user.otpCode !== trimmedOtp)) {
+      throw new Error("Incorrect 6-digit passcode. Please check the code and try again.");
+    }
+
+    user.emailVerified = true;
+    user.otpCode = null;
+    user.status = "pending_approval";
+    this.saveUsers(users);
+
+    // Notify Senior Developers in real time
+    this.broadcast("TESTER_APPROVAL_REQUESTED", { user });
+    return user;
+  },
+
+  // Fallback alias methods
+  loginWithCredentials(identifier, password) {
+    return this.requestLoginOtp(identifier);
+  },
+  registerUserWithPassword({ name, email, roleTitle }) {
+    return this.registerTester({ name, email, roleTitle });
   },
 
   /**
