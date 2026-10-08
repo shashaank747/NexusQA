@@ -2897,50 +2897,88 @@ body.light-theme .sidebar-secondary-panel {
 
 /* Voice Dictation Active Waveform Banner */
 .voice-listening-banner {
-  background: linear-gradient(90deg, rgba(239, 68, 68, 0.15), rgba(168, 85, 247, 0.15));
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: linear-gradient(90deg, rgba(76, 134, 249, 0.14), rgba(73, 168, 76, 0.12), rgba(246, 187, 2, 0.12));
+  border: 1px solid rgba(76, 134, 249, 0.35);
+  border-radius: 8px;
   padding: 0.6rem 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  animation: pulseRecordingGlow 2s infinite ease-in-out;
+  gap: 0.85rem;
+  animation: pulseRecordingGlow 2.5s infinite ease-in-out;
+  margin-bottom: 0.75rem;
 }
 
 @keyframes pulseRecordingGlow {
-  0%, 100% { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); }
-  50% { border-color: rgba(239, 68, 68, 0.7); background: rgba(239, 68, 68, 0.2); }
+  0%, 100% { border-color: rgba(76, 134, 249, 0.3); box-shadow: 0 0 12px rgba(76, 134, 249, 0.1); }
+  50% { border-color: rgba(76, 134, 249, 0.6); box-shadow: 0 0 20px rgba(76, 134, 249, 0.22); }
 }
 
 .voice-listening-text {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--text-heading);
   flex: 1;
 }
 
-.voice-wave-bars {
+/* UIverse Voice Detection Equalizer Loader */
+.voice-detector-loader {
   display: flex;
   align-items: center;
-  gap: 3px;
-  height: 20px;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.voice-wave-bars span {
-  width: 3px;
-  background: #ef4444;
+.voice-detector-loader .loading {
+  --speed-of-animation: 0.9s;
+  --gap: 5px;
+  --first-color: #4c86f9;
+  --second-color: #49a84c;
+  --third-color: #f6bb02;
+  --fourth-color: #f6bb02;
+  --fifth-color: #2196f3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--gap);
+  height: 32px;
+  padding: 0 4px;
+}
+
+.voice-detector-loader .loading span {
+  width: 4px;
+  height: 28px;
   border-radius: 3px;
-  animation: waveBar 1.2s infinite ease-in-out;
+  background: var(--first-color);
+  animation: voiceScaleAnim var(--speed-of-animation) ease-in-out infinite;
 }
 
-.voice-wave-bars span:nth-child(1) { height: 6px; animation-delay: 0s; }
-.voice-wave-bars span:nth-child(2) { height: 16px; animation-delay: 0.2s; }
-.voice-wave-bars span:nth-child(3) { height: 20px; animation-delay: 0.4s; }
-.voice-wave-bars span:nth-child(4) { height: 14px; animation-delay: 0.6s; }
-.voice-wave-bars span:nth-child(5) { height: 8px; animation-delay: 0.8s; }
+.voice-detector-loader .loading span:nth-child(2) {
+  background: var(--second-color);
+  animation-delay: -0.8s;
+}
 
-@keyframes waveBar {
-  0%, 100% { transform: scaleY(0.4); }
-  50% { transform: scaleY(1.2); }
+.voice-detector-loader .loading span:nth-child(3) {
+  background: var(--third-color);
+  animation-delay: -0.7s;
+}
+
+.voice-detector-loader .loading span:nth-child(4) {
+  background: var(--fourth-color);
+  animation-delay: -0.6s;
+}
+
+.voice-detector-loader .loading span:nth-child(5) {
+  background: var(--fifth-color);
+  animation-delay: -0.5s;
+}
+
+@keyframes voiceScaleAnim {
+  0%, 40%, 100% {
+    transform: scaleY(0.08);
+  }
+  20% {
+    transform: scaleY(1);
+  }
 }
 
 .ai-preset-chips {
@@ -6948,34 +6986,24 @@ body.light-theme .nexus-table tbody td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem 1rem;
-  background: rgba(239, 68, 68, 0.15);
-  border-top: 1px solid rgba(239, 68, 68, 0.35);
-  border-bottom: 1px solid rgba(239, 68, 68, 0.35);
-  animation: fadeIn 0.2s ease;
+  padding: 0.65rem 1rem;
+  background: linear-gradient(90deg, rgba(76, 134, 249, 0.14), rgba(73, 168, 76, 0.12), rgba(246, 187, 2, 0.12));
+  border-top: 1px solid rgba(76, 134, 249, 0.35);
+  border-bottom: 1px solid rgba(76, 134, 249, 0.35);
+  gap: 1rem;
+  animation: pulseRecordingGlow 2.5s infinite ease-in-out;
 }
 
-.voice-pulse-indicator {
-  position: relative;
-  width: 28px;
-  height: 28px;
+.voice-status-text {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
 }
 
-.pulse-ring {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  border: 2px solid #ef4444;
-  animation: pulseAnim 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-}
-
-@keyframes pulseAnim {
-  0% { transform: scale(0.6); opacity: 0.8; }
-  100% { transform: scale(1.6); opacity: 0; }
+.voice-status-text strong {
+  font-size: 0.85rem;
+  color: var(--text-heading);
 }
 
 /* Prompt Console Box */
