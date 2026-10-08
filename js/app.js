@@ -5343,8 +5343,48 @@ Tags: concurrency, inventory, bug-fix, deadlock`
       </div>
     `.trim();
   }
-  window.createDeleteButtonHtml = createDeleteButtonHtml;
+  // Back to Top Button Controller (Animated Expandable Pill)
+  function initBackToTopButton() {
+    const wrap = document.getElementById("scrollToTopWrapper");
+    const btn = document.getElementById("scrollToTopBtn");
+    if (!wrap && !btn) return;
 
-  // Boot Routing
+    const mainContent = document.getElementById("mainContent");
+    const viewViewport = document.getElementById("viewViewport");
+
+    function checkScroll() {
+      const winScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      const mainScroll = mainContent ? mainContent.scrollTop : 0;
+      const viewScroll = viewViewport ? viewViewport.scrollTop : 0;
+      const maxScroll = Math.max(winScroll, mainScroll, viewScroll);
+
+      if (maxScroll > 200) {
+        if (wrap) wrap.classList.add("show");
+      } else {
+        if (wrap) wrap.classList.remove("show");
+      }
+    }
+
+    function doScrollToTop(e) {
+      if (e) e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
+      document.body.scrollTo({ top: 0, behavior: "smooth" });
+      if (mainContent) mainContent.scrollTo({ top: 0, behavior: "smooth" });
+      if (viewViewport) viewViewport.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    window.addEventListener("scroll", checkScroll, { passive: true });
+    document.addEventListener("scroll", checkScroll, { passive: true });
+    if (mainContent) mainContent.addEventListener("scroll", checkScroll, { passive: true });
+    if (viewViewport) viewViewport.addEventListener("scroll", checkScroll, { passive: true });
+
+    if (btn) btn.addEventListener("click", doScrollToTop);
+    if (wrap) wrap.addEventListener("click", doScrollToTop);
+  }
+
+  // Boot Back to Top & Routing
+  initBackToTopButton();
   initRouting();
 });
+

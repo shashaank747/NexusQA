@@ -7712,6 +7712,97 @@ body.light-theme .step-card-num {
   transform: none;
 }
 
+/* ==========================================================================
+   BACK TO TOP ANIMATED BUTTON COMPONENT
+   ========================================================================== */
+.styled-back-to-top-wrapper {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(16px) scale(0.9);
+  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.styled-back-to-top-wrapper.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.styled-back-to-top-wrapper .button {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: rgb(20, 20, 20);
+  border: none;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 0px 0px 4px rgba(180, 160, 255, 0.253);
+  cursor: pointer;
+  transition-duration: 0.3s;
+  overflow: hidden;
+  position: relative;
+}
+
+.styled-back-to-top-wrapper .svgIcon {
+  width: 12px;
+  height: 16px;
+  transition-duration: 0.3s;
+}
+
+.styled-back-to-top-wrapper .svgIcon path {
+  fill: white;
+}
+
+.styled-back-to-top-wrapper .button:hover {
+  width: 140px;
+  border-radius: 50px;
+  transition-duration: 0.3s;
+  background-color: rgb(181, 160, 255);
+  box-shadow: 0px 0px 18px rgba(181, 160, 255, 0.6);
+  align-items: center;
+}
+
+.styled-back-to-top-wrapper .button:hover .svgIcon {
+  transition-duration: 0.3s;
+  transform: translateY(-200%);
+}
+
+.styled-back-to-top-wrapper .button::before {
+  position: absolute;
+  bottom: -20px;
+  content: "Back to Top";
+  color: #1e1b4b;
+  font-weight: 700;
+  white-space: nowrap;
+  font-size: 0px;
+  transition: all 0.3s ease;
+}
+
+.styled-back-to-top-wrapper .button:hover::before {
+  font-size: 13px;
+  opacity: 1;
+  bottom: unset;
+  transition-duration: 0.3s;
+}
+
+body.light-theme .styled-back-to-top-wrapper .button {
+  background-color: #1e1b4b;
+  box-shadow: 0px 0px 0px 4px rgba(99, 102, 241, 0.2);
+}
+
+body.light-theme .styled-back-to-top-wrapper .button:hover {
+  background-color: rgb(181, 160, 255);
+}
+
+
 
 
 
