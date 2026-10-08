@@ -319,32 +319,6 @@ const StorageManager = {
     return this.getUsers().find(u => u.email.toLowerCase() === email.toLowerCase().trim());
   },
 
-  // --- Telegram OTP Integration ---
-  // Placeholder token and email-to-chat ID mapping. Replace with real values.
-  _telegramBotToken: "8907029087:AAGun2HgFjC2seTj1WCg3N8Lgge0QZldLHk",  _emailToChatId: {
-    "a@a": "CHAT_ID_FOR_A", // user 'a'
-    "chhotumonster225@gmail.com": "CHAT_ID_FOR_DEMO"
-  },
-  _sendTelegramOtp(email, otp) {
-    const chatId = this._emailToChatId[email.toLowerCase().trim()];
-    if (!chatId) {
-      console.warn(`No Telegram chat ID mapping for ${email}. OTP not sent via Telegram.`);
-      return;
-    }
-    const token = this._telegramBotToken;
-    const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    const payload = {
-      chat_id: chatId,
-      text: `Your login OTP is: ${otp}`
-    };
-    // Fire-and-forget fetch; ignore response errors for now.
-    fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    }).catch(err => console.error('Failed to send Telegram OTP:', err));
-  },
-
   /**
    * Direct Login (Instant 1-Click Access)
    */
@@ -433,9 +407,6 @@ const StorageManager = {
     user.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     this.saveUsers(users);
 
-    // Dispatch via Telegram if configured
-    this._sendTelegramOtp(user.email, otpCode);
-
     return { status: "otp_sent", user, otpCode };
   },
 
@@ -507,7 +478,6 @@ const StorageManager = {
       existing.otpCode = otpCode;
       existing.otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
       this.saveUsers(users);
-      this._sendTelegramOtp(cleanEmail, otpCode);
       return { user: existing, otpCode };
     }
 
@@ -528,7 +498,6 @@ const StorageManager = {
 
     users.push(newUser);
     this.saveUsers(users);
-    this._sendTelegramOtp(cleanEmail, otpCode);
     return { user: newUser, otpCode };
   },
 
