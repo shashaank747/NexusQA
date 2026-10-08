@@ -1845,11 +1845,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   function renderDevApprovals() {
     const allUsers = StorageManager.getUsers();
-    const pending = allUsers.filter(u => u.role === "qa" && u.status === "pending_approval");
-    const activeTesters = allUsers.filter(u => u.role === "qa" && u.status === "active");
+    const pending = allUsers.filter(u => u.status === "pending_approval");
+    const activeMembers = allUsers.filter(u => u.status === "active");
 
     if (DOM.kpiPendingApprovalsCount) DOM.kpiPendingApprovalsCount.textContent = pending.length;
-    if (DOM.kpiActiveTestersCount) DOM.kpiActiveTestersCount.textContent = activeTesters.length;
+    if (DOM.kpiActiveTestersCount) DOM.kpiActiveTestersCount.textContent = activeMembers.length;
     if (DOM.kpiOtpVerifiedCount) DOM.kpiOtpVerifiedCount.textContent = "100%";
 
     updateDevApprovalsBadge();
@@ -1860,39 +1860,48 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         DOM.pendingApprovalsListContainer.innerHTML = `
           <div class="empty-state p-4 text-center">
             <div class="empty-icon text-emerald mb-2"><i class="fa-solid fa-circle-check" style="font-size:2.5rem;"></i></div>
-            <h4>No Pending Tester Requests</h4>
-            <p class="text-muted text-xs">All registered testers have been reviewed and authorized for the QA workspace.</p>
+            <h4>No Pending Access Requests</h4>
+            <p class="text-muted text-xs">All registered members have been reviewed and authorized for the workspace.</p>
           </div>
         `;
       } else {
         DOM.pendingApprovalsListContainer.innerHTML = `
           <div class="pending-approval-cards-grid">
-            ${pending.map(user => `
-              <div class="pending-approval-card">
-                <div class="pending-req-header">
-                  <div class="pending-req-avatar">${escapeHtml(user.avatar || user.name.substring(0, 2).toUpperCase())}</div>
-                  <div class="pending-req-meta">
-                    <h4>${escapeHtml(user.name)}</h4>
-                    <span class="req-email">${escapeHtml(user.email)}</span>
-                    <div><span class="req-specialty">${escapeHtml(user.roleTitle || 'QA Tester')}</span></div>
+            ${pending.map(user => {
+              const isDev = user.role === "dev";
+              const avatarClass = isDev ? "avatar-dev" : "avatar-qa";
+              const roleTitle = escapeHtml(user.roleTitle || (isDev ? (user.devLevel === 'senior' ? 'Senior Developer' : 'Developer') : 'QA Tester'));
+              const roleBadge = isDev
+                ? `<span class="badge badge-ai" style="background: rgba(16, 185, 129, 0.15) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; font-size:11px;"><i class="fa-solid fa-code"></i> ${roleTitle}</span>`
+                : `<span class="badge badge-untested" style="background: rgba(99, 102, 241, 0.15) !important; color: #818cf8 !important; border: 1px solid rgba(99, 102, 241, 0.3) !important; font-size:11px;"><i class="fa-solid fa-vial-circle-check"></i> ${roleTitle}</span>`;
+
+              return `
+                <div class="pending-approval-card">
+                  <div class="pending-req-header">
+                    <div class="avatar-ring ${avatarClass}" style="width:38px; height:38px; font-size:13px; font-weight:700;">${escapeHtml(user.avatar || user.name.substring(0, 2).toUpperCase())}</div>
+                    <div class="pending-req-meta">
+                      <h4>${escapeHtml(user.name)}</h4>
+                      <span class="req-email">${escapeHtml(user.email)}</span>
+                      <div class="mt-1">${roleBadge}</div>
+                    </div>
+                  </div>
+
+                  <div class="pending-req-badges">
+                    <span class="badge badge-passed"><i class="fa-solid fa-check"></i> Email OTP Verified</span>
+                    <span class="badge badge-blocked"><i class="fa-solid fa-clock"></i> Awaiting Dev Signoff</span>
+                  </div>
+
+                  <div class="pending-req-actions">
+                    <button class="btn-approve-qa" onclick="window.approveTester('${user.id}')">
+                      <i class="fa-solid fa-user-check"></i> Approve Access
+                    </button>
+                    <button class="btn-reject-qa" onclick="window.rejectTester('${user.id}')">
+                      <i class="fa-solid fa-user-xmark"></i> Reject
+                    </button>
                   </div>
                 </div>
-
-                <div class="pending-req-badges">
-                  <span class="badge badge-passed"><i class="fa-solid fa-check"></i> Email OTP Verified</span>
-                  <span class="badge badge-blocked">Awaiting Dev Approval</span>
-                </div>
-
-                <div class="pending-req-actions">
-                  <button class="btn-approve-qa" onclick="window.approveTester('${user.id}')">
-                    <i class="fa-solid fa-user-check"></i> Approve Access
-                  </button>
-                  <button class="btn-reject-qa" onclick="window.rejectTester('${user.id}')">
-                    <i class="fa-solid fa-user-xmark"></i> Reject
-                  </button>
-                </div>
-              </div>
-            `).join("")}
+              `;
+            }).join("")}
           </div>
         `;
       }
@@ -2079,15 +2088,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   });
 
   window.approveTester = function(userId) {
-    const user = StorageManager.approveTesterRequest(userId, state.currentUser.name);
+    const user = StorageManager.approveTesterRequest(userId, (state.currentUser && state.currentUser.name) || "Chhotu Monster");
     if (user) {
-      showToast(`Approved QA workspace access for ${user.name}!`, "success");
+      showToast(`Approved workspace access for ${user.name}!`, "success");
       renderDevApprovals();
     }
   };
 
   window.rejectTester = function(userId) {
-    if (confirm("Reject this tester's access request?")) {
+    if (confirm("Reject this member's access request?")) {
       const user = StorageManager.rejectTesterRequest(userId);
       if (user) {
         showToast(`Rejected access request for ${user.name}`, "error");

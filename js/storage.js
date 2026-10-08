@@ -599,7 +599,7 @@ const StorageManager = {
   },
 
   getPendingTesterRequests() {
-    return this.getUsers().filter(u => u.role === "qa" && u.status === "pending_approval" && u.emailVerified);
+    return this.getUsers().filter(u => u.status === "pending_approval");
   },
 
   login(email, role) {
