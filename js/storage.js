@@ -143,70 +143,7 @@ const StorageManager = {
   // -------------------------------------------------------------
   getUsers() {
     const raw = localStorage.getItem(STORAGE_KEYS.USERS);
-    let users = raw ? JSON.parse(raw) : [...SEED_USERS];
-    
-    // Purge fake mock demo users if present in localStorage
-    const fakeMockEmails = [
-      "alex.qa@nexusqa.io",
-      "elena.qa@nexusqa.io",
-      "liam.tester@company.com",
-      "marcus.dev@nexusqa.io",
-      "sarah.dev@nexusqa.io",
-      "toby.dev@nexusqa.io",
-      "maya.dev@nexusqa.io"
-    ];
-    const initialLen = users.length;
-    users = users.filter(u => !u.email || !fakeMockEmails.includes(u.email.toLowerCase().trim()));
-    if (users.length !== initialLen) {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-    }
-
-    // Ensure dev@nexusqa.io is configured as active Senior Developer
-    const targetEmail = "dev@nexusqa.io";
-    const devIndex = users.findIndex(u => u.email && u.email.toLowerCase() === targetEmail);
-    if (devIndex === -1) {
-      users.push({
-        id: "user-dev-lead",
-        name: "Senior Developer",
-        email: targetEmail,
-        username: "dev",
-        role: "dev",
-        roleTitle: "Lead Full-Stack Developer",
-        devLevel: "senior",
-        avatar: "SD",
-        color: "#10b981",
-        status: "active",
-        emailVerified: true,
-        createdAt: "2026-10-06 12:00"
-      });
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-    } else {
-      if (users[devIndex].role !== "dev" || users[devIndex].status !== "active") {
-        users[devIndex].role = "dev";
-        users[devIndex].status = "active";
-        users[devIndex].emailVerified = true;
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-      }
-    }
-
-    // Ensure a@a is configured as active QA Tester
-    const testerEmail = "a@a";
-    const testerIndex = users.findIndex(u => u.email && u.email.toLowerCase() === testerEmail);
-    if (testerIndex === -1) {
-      users.push({
-        id: "user-qa-a",
-        name: "QA Tester",
-        email: testerEmail,
-        role: "qa",
-        roleTitle: "QA Tester",
-        avatar: "QA",
-        color: "#6366f1",
-        status: "active",
-        emailVerified: true,
-        createdAt: "2026-10-06 12:00"
-      });
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-    }
+    let users = raw ? JSON.parse(raw) : [];
 
     // Ensure current active user session is also saved in users array
     const curRaw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);

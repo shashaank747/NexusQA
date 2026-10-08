@@ -3,36 +3,7 @@
  * Preloaded with realistic enterprise QA, Developer data, and access requests.
  */
 
-const SEED_USERS = [
-  {
-    id: "user-dev-lead",
-    name: "Senior Developer",
-    email: "dev@nexusqa.io",
-    username: "dev",
-    phone: "9876543210",
-    role: "dev",
-    roleTitle: "Lead Full-Stack Developer",
-    devLevel: "senior",
-    avatar: "SD",
-    color: "#10b981",
-    status: "active",
-    emailVerified: true,
-    createdAt: "2026-10-06 12:00"
-  },
-  {
-    id: "user-qa-a",
-    name: "QA Tester",
-    email: "a@a",
-    phone: "9876543211",
-    role: "qa",
-    roleTitle: "QA Tester",
-    avatar: "QA",
-    color: "#6366f1",
-    status: "active",
-    emailVerified: true,
-    createdAt: "2026-10-06 12:00"
-  }
-];
+const SEED_USERS = [];
 
 const SEED_SUITES = [
   {

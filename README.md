@@ -322,12 +322,15 @@ NexusQA connects to Supabase for cloud sync and multi-user collaboration:
 
 ---
 
-## 🔑 Demo Login Credentials
+## 🔑 User Authentication & Workspace Access
 
-| Role | Email / Identifier | Passcode | Target Portal |
-| :--- | :--- | :--- | :--- |
-| **QA Tester** | `a@a` | `654321` | [`tester.html`](file:///c:/Users/Shashaank%20Sajjanar/Desktop/Random%20Projects/QA/tester.html) (`/qa`) |
-| **Lead Developer** | `dev@nexusqa.io` | `123456` | [`dev.html`](file:///c:/Users/Shashaank%20Sajjanar/Desktop/Random%20Projects/QA/dev.html) (`/dev`) |
+NexusQA starts with an empty user registry. Create your own accounts directly from the login portal:
+
+1. **Sign Up**: Navigate to [`index.html`](file:///c:/Users/Shashaank%20Sajjanar/Desktop/Random%20Projects/QA/index.html) and select the **Sign Up** tab.
+2. **Choose Role**:
+   - **QA Tester Portal** (`/qa` or [`tester.html`](file:///c:/Users/Shashaank%20Sajjanar/Desktop/Random%20Projects/QA/tester.html)): For test execution, conversational AI voice test creation, and bug logging.
+   - **Developer Command Center** (`/dev` or [`dev.html`](file:///c:/Users/Shashaank%20Sajjanar/Desktop/Random%20Projects/QA/dev.html)): For bug triage, employee approvals, and defect resolution.
+3. **Instant Authentication**: Type your username or email and optional 6-digit passcode to enter the workspace.
 
 ---
 
