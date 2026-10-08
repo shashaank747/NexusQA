@@ -326,6 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
     stepsBuilderList: document.getElementById("stepsBuilderList"),
     addStepBtn: document.getElementById("addStepBtn"),
     saveTestCaseBtn: document.getElementById("saveTestCaseBtn"),
+    autoInputTestCaseBtn: document.getElementById("autoInputTestCaseBtn"),
     closeTestCaseModalBtn: document.getElementById("closeTestCaseModalBtn"),
     cancelTestCaseModalBtn: document.getElementById("cancelTestCaseModalBtn"),
     tcImageFileInput: document.getElementById("tcImageFileInput"),
@@ -3134,6 +3135,97 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.testCaseModal) DOM.testCaseModal.style.display = "flex";
   };
 
+  // Auto Input Scenarios Pool
+  const autoInputScenarios = [
+    {
+      title: "Verify OAuth 2.0 PKCE redirection and session token persistence across browser restarts",
+      suiteId: "suite-auth",
+      priority: "P1 - High",
+      type: "Security",
+      status: "Untested",
+      preconditions: "User account exists with corporate Google Workspace SSO enabled; 2FA requirement enabled.",
+      tags: ["auth", "oauth", "security", "session", "sso"],
+      steps: [
+        { step: 1, action: "Click 'Sign in with Google' on the unified landing gateway", expected: "Redirected to Google OAuth authorization consent screen with valid client_id and state token" },
+        { step: 2, action: "Complete biometric credentials consent and return to callback URL", expected: "Session token stored in httpOnly secure cookie and user redirected to workspace dashboard" },
+        { step: 3, action: "Close browser window, reopen browser, and navigate directly to workspace URL", expected: "User remains authenticated without re-prompting for credentials" }
+      ]
+    },
+    {
+      title: "Verify 20% discount coupon applied accurately to subtotal and tax during multi-item checkout",
+      suiteId: "suite-checkout",
+      priority: "P0 - Critical",
+      type: "Functional",
+      status: "Untested",
+      preconditions: "Shopping cart contains 2 products with subtotal exceeding $50.00; coupon 'SAVE20' is active.",
+      tags: ["checkout", "payments", "discount", "stripe", "cart"],
+      steps: [
+        { step: 1, action: "Add items SKU-101 and SKU-102 to cart and navigate to checkout screen", expected: "Order summary displays accurate subtotal before promotional deductions" },
+        { step: 2, action: "Enter promo code 'SAVE20' into discount input and click Apply", expected: "Discount of -$15.00 (20%) deducted immediately, and tax recomputed on adjusted balance" },
+        { step: 3, action: "Submit payment with valid test card credentials", expected: "Order confirmation view loads with status 200 and invoice receipt email triggered" }
+      ]
+    },
+    {
+      title: "Verify REST API rate limiting triggers HTTP 429 Too Many Requests after 60 requests per minute",
+      suiteId: "suite-api",
+      priority: "P1 - High",
+      type: "Integration",
+      status: "Untested",
+      preconditions: "API Client token generated with standard tier rate limit (60 requests per minute).",
+      tags: ["api", "rate-limit", "security", "performance"],
+      steps: [
+        { step: 1, action: "Dispatch 60 rapid GET requests to /api/v1/test-cases within 30 seconds", expected: "All 60 requests respond with status 200 OK and valid JSON data payload" },
+        { step: 2, action: "Dispatch 61st GET request within the same 60-second window", expected: "Server responds with HTTP 429 Too Many Requests and 'Retry-After' header" }
+      ]
+    },
+    {
+      title: "Verify faceted search filters test cases simultaneously by suite, priority, and text query",
+      suiteId: "suite-search",
+      priority: "P2 - Medium",
+      type: "Functional",
+      status: "Untested",
+      preconditions: "Workspace contains test cases across diverse suites, priorities, and custom tags.",
+      tags: ["search", "filtering", "ui", "performance"],
+      steps: [
+        { step: 1, action: "Select suite 'Authentication' from left sidebar and choose priority 'P1 - High'", expected: "Table immediately filters down to only P1 test cases in the Authentication suite" },
+        { step: 2, action: "Type 'password' into the global search input box", expected: "Table updates in real-time to show matching test cases containing the keyword" }
+      ]
+    }
+  ];
+
+  let autoInputScenarioIndex = 0;
+
+  function handleAutoInputTestCase() {
+    const scenario = autoInputScenarios[autoInputScenarioIndex % autoInputScenarios.length];
+    autoInputScenarioIndex++;
+
+    if (DOM.tcTitle) DOM.tcTitle.value = scenario.title;
+    populateSuiteDropdowns();
+    if (DOM.tcSuite) {
+      DOM.tcSuite.value = scenario.suiteId;
+      // If suite not found, pick first option
+      if (!DOM.tcSuite.value && DOM.tcSuite.options.length > 0) {
+        DOM.tcSuite.selectedIndex = 0;
+      }
+    }
+    if (DOM.tcPriority) DOM.tcPriority.value = scenario.priority;
+    if (DOM.tcType) DOM.tcType.value = scenario.type;
+    if (DOM.tcStatus) DOM.tcStatus.value = scenario.status;
+    if (DOM.tcPreconditions) DOM.tcPreconditions.value = scenario.preconditions;
+    if (DOM.tcTags) DOM.tcTags.value = scenario.tags.join(", ");
+    renderStepRows(scenario.steps);
+
+    // Visual smooth flash
+    if (DOM.testCaseForm) {
+      DOM.testCaseForm.style.transition = "opacity 0.2s ease";
+      DOM.testCaseForm.style.opacity = "0.7";
+      setTimeout(() => { DOM.testCaseForm.style.opacity = "1"; }, 200);
+    }
+
+    showToast(`⚡ Auto Input: Pre-filled with scenario: "${scenario.title.substring(0, 38)}..."`, "success");
+  }
+
+  on(DOM.autoInputTestCaseBtn, "click", handleAutoInputTestCase);
   on(DOM.createNewTestCaseBtn, "click", openCreateTestCaseModal);
   on(DOM.emptyCreateBtn, "click", openCreateTestCaseModal);
   on(DOM.closeTestCaseModalBtn, "click", () => { if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none"; });

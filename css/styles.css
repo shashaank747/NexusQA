@@ -3599,6 +3599,44 @@ body.light-theme .sidebar-secondary-panel {
   border-bottom-right-radius: var(--radius-xl);
 }
 
+.auto-input-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: var(--primary-light, #a5b4fc);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.15);
+}
+
+.auto-input-pill:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(168, 85, 247, 0.3));
+  border-color: var(--primary);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+}
+
+body.light-theme .auto-input-pill {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4f46e5;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.1);
+}
+
+body.light-theme .auto-input-pill:hover {
+  background: #e0e7ff;
+  border-color: #4f46e5;
+  color: #3730a3;
+  box-shadow: 0 3px 8px rgba(79, 70, 229, 0.2);
+}
+
 /* Forms */
 .form-group {
   margin-bottom: 1rem;
