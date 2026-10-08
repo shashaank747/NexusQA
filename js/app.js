@@ -340,25 +340,65 @@ document.addEventListener("DOMContentLoaded", () => {
     editTestCaseDeleteWrap: document.getElementById("editTestCaseDeleteWrap"),
     deleteTestCaseModalBtn: document.getElementById("deleteTestCaseModalBtn"),
 
-    // AI Auto Input Studio Modal
+    // Conversational AI QA Assistant & Auto Input Studio Modal
     autoInputModal: document.getElementById("autoInputModal"),
     aiTargetSuite: document.getElementById("aiTargetSuite"),
     aiChatStream: document.getElementById("aiChatStream"),
     aiTestCasePromptInput: document.getElementById("aiTestCasePromptInput"),
     aiExtractSubmitBtn: document.getElementById("aiExtractSubmitBtn"),
     aiStudioStatusText: document.getElementById("aiStudioStatusText"),
-    aiFillToManualBtn: document.getElementById("aiFillToManualBtn"),
-    aiSaveToDatabaseBtn: document.getElementById("aiSaveToDatabaseBtn"),
     clearAiChatBtn: document.getElementById("clearAiChatBtn"),
-    chipAddPositive: document.getElementById("chipAddPositive"),
-    chipAddNegative: document.getElementById("chipAddNegative"),
-    chipAddEdge: document.getElementById("chipAddEdge"),
-    chipAddBug: document.getElementById("chipAddBug"),
+    resetSessionBtn: document.getElementById("resetSessionBtn"),
+    openTaskRefModalBtn: document.getElementById("openTaskRefModalBtn"),
     closeAutoInputModalBtn: document.getElementById("closeAutoInputModalBtn"),
     cancelAutoInputModalBtn: document.getElementById("cancelAutoInputModalBtn"),
     dashboardAutoInputBtn: document.getElementById("dashboardAutoInputBtn"),
     repoAutoInputBtn: document.getElementById("repoAutoInputBtn"),
+    autoInputTestCaseBtn: document.getElementById("autoInputTestCaseBtn"),
     dashboardNewTestCaseBtn: document.getElementById("dashboardNewTestCaseBtn"),
+
+    // Session Status Pills
+    valTestRef: document.getElementById("valTestRef"),
+    valSide: document.getElementById("valSide"),
+    valTrainerCount: document.getElementById("valTrainerCount"),
+    valStudentCount: document.getElementById("valStudentCount"),
+    pillMismatch: document.getElementById("pillMismatch"),
+
+    // Voice & Media
+    voiceRecordingBanner: document.getElementById("voiceRecordingBanner"),
+    aiVoiceDictateBtn: document.getElementById("aiVoiceDictateBtn"),
+    stopVoiceBtn: document.getElementById("stopVoiceBtn"),
+    aiAttachScreenshotLabel: document.getElementById("aiAttachScreenshotLabel"),
+    aiScreenshotFileInput: document.getElementById("aiScreenshotFileInput"),
+    aiEvidencePreviewBar: document.getElementById("aiEvidencePreviewBar"),
+    evidencePreviewImg: document.getElementById("evidencePreviewImg"),
+    evidenceFileName: document.getElementById("evidenceFileName"),
+    removeEvidenceBtn: document.getElementById("removeEvidenceBtn"),
+    chipTrainerSide: document.getElementById("chipTrainerSide"),
+    chipStudentSide: document.getElementById("chipStudentSide"),
+
+    // Review & Staged Cards
+    aiReviewCardsList: document.getElementById("aiReviewCardsList"),
+    stagedRecordsCountBadge: document.getElementById("stagedRecordsCountBadge"),
+    emptyReviewPlaceholder: document.getElementById("emptyReviewPlaceholder"),
+    copyAllTsvBtn: document.getElementById("copyAllTsvBtn"),
+    downloadAllCsvBtn: document.getElementById("downloadAllCsvBtn"),
+    aiExportTsvFooterBtn: document.getElementById("aiExportTsvFooterBtn"),
+    aiConfirmSaveAllBtn: document.getElementById("aiConfirmSaveAllBtn"),
+
+    // Task Reference Modal
+    taskReferenceModal: document.getElementById("taskReferenceModal"),
+    closeTaskRefModalBtn: document.getElementById("closeTaskRefModalBtn"),
+    closeTaskRefModalFooterBtn: document.getElementById("closeTaskRefModalFooterBtn"),
+    taskRefTable: document.getElementById("taskRefTable"),
+    taskRefTableBody: document.getElementById("taskRefTableBody"),
+    addNewTaskRefBtn: document.getElementById("addNewTaskRefBtn"),
+
+    // 22-Col Full Editor Modal
+    qa22ColEditModal: document.getElementById("qa22ColEditModal"),
+    closeQaEditModalBtn: document.getElementById("closeQaEditModalBtn"),
+    cancelQaEditModalBtn: document.getElementById("cancelQaEditModalBtn"),
+    saveQaEditModalBtn: document.getElementById("saveQaEditModalBtn"),
 
     testCaseDetailModal: document.getElementById("testCaseDetailModal"),
     viewDetailId: document.getElementById("viewDetailId"),
@@ -3244,10 +3284,11 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   ];
 
   // ==========================================================================
-  // AI AUTO-INPUT STUDIO (ChatGPT / Gemini Natural Language Parser)
+  // CAMPUSOS CONVERSATIONAL AI QA ASSISTANT CONTROLLER
   // ==========================================================================
 
-  let lastParsedAiTestCase = null;
+  let currentAttachedScreenshot = null;
+  let stagedQaRecords = [];
 
   function populateAiSuiteDropdown() {
     if (!DOM.aiTargetSuite) return;
@@ -3258,159 +3299,39 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   }
 
-  function parseTestCasePrompt(rawText) {
-    if (!rawText || !rawText.trim()) return null;
-    const text = rawText.trim();
-    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  function updateSessionBarUI() {
+    if (typeof QAAssistant === "undefined") return;
+    const session = QAAssistant.getSession();
+    
+    if (DOM.valTestRef) DOM.valTestRef.textContent = session.test_reference || "Not Set";
+    if (DOM.valSide) DOM.valSide.textContent = session.side || "Student";
+    if (DOM.valTrainerCount) DOM.valTrainerCount.textContent = session.trainer_question_count !== null ? session.trainer_question_count : "-";
+    if (DOM.valStudentCount) DOM.valStudentCount.textContent = session.student_question_count !== null ? session.student_question_count : "-";
 
-    // 1. Title Extraction
-    let title = "";
-    const titleMatch = text.match(/(?:title|test\s*case(?:\s*\d+)?|scenario):\s*([^\n]+)/i);
-    if (titleMatch) {
-      title = titleMatch[1].trim();
-    } else {
-      // Look for a line starting with "Verify" or take the first clean line
-      const verifyLine = lines.find(l => /^verify\b/i.test(l));
-      title = verifyLine || lines[0].replace(/^(?:#|\*|-|\d+\.)\s*/, "");
+    const hasMismatch = session.trainer_question_count !== null && 
+                        session.student_question_count !== null && 
+                        session.trainer_question_count !== session.student_question_count;
+
+    if (DOM.pillMismatch) {
+      DOM.pillMismatch.style.display = hasMismatch ? "inline-flex" : "none";
     }
-    // Clean trailing punctuation or markers
-    title = title.replace(/^["']|["']$/g, "").trim();
-
-    // 2. Nature & Category (Positive, Negative, Edge Case)
-    let nature = "Positive Test";
-    let type = "Functional";
-    if (/negative|fail(?:ure)?|invalid|reject|unauthorized|blocked/i.test(text)) {
-      nature = "Negative Test";
-    } else if (/edge(?:\s*case)?|boundary|limit|overflow|concurren|stress|deadlock|timeout/i.test(text)) {
-      nature = "Edge Case";
-    }
-
-    if (/security|xss|sqli|csrf|token|auth|permission/i.test(text)) {
-      type = "Security";
-    } else if (/smoke/i.test(text)) {
-      type = "Smoke";
-    } else if (/regression/i.test(text)) {
-      type = "Regression";
-    } else if (/api|endpoint|http|rest|status\s*\d{3}/i.test(text)) {
-      type = "Integration";
-    } else if (/ui|ux|responsive|viewport|layout|css/i.test(text)) {
-      type = "UI / UX";
-    } else if (/perf|performance|lighthouse|vitals|latency/i.test(text)) {
-      type = "Performance";
-    }
-
-    // 3. Priority Extraction
-    let priority = "P1 - High";
-    if (/p0|critical|blocker|urgent/i.test(text)) {
-      priority = "P0 - Critical";
-    } else if (/p1|high/i.test(text)) {
-      priority = "P1 - High";
-    } else if (/p2|medium/i.test(text)) {
-      priority = "P2 - Medium";
-    } else if (/p3|low|minor/i.test(text)) {
-      priority = "P3 - Low";
-    }
-
-    // 4. Bug ID Calculation / Extraction
-    let bugId = "";
-    const bugMatch = text.match(/bug(?:\s*id)?:\s*([A-Za-z0-9_-]+)/i);
-    if (bugMatch) {
-      const captured = bugMatch[1].trim();
-      if (/^auto$/i.test(captured)) {
-        bugId = `BUG-${Math.floor(100 + Math.random() * 900)}`;
-      } else {
-        bugId = captured.toUpperCase();
-      }
-    } else {
-      const directBug = text.match(/\bBUG-\d+\b/i);
-      if (directBug) bugId = directBug[0].toUpperCase();
-    }
-
-    // 5. Preconditions Extraction
-    let preconditions = "";
-    const preMatch = text.match(/(?:preconditions?|context|given):\s*([^\n]+(?:\n(?!\s*(?:step|when|then|expected|tags|bug))\s*[^\n]+)*)/i);
-    if (preMatch) {
-      preconditions = preMatch[1].trim();
-    }
-
-    // 6. Steps Extraction
-    const steps = [];
-    const stepRegex = /(?:step\s*(\d+)|\b(\d+)\.|\bwhen)\s*[:.-]?\s*([^\n]+)/gi;
-    let match;
-    while ((match = stepRegex.exec(text)) !== null) {
-      const stepText = (match[3] || "").trim();
-      if (stepText && !/^expected/i.test(stepText) && !/^tags/i.test(stepText)) {
-        // Check if expected is embedded (e.g. "Action -> Expect: ...")
-        let action = stepText;
-        let expected = "Operation completes as expected.";
-        if (/(?:->|expect(?:ed)?|should\s*be|verify)\s*[:]?\s*(.+)/i.test(stepText)) {
-          const parts = stepText.split(/(?:->|expect(?:ed)?|should\s*be|verify)\s*[:]?\s*/i);
-          action = (parts[0] || "").trim();
-          expected = (parts[1] || "Verified successfully.").trim();
-        }
-        steps.push({
-          step: steps.length + 1,
-          action: action || `Execute step ${steps.length + 1}`,
-          expected: expected
-        });
-      }
-    }
-
-    // Overall Expected Result
-    let overallExpected = "";
-    const expMatch = text.match(/(?:expected(?:\s*result)?|then|outcome):\s*([^\n]+(?:\n(?!\s*(?:tags|bug|step))\s*[^\n]+)*)/i);
-    if (expMatch) {
-      overallExpected = expMatch[1].trim();
-      if (steps.length > 0) {
-        steps[steps.length - 1].expected = overallExpected;
-      }
-    }
-
-    // Fallback steps if none detected explicitly
-    if (steps.length === 0) {
-      steps.push({
-        step: 1,
-        action: "Navigate to target view / endpoint and trigger action",
-        expected: overallExpected || "Target response / UI update verified successfully"
-      });
-    }
-
-    // 7. Tags Extraction
-    let tags = [];
-    const tagMatch = text.match(/tags?:\s*([^\n]+)/i);
-    if (tagMatch) {
-      tags = tagMatch[1].split(/[,| ]+/).map(t => t.trim().toLowerCase().replace(/^#/, "")).filter(Boolean);
-    } else {
-      tags = [nature.toLowerCase().replace(" test", ""), type.toLowerCase()];
-      if (bugId) tags.push("bug-linked");
-      if (title.toLowerCase().includes("auth")) tags.push("auth");
-      if (title.toLowerCase().includes("checkout")) tags.push("checkout");
-      if (title.toLowerCase().includes("api")) tags.push("api");
-    }
-
-    const suiteId = (DOM.aiTargetSuite && DOM.aiTargetSuite.value) ? DOM.aiTargetSuite.value : "suite-auth";
-
-    return {
-      id: `TC-${Math.floor(100 + Math.random() * 900)}`,
-      title,
-      nature,
-      suiteId,
-      priority,
-      type,
-      status: "Untested",
-      bugId,
-      preconditions,
-      steps,
-      tags,
-      author: "Nexus AI Auto-Input",
-      createdAt: new Date().toISOString().replace("T", " ").substring(0, 16)
-    };
   }
 
-  function appendAiUserBubble(promptText) {
+  function appendAiUserBubble(promptText, imageMeta = null) {
     if (!DOM.aiChatStream) return;
     const row = document.createElement("div");
     row.className = "ai-message-row user-row";
+    
+    let imgHtml = "";
+    if (imageMeta && imageMeta.data) {
+      imgHtml = `
+        <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.25); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+          <img src="${imageMeta.data}" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px;">
+          <span class="text-xs text-muted">${escapeHtml(imageMeta.name || "Screenshot")}</span>
+        </div>
+      `;
+    }
+
     row.innerHTML = `
       <div class="ai-avatar user-avatar"><i class="fa-solid fa-user"></i></div>
       <div class="ai-message-bubble">
@@ -3418,216 +3339,443 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           <strong style="color: var(--primary-light, #a5b4fc);">You (QA Tester)</strong>
           <span class="text-xs text-muted">Just now</span>
         </div>
-        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; font-size: 0.86rem;">${escapeHtml(promptText)}</pre>
+        <div style="white-space: pre-wrap; font-size: 0.86rem;">${escapeHtml(promptText)}</div>
+        ${imgHtml}
       </div>
     `;
     DOM.aiChatStream.appendChild(row);
     DOM.aiChatStream.scrollTop = DOM.aiChatStream.scrollHeight;
   }
 
-  function appendAiBotBubble(parsed) {
+  function appendAiBotBubble(result) {
     if (!DOM.aiChatStream) return;
     const row = document.createElement("div");
     row.className = "ai-message-row bot-row";
 
-    let natureClass = "nature-positive";
-    if (parsed.nature === "Negative Test") natureClass = "nature-negative";
-    if (parsed.nature === "Edge Case") natureClass = "nature-edge";
-
-    const stepsHtml = parsed.steps.map(s => `
-      <div class="ai-step-item">
-        <span class="ai-step-num">Step ${s.step}:</span>
-        <div style="flex: 1;">
-          <div><strong>Action:</strong> ${escapeHtml(s.action)}</div>
-          <div class="text-xs text-muted mt-1"><i class="fa-solid fa-check-double text-emerald mr-1"></i><strong>Expected:</strong> ${escapeHtml(s.expected)}</div>
+    if (result.needsClarification && result.questions && result.questions.length > 0) {
+      const qHtml = result.questions.map(q => `
+        <div style="background: rgba(245, 158, 11, 0.15); border-left: 3px solid #f59e0b; padding: 6px 10px; border-radius: 4px; margin-top: 6px; font-weight: 600; color: #fde68a;">
+          <i class="fa-solid fa-circle-question mr-1"></i> ${escapeHtml(q)}
         </div>
-      </div>
-    `).join("");
+      `).join("");
 
-    const bugBadgeHtml = parsed.bugId 
-      ? `<span class="badge badge-failed text-xs"><i class="fa-solid fa-bug mr-1"></i>Linked Bug: ${escapeHtml(parsed.bugId)}</span>`
-      : "";
-
-    row.innerHTML = `
-      <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-sparkles"></i></div>
-      <div class="ai-message-bubble" style="width: 100%; max-width: 88%;">
-        <div class="d-flex align-center justify-between gap-2 mb-2">
-          <div class="d-flex align-center gap-2">
-            <strong style="color: #ffffff;">Nexus AI Auto-Parser</strong>
-            <span class="badge badge-primary text-xs"><i class="fa-solid fa-bolt mr-1"></i>Parsed Successfully</span>
+      row.innerHTML = `
+        <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-robot"></i></div>
+        <div class="ai-message-bubble">
+          <div class="d-flex align-center justify-between gap-2 mb-1">
+            <strong style="color: #ffffff;">CampusOS QA Assistant</strong>
+            <span class="badge badge-warning text-xs">Clarification Needed</span>
           </div>
-          <span class="text-xs text-muted">${parsed.createdAt}</span>
+          <p style="margin: 0; font-size: 0.86rem;">I have noted your observation. To classify and structure it accurately without guessing:</p>
+          ${qHtml}
         </div>
+      `;
+    } else if (result.newRecords && result.newRecords.length > 0) {
+      const recordsSummaryHtml = result.newRecords.map((r, i) => `
+        <div style="background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; margin-top: 6px; border-left: 3px solid ${r.test_case_type === 'Bug' ? '#ef4444' : '#3b82f6'};">
+          <div class="d-flex align-center justify-between">
+            <span class="badge ${r.test_case_type === 'Bug' ? 'badge-failed' : 'badge-primary'} text-xs font-bold">${r.test_case_type}</span>
+            <span class="text-xs text-muted">${r.test_case_id} ${r.bug_id ? `• ${r.bug_id}` : ''}</span>
+          </div>
+          <div style="font-size: 0.84rem; font-weight: 600; margin-top: 3px; color: #ffffff;">${escapeHtml(r.title)}</div>
+          ${r.is_duplicate ? `<div class="text-xs text-emerald mt-1"><i class="fa-solid fa-link mr-1"></i> Matched existing defect <strong>${r.bug_id}</strong></div>` : ''}
+          ${r.possible_duplicate ? `<div class="text-xs text-amber mt-1"><i class="fa-solid fa-copy mr-1"></i> Possible match: <strong>${r.possible_duplicate.id}</strong> (Review in right panel)</div>` : ''}
+        </div>
+      `).join("");
 
-        <div class="ai-parsed-card">
-          <div class="ai-parsed-header">
-            <div>
-              <span class="ai-nature-badge ${natureClass} mr-2">${escapeHtml(parsed.nature)}</span>
-              <span class="badge badge-secondary text-xs mr-1">${escapeHtml(parsed.priority)}</span>
-              <span class="badge badge-secondary text-xs mr-1">${escapeHtml(parsed.type)}</span>
-              ${bugBadgeHtml}
+      row.innerHTML = `
+        <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-robot"></i></div>
+        <div class="ai-message-bubble" style="width: 100%;">
+          <div class="d-flex align-center justify-between gap-2 mb-1">
+            <div class="d-flex align-center gap-2">
+              <strong style="color: #ffffff;">CampusOS QA Assistant</strong>
+              <span class="badge badge-success text-xs"><i class="fa-solid fa-check mr-1"></i> ${result.newRecords.length} Record${result.newRecords.length > 1 ? 's' : ''} Extracted</span>
             </div>
-            <span class="test-id-pill">${parsed.id}</span>
+            <span class="text-xs text-muted">Ready for Review</span>
           </div>
-
-          <div class="ai-parsed-title mb-2">${escapeHtml(parsed.title)}</div>
-
-          ${parsed.preconditions ? `<div class="text-xs text-muted mb-2"><i class="fa-solid fa-info-circle mr-1"></i><strong>Preconditions:</strong> ${escapeHtml(parsed.preconditions)}</div>` : ""}
-
-          <div class="ai-steps-timeline">
-            ${stepsHtml}
-          </div>
-
-          <div class="d-flex align-center justify-between flex-wrap gap-2 mt-2 pt-2" style="border-top: 1px solid rgba(255,255,255,0.06);">
-            <div class="d-flex align-center gap-1 flex-wrap">
-              <span class="text-xs text-muted">Tags:</span>
-              ${parsed.tags.map(t => `<span class="badge badge-subtle text-xs">#${escapeHtml(t)}</span>`).join(" ")}
-            </div>
-          </div>
+          <p style="margin: 0; font-size: 0.86rem;">
+            Successfully extracted structured findings! I've loaded them into the <strong>Review Panel</strong> on the right for your confirmation before saving.
+          </p>
+          ${recordsSummaryHtml}
         </div>
-      </div>
-    `;
+      `;
+    } else {
+      row.innerHTML = `
+        <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-robot"></i></div>
+        <div class="ai-message-bubble">
+          <div class="d-flex align-center justify-between gap-2 mb-1">
+            <strong style="color: #ffffff;">CampusOS QA Assistant</strong>
+            <span class="text-xs text-muted">Observation Logged</span>
+          </div>
+          <p style="margin: 0; font-size: 0.86rem;">
+            Updated session context with your observation. You can provide more details or another message to finalize the test case.
+          </p>
+        </div>
+      `;
+    }
 
     DOM.aiChatStream.appendChild(row);
     DOM.aiChatStream.scrollTop = DOM.aiChatStream.scrollHeight;
+  }
+
+  function renderStagedReviewCards() {
+    if (!DOM.aiReviewCardsList) return;
+    const records = stagedQaRecords;
+
+    if (DOM.stagedRecordsCountBadge) {
+      const unsavedCount = records.filter(r => !r._saved).length;
+      DOM.stagedRecordsCountBadge.textContent = `${unsavedCount} Pending (${records.length} Total)`;
+    }
+
+    if (DOM.aiConfirmSaveAllBtn) {
+      DOM.aiConfirmSaveAllBtn.disabled = records.filter(r => !r._saved).length === 0;
+    }
+
+    if (records.length === 0) {
+      DOM.aiReviewCardsList.innerHTML = `
+        <div class="empty-review-placeholder" id="emptyReviewPlaceholder">
+          <div class="empty-icon"><i class="fa-solid fa-clipboard-question"></i></div>
+          <h4>No Records Extracted Yet</h4>
+          <p class="text-xs text-muted">
+            Speak or type your testing notes on the left. The AI will extract facts, expected vs actual behavior, and generate structured 22-column records here for your review and confirmation before saving.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    DOM.aiReviewCardsList.innerHTML = records.map((rec, index) => {
+      const isBug = rec.test_case_type === "Bug";
+      const cardTypeClass = isBug ? "card-bug" : "card-enhancement";
+      const savedClass = rec._saved ? "card-saved" : "";
+
+      const duplicateAlertHtml = rec.possible_duplicate && !rec._duplicateResolved ? `
+        <div class="duplicate-bug-alert">
+          <div class="alert-top">
+            <strong><i class="fa-solid fa-copy text-amber mr-1"></i> Possible Existing Bug: ${escapeHtml(rec.possible_duplicate.id)}</strong>
+            <span class="badge badge-warning text-xs">Medium Confidence</span>
+          </div>
+          <div class="text-xs text-muted">"${escapeHtml(rec.possible_duplicate.summary || rec.possible_duplicate.title || '')}"</div>
+          <div class="d-flex align-center gap-1 mt-1">
+            <button type="button" class="btn btn-secondary btn-xs" onclick="window.useExistingBugForRecord(${index}, '${rec.possible_duplicate.id}')">
+              <i class="fa-solid fa-link mr-1"></i> Use Existing (${rec.possible_duplicate.id})
+            </button>
+            <button type="button" class="btn btn-ghost btn-xs" onclick="window.keepNewBugForRecord(${index})">
+              Create New Bug ID
+            </button>
+          </div>
+        </div>
+      ` : "";
+
+      const stepsListHtml = Array.isArray(rec.steps_to_reproduce) 
+        ? rec.steps_to_reproduce.map((s, si) => `<div class="text-xs text-muted"><strong>${si + 1}.</strong> ${escapeHtml(s)}</div>`).join("")
+        : `<div class="text-xs text-muted">${escapeHtml(rec.steps_to_reproduce || "1. Execute test as defined")}</div>`;
+
+      return `
+        <div class="qa-review-card ${cardTypeClass} ${savedClass}" id="qaCard-${index}">
+          <div class="qa-review-card-header">
+            <div class="qa-review-badges">
+              <span class="badge ${isBug ? 'badge-failed' : 'badge-primary'} text-xs font-bold">${rec.test_case_type}</span>
+              <span class="test-id-pill">${rec.test_case_id}</span>
+              ${rec.bug_id ? `<span class="badge badge-secondary text-xs"><i class="fa-solid fa-bug text-rose mr-1"></i>${rec.bug_id}</span>` : ''}
+              <span class="badge badge-secondary text-xs">${rec.severity}</span>
+              <span class="badge badge-subtle text-xs">${rec.side} Side</span>
+              <span class="badge ${rec.test_result === 'Fail' ? 'badge-failed' : 'badge-success'} text-xs">${rec.test_result}</span>
+            </div>
+            ${rec._saved ? `<span class="badge badge-success text-xs"><i class="fa-solid fa-check mr-1"></i> Saved to DB</span>` : ''}
+          </div>
+
+          <div class="qa-review-title">${escapeHtml(rec.title)}</div>
+
+          ${duplicateAlertHtml}
+
+          <!-- Expected vs Actual Comparison -->
+          <div class="qa-expected-actual-box">
+            <div class="qa-expected-pane">
+              <div class="qa-pane-label label-expected"><i class="fa-solid fa-circle-check mr-1"></i> Expected Result:</div>
+              <div>${escapeHtml(rec.expected_result)}</div>
+            </div>
+            <div class="qa-actual-pane">
+              <div class="qa-pane-label label-actual"><i class="fa-solid fa-circle-xmark mr-1"></i> Actual Result:</div>
+              <div>${escapeHtml(rec.actual_result)}</div>
+            </div>
+          </div>
+
+          ${rec.preconditions ? `<div class="text-xs text-muted"><i class="fa-solid fa-info-circle mr-1"></i><strong>Preconditions:</strong> ${escapeHtml(rec.preconditions)}</div>` : ''}
+
+          <div class="text-xs font-bold text-muted mt-1"><i class="fa-solid fa-list-ol mr-1"></i> Steps to Reproduce:</div>
+          <div class="steps-box" style="padding-left: 0.5rem; display: flex; flex-direction: column; gap: 3px;">
+            ${stepsListHtml}
+          </div>
+
+          <div class="d-flex align-center justify-between flex-wrap gap-1 text-xs text-muted mt-1 pt-1" style="border-top: 1px solid rgba(255,255,255,0.06);">
+            <span><strong>Reproducibility:</strong> ${escapeHtml(rec.reproducibility || 'Not Tested')}</span>
+            <span><strong>Status:</strong> ${escapeHtml(rec.bug_status || 'Open')}</span>
+            <span><strong>Evidence:</strong> ${escapeHtml(rec.screenshot_evidence || 'None')}</span>
+          </div>
+
+          <div class="qa-card-actions">
+            <div class="d-flex align-center gap-1">
+              <button type="button" class="btn btn-ghost btn-xs text-rose" onclick="window.dismissStagedRecord(${index})" title="Dismiss Record">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs" onclick="window.editStagedRecord(${index})" title="Edit in Full 22-Column Editor">
+                <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
+              </button>
+              <button type="button" class="btn btn-outline btn-xs" onclick="window.copySingleRecordTsv(${index})" title="Copy 22-Col TSV for Excel">
+                <i class="fa-solid fa-file-excel text-emerald mr-1"></i> TSV
+              </button>
+            </div>
+            <div>
+              ${rec._saved ? `
+                <button type="button" class="btn btn-success btn-xs" disabled>
+                  <i class="fa-solid fa-check mr-1"></i> Saved
+                </button>
+              ` : `
+                <button type="button" class="btn btn-primary btn-xs" onclick="window.confirmSaveSingleRecord(${index})">
+                  <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Confirm & Save
+                </button>
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
   }
 
   function handleExecuteAiPrompt() {
     if (!DOM.aiTestCasePromptInput) return;
     const promptText = DOM.aiTestCasePromptInput.value.trim();
-    if (!promptText) {
-      showToast("Please enter a test case prompt or select a quick template chip", "warning");
+    if (!promptText && !currentAttachedScreenshot) {
+      showToast("Please enter an observation or voice dictation first.", "warning");
       DOM.aiTestCasePromptInput.focus();
       return;
     }
 
-    appendAiUserBubble(promptText);
+    const imageToSend = currentAttachedScreenshot;
+    appendAiUserBubble(promptText || "(Screenshot attached)", imageToSend);
     DOM.aiTestCasePromptInput.value = "";
+    
+    // Clear screenshot preview
+    currentAttachedScreenshot = null;
+    if (DOM.aiEvidencePreviewBar) DOM.aiEvidencePreviewBar.style.display = "none";
 
     if (DOM.aiStudioStatusText) {
-      DOM.aiStudioStatusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-primary"></i> Parsing test specifications...`;
+      DOM.aiStudioStatusText.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-primary"></i> Analyzing observation & extracting facts...`;
     }
 
     setTimeout(() => {
-      const parsed = parseTestCasePrompt(promptText);
-      lastParsedAiTestCase = parsed;
+      const result = QAAssistant.processTesterMessage(promptText, imageToSend);
+      if (result) {
+        if (result.newRecords && result.newRecords.length > 0) {
+          result.newRecords.forEach(rec => {
+            stagedQaRecords.push(rec);
+          });
+        }
 
-      appendAiBotBubble(parsed);
+        appendAiBotBubble(result);
+        updateSessionBarUI();
+        renderStagedReviewCards();
 
-      if (DOM.aiFillToManualBtn) DOM.aiFillToManualBtn.disabled = false;
-      if (DOM.aiSaveToDatabaseBtn) DOM.aiSaveToDatabaseBtn.disabled = false;
+        if (DOM.aiStudioStatusText) {
+          DOM.aiStudioStatusText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald"></i> Ready • ${stagedQaRecords.length} records in review`;
+        }
 
-      if (DOM.aiStudioStatusText) {
-        DOM.aiStudioStatusText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald"></i> Ready: "${escapeHtml(parsed.title.substring(0, 32))}..."`;
+        if (result.newRecords && result.newRecords.length > 0) {
+          showToast(`⚡ QA Assistant: Extracted ${result.newRecords.length} structured QA record(s)`, "success");
+        }
       }
-
-      showToast(`⚡ AI Auto-Input: Extracted "${parsed.title.substring(0, 36)}..."`, "success");
     }, 180);
   }
 
   function openAutoInputModal() {
     populateAiSuiteDropdown();
+    updateSessionBarUI();
+    renderStagedReviewCards();
     if (DOM.autoInputModal) DOM.autoInputModal.style.display = "flex";
     if (DOM.aiTestCasePromptInput) DOM.aiTestCasePromptInput.focus();
   }
 
-  // AI Prompt Template Chips
-  const promptTemplates = {
-    positive: `Test Case 1: Verify successful order checkout with 20% discount coupon applied
-Nature: Positive Test
-Bug ID: Auto
-Preconditions: Shopping cart contains items exceeding $50; promo code 'SAVE20' is active.
-Step 1: Navigate to checkout screen and enter promo code 'SAVE20' into discount input
-Step 2: Click Apply button -> Expected: Discount of 20% is calculated immediately
-Step 3: Submit payment with valid test credit card
-Expected: Order confirmation view loads with HTTP 200 OK and invoice email receipt is triggered.
-Tags: checkout, discount, positive, smoke`,
+  // Voice Dictation Controller
+  if (DOM.aiVoiceDictateBtn) {
+    on(DOM.aiVoiceDictateBtn, "click", () => {
+      const res = QAAssistant.toggleVoiceDictation(
+        (voiceResult) => {
+          if (DOM.aiTestCasePromptInput && voiceResult.fullText) {
+            DOM.aiTestCasePromptInput.value = voiceResult.fullText;
+          }
+        },
+        (isRecording, error) => {
+          if (DOM.voiceRecordingBanner) DOM.voiceRecordingBanner.style.display = isRecording ? "flex" : "none";
+          if (DOM.aiVoiceDictateBtn) {
+            if (isRecording) {
+              DOM.aiVoiceDictateBtn.classList.add("recording-active");
+            } else {
+              DOM.aiVoiceDictateBtn.classList.remove("recording-active");
+            }
+          }
+          if (error) {
+            showToast(`Voice input: ${error}. You can type directly in the prompt box.`, "warning");
+          }
+        }
+      );
 
-    negative: `Test Case 2: Verify password reset link expires and rejects authentication after 15 minutes
-Nature: Negative Test
-Bug ID: Auto
-Preconditions: Password reset HMAC link has exceeded 15 minutes time-to-live.
-Step 1: Open the expired reset password link from email
-Step 2: Enter new password and click Submit
-Expected: Error message displayed: 'Reset link has expired. Please request a new link.'
-Tags: auth, security, negative, token`,
+      if (!res.supported) {
+        showToast("Speech recognition is not supported in this browser. Please use Chrome/Edge or type directly.", "info");
+      }
+    });
+  }
 
-    edge: `Test Case 3: Verify REST API rate limiter rejects 61st request with HTTP 429 Too Many Requests
-Nature: Edge Case
-Bug ID: Auto
-Preconditions: Client token authenticated with 60 requests per minute standard rate quota.
-Step 1: Dispatch 60 rapid GET requests to /api/v1/test-cases within 30 seconds
-Step 2: Dispatch 61st GET request within the same 60-second window
-Expected: Server responds with HTTP 429 Too Many Requests and Retry-After header.
-Tags: api, rate-limit, edge, performance`,
+  if (DOM.stopVoiceBtn) {
+    on(DOM.stopVoiceBtn, "click", () => {
+      QAAssistant.toggleVoiceDictation();
+      if (DOM.voiceRecordingBanner) DOM.voiceRecordingBanner.style.display = "none";
+      if (DOM.aiVoiceDictateBtn) DOM.aiVoiceDictateBtn.classList.remove("recording-active");
+      if (DOM.aiTestCasePromptInput && DOM.aiTestCasePromptInput.value.trim()) {
+        handleExecuteAiPrompt();
+      }
+    });
+  }
 
-    bug: `Test Case 4: Verify concurrent checkout inventory decrement prevents database deadlock
-Nature: Edge Case
-Bug ID: BUG-202
-Preconditions: Product inventory has exactly 1 unit in stock in database.
-Step 1: Trigger simultaneous checkout for 2 users at millisecond t0
-Step 2: Check database lock transaction isolation level
-Expected: One checkout succeeds; second user receives out of stock notice without server crash.
-Tags: concurrency, inventory, bug-fix, deadlock`
+  // Screenshot Upload & Paste Handlers
+  if (DOM.aiScreenshotFileInput) {
+    DOM.aiScreenshotFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          currentAttachedScreenshot = {
+            name: file.name,
+            data: event.target.result,
+            size: file.size
+          };
+          if (DOM.evidencePreviewImg) DOM.evidencePreviewImg.src = currentAttachedScreenshot.data;
+          if (DOM.evidenceFileName) DOM.evidenceFileName.textContent = currentAttachedScreenshot.name;
+          if (DOM.aiEvidencePreviewBar) DOM.aiEvidencePreviewBar.style.display = "block";
+          showToast(`Attached evidence screenshot: ${file.name}`, "info");
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  if (DOM.removeEvidenceBtn) {
+    on(DOM.removeEvidenceBtn, "click", () => {
+      currentAttachedScreenshot = null;
+      if (DOM.aiEvidencePreviewBar) DOM.aiEvidencePreviewBar.style.display = "none";
+      if (DOM.aiScreenshotFileInput) DOM.aiScreenshotFileInput.value = "";
+    });
+  }
+
+  // Listen for clipboard image paste inside Prompt Console
+  window.addEventListener("paste", (e) => {
+    if (DOM.autoInputModal && DOM.autoInputModal.style.display === "flex") {
+      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+      for (let index in items) {
+        const item = items[index];
+        if (item.kind === 'file' && item.type.includes('image/')) {
+          const blob = item.getAsFile();
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            currentAttachedScreenshot = {
+              name: `Screenshot-${new Date().toLocaleTimeString().replace(/:/g, '')}.png`,
+              data: event.target.result,
+              size: blob.size
+            };
+            if (DOM.evidencePreviewImg) DOM.evidencePreviewImg.src = currentAttachedScreenshot.data;
+            if (DOM.evidenceFileName) DOM.evidenceFileName.textContent = currentAttachedScreenshot.name;
+            if (DOM.aiEvidencePreviewBar) DOM.aiEvidencePreviewBar.style.display = "block";
+            showToast("Screenshot pasted from clipboard!", "success");
+          };
+          reader.readAsDataURL(blob);
+        }
+      }
+    }
+  });
+
+  // Quick Scenarios Chips
+  const predefinedTestingScenarios = {
+    "test5-mismatch": "I'm testing Test 5. It's a Fill in the Blanks task, medium difficulty, Python, 5 questions. From the trainer side there are 5 questions, but when I open it as a student I only see one.",
+    "test4-bug-and-enhancement": "I'm starting Test 4. Bug Fix task, medium, Python, 3 questions. As student only one is showing. The UI is also very bad, the question should be on the left and compiler on the right.",
+    "test5-duplicate-bug": "Test 5 is showing Python but the compiler has Java boilerplate.",
+    "test5-unexpected-challenge": "I'm testing Test 5. Practical Coding Challenge incorrectly appears in Fill in the Blanks task."
   };
 
   if (DOM.aiChatStream) {
     DOM.aiChatStream.addEventListener("click", (e) => {
-      const chip = e.target.closest(".ai-prompt-chip[data-template]");
+      const chip = e.target.closest(".ai-prompt-chip[data-scenario]");
       if (chip && DOM.aiTestCasePromptInput) {
-        const key = chip.getAttribute("data-template");
-        if (promptTemplates[key]) {
-          DOM.aiTestCasePromptInput.value = promptTemplates[key];
-          DOM.aiTestCasePromptInput.focus();
+        const key = chip.getAttribute("data-scenario");
+        if (predefinedTestingScenarios[key]) {
+          DOM.aiTestCasePromptInput.value = predefinedTestingScenarios[key];
+          handleExecuteAiPrompt();
         }
       }
     });
   }
 
-  // Quick insertion chips in prompt toolbar
-  function insertPromptChipText(snippet) {
-    if (!DOM.aiTestCasePromptInput) return;
-    const input = DOM.aiTestCasePromptInput;
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-    const current = input.value;
-    input.value = current.substring(0, start) + "\n" + snippet + "\n" + current.substring(end);
-    input.focus();
+  // Side quick chips
+  if (DOM.chipTrainerSide) {
+    on(DOM.chipTrainerSide, "click", () => {
+      if (DOM.aiTestCasePromptInput) {
+        DOM.aiTestCasePromptInput.value += " From the Trainer side: ";
+        DOM.aiTestCasePromptInput.focus();
+      }
+    });
   }
 
-  on(DOM.chipAddPositive, "click", () => insertPromptChipText("Nature: Positive Test"));
-  on(DOM.chipAddNegative, "click", () => insertPromptChipText("Nature: Negative Test"));
-  on(DOM.chipAddEdge, "click", () => insertPromptChipText("Nature: Edge Case"));
-  on(DOM.chipAddBug, "click", () => insertPromptChipText("Bug ID: Auto"));
+  if (DOM.chipStudentSide) {
+    on(DOM.chipStudentSide, "click", () => {
+      if (DOM.aiTestCasePromptInput) {
+        DOM.aiTestCasePromptInput.value += " From the Student side: ";
+        DOM.aiTestCasePromptInput.focus();
+      }
+    });
+  }
 
-  on(DOM.clearAiChatBtn, "click", () => {
+  // Clear & Reset Session
+  function handleResetAssistant() {
+    QAAssistant.resetSession();
+    stagedQaRecords = [];
+    currentAttachedScreenshot = null;
+    if (DOM.aiEvidencePreviewBar) DOM.aiEvidencePreviewBar.style.display = "none";
     if (DOM.aiChatStream) {
       DOM.aiChatStream.innerHTML = `
         <div class="ai-message-row bot-row">
           <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-robot"></i></div>
           <div class="ai-message-bubble">
             <div class="d-flex align-center justify-between gap-2 mb-1">
-              <strong style="color: var(--primary-light, #a5b4fc);">Nexus AI Assistant</strong>
-              <span class="text-xs text-muted">Ready</span>
+              <strong style="color: var(--primary-light, #a5b4fc);">CampusOS QA AI Assistant</strong>
+              <span class="badge badge-success text-xs">Ready</span>
             </div>
-            <p style="margin: 0 0 0.5rem 0;">
-              Chat stream cleared. Type or paste any test case notes or prompt to auto-parse!
+            <p style="margin: 0 0 0.5rem 0; font-size: 0.86rem;">
+              Testing session reset. Speak or type your next observation to start a fresh context!
             </p>
             <div class="ai-chip-group">
-              <button type="button" class="ai-prompt-chip" data-template="positive"><i class="fa-solid fa-circle-check text-emerald mr-1"></i> Positive Checkout Flow</button>
-              <button type="button" class="ai-prompt-chip" data-template="negative"><i class="fa-solid fa-triangle-exclamation text-rose mr-1"></i> Negative Password Reset</button>
-              <button type="button" class="ai-prompt-chip" data-template="edge"><i class="fa-solid fa-bolt text-amber mr-1"></i> Edge API Rate Limiting</button>
-              <button type="button" class="ai-prompt-chip" data-template="bug"><i class="fa-solid fa-bug text-rose mr-1"></i> Bug-Linked Deadlock Test</button>
+              <button type="button" class="ai-prompt-chip" data-scenario="test5-mismatch">
+                <i class="fa-solid fa-code-compare text-rose mr-1"></i> Test 5: Trainer (5 Qs) vs Student (1 Q)
+              </button>
+              <button type="button" class="ai-prompt-chip" data-scenario="test4-bug-and-enhancement">
+                <i class="fa-solid fa-bug text-amber mr-1"></i> Test 4: Bug + Split-View Enhancement
+              </button>
+              <button type="button" class="ai-prompt-chip" data-scenario="test5-duplicate-bug">
+                <i class="fa-solid fa-copy text-indigo mr-1"></i> Duplicate Check: BUG-037 Python/Java
+              </button>
+              <button type="button" class="ai-prompt-chip" data-scenario="test5-unexpected-challenge">
+                <i class="fa-solid fa-triangle-exclamation text-rose mr-1"></i> Test 5: Practical Challenge in Fill-in-Blanks
+              </button>
             </div>
           </div>
         </div>
       `;
     }
-    lastParsedAiTestCase = null;
-    if (DOM.aiFillToManualBtn) DOM.aiFillToManualBtn.disabled = true;
-    if (DOM.aiSaveToDatabaseBtn) DOM.aiSaveToDatabaseBtn.disabled = true;
-    showToast("AI Auto-Input chat reset", "info");
-  });
+    updateSessionBarUI();
+    renderStagedReviewCards();
+    showToast("Testing session & context reset", "info");
+  }
+
+  on(DOM.clearAiChatBtn, "click", handleResetAssistant);
+  on(DOM.resetSessionBtn, "click", handleResetAssistant);
 
   on(DOM.aiExtractSubmitBtn, "click", handleExecuteAiPrompt);
 
@@ -3640,72 +3788,340 @@ Tags: concurrency, inventory, bug-fix, deadlock`
     });
   }
 
-  // Save parsed Test Case directly to Database & Cloud
-  on(DOM.aiSaveToDatabaseBtn, "click", () => {
-    if (!lastParsedAiTestCase) {
-      showToast("No test case parsed yet. Please enter a prompt first.", "warning");
-      return;
-    }
+  // -------------------------------------------------------------
+  // Record Actions (Window Exposed Functions)
+  // -------------------------------------------------------------
+  window.confirmSaveSingleRecord = function(index) {
+    const record = stagedQaRecords[index];
+    if (!record) return;
+
+    const targetSuiteId = (DOM.aiTargetSuite && DOM.aiTargetSuite.value) ? DOM.aiTargetSuite.value : "suite-auth";
 
     const testCaseData = {
-      title: lastParsedAiTestCase.title,
-      suiteId: lastParsedAiTestCase.suiteId || (DOM.aiTargetSuite ? DOM.aiTargetSuite.value : "suite-auth"),
-      priority: lastParsedAiTestCase.priority || "P1 - High",
-      type: lastParsedAiTestCase.type || "Functional",
-      status: "Untested",
-      preconditions: lastParsedAiTestCase.preconditions || "",
-      tags: lastParsedAiTestCase.tags || [],
-      steps: lastParsedAiTestCase.steps || []
+      id: record.test_case_id,
+      title: record.title,
+      suiteId: targetSuiteId,
+      priority: record.severity === "Critical" ? "P0 - Critical" : (record.severity === "Major" ? "P1 - High" : "P2 - Medium"),
+      type: record.test_case_type === "Bug" ? "Functional" : "UI / UX",
+      status: record.test_result === "Fail" ? "Failed" : "Passed",
+      preconditions: record.preconditions || "",
+      tags: [record.test_module.toLowerCase(), record.test_case_type.toLowerCase(), record.side.toLowerCase()],
+      steps: Array.isArray(record.steps_to_reproduce)
+        ? record.steps_to_reproduce.map((s, idx) => ({ step: idx + 1, action: s, expected: idx === record.steps_to_reproduce.length - 1 ? record.expected_result : "Verified." }))
+        : [{ step: 1, action: record.steps_to_reproduce, expected: record.expected_result }],
+      author: "CampusOS QA Assistant",
+      createdAt: record.date || new Date().toISOString().split("T")[0]
     };
 
+    // Save Test Case
     const saved = StorageManager.saveTestCase(testCaseData);
 
-    // If Bug ID was specified, automatically create a linked defect in database as well
-    if (lastParsedAiTestCase.bugId) {
+    // If Bug, create Defect card
+    if (record.test_case_type === "Bug" && record.bug_id) {
       const existingBugs = StorageManager.getDefects();
-      if (!existingBugs.some(b => b.id === lastParsedAiTestCase.bugId)) {
+      const alreadyExists = existingBugs.some(b => b.id === record.bug_id);
+      if (!alreadyExists) {
         StorageManager.saveDefect({
-          id: lastParsedAiTestCase.bugId,
-          summary: `Issue identified during: ${lastParsedAiTestCase.title}`,
+          id: record.bug_id,
+          summary: record.title,
+          title: record.title,
           linkedTestCaseId: saved.id,
-          severity: lastParsedAiTestCase.priority === "P0 - Critical" ? "Critical" : "Major",
-          priority: lastParsedAiTestCase.priority === "P0 - Critical" ? "P0 - Urgent" : "P1 - High",
+          severity: record.severity || "Major",
+          priority: record.severity === "Critical" ? "P0 - Urgent" : "P1 - High",
           assignee: "Senior Developer",
-          reportedBy: "QA Tester (Auto-AI)",
-          status: "Open",
-          description: `Automatically created bug tracking card for test case ${saved.id}. Preconditions: ${lastParsedAiTestCase.preconditions || "None"}`
+          reportedBy: "QA Tester",
+          status: record.bug_status || "Open",
+          description: `Identified on ${record.side} side. Expected: ${record.expected_result} | Actual: ${record.actual_result}. Preconditions: ${record.preconditions || 'None'}. Notes: ${record.notes || 'None'}`,
+          module: record.module || "Tasks",
+          feature: record.feature || "General",
+          bug_type: record.bug_type || "Functional",
+          side: record.side || "Student"
         });
       }
     }
 
+    record._saved = true;
+    renderStagedReviewCards();
     renderTestCaseTable();
     renderSuitesSidebar();
     renderMetrics();
     renderDashboard();
     renderKanban();
 
-    showToast(`⚡ Saved Test Case ${saved.id} to Database & Supabase!`, "success");
-    if (DOM.aiStudioStatusText) {
-      DOM.aiStudioStatusText.innerHTML = `<i class="fa-solid fa-circle-check text-emerald"></i> Saved ${saved.id} to DB`;
+    showToast(`✓ Confirmed & Saved ${record.test_case_id} (${record.test_case_type}) to Database!`, "success");
+  };
+
+  window.dismissStagedRecord = function(index) {
+    stagedQaRecords.splice(index, 1);
+    renderStagedReviewCards();
+    showToast("Record dismissed from review pool", "info");
+  };
+
+  window.useExistingBugForRecord = function(index, bugId) {
+    if (stagedQaRecords[index]) {
+      stagedQaRecords[index].bug_id = bugId;
+      stagedQaRecords[index]._duplicateResolved = true;
+      stagedQaRecords[index].is_duplicate = true;
+      renderStagedReviewCards();
+      showToast(`Linked existing defect ${bugId} to record`, "success");
     }
+  };
+
+  window.keepNewBugForRecord = function(index) {
+    if (stagedQaRecords[index]) {
+      stagedQaRecords[index].bug_id = `BUG-${Math.floor(100 + Math.random() * 900)}`;
+      stagedQaRecords[index]._duplicateResolved = true;
+      stagedQaRecords[index].is_duplicate = false;
+      renderStagedReviewCards();
+      showToast(`Assigned new Defect ID ${stagedQaRecords[index].bug_id}`, "info");
+    }
+  };
+
+  window.copySingleRecordTsv = function(index) {
+    const record = stagedQaRecords[index];
+    if (!record) return;
+    const tsv = QAAssistant.exportRecordsToTSV([record]);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tsv).then(() => {
+        showToast(`Copied 22-column record for Excel! Press Ctrl+V in Excel.`, "success");
+      });
+    }
+  };
+
+  // Batch Save All
+  on(DOM.aiConfirmSaveAllBtn, "click", () => {
+    const unsaved = stagedQaRecords.filter(r => !r._saved);
+    if (unsaved.length === 0) {
+      showToast("All staged records are already confirmed and saved.", "info");
+      return;
+    }
+
+    stagedQaRecords.forEach((_, idx) => {
+      if (!stagedQaRecords[idx]._saved) {
+        window.confirmSaveSingleRecord(idx);
+      }
+    });
+
+    showToast(`✓ All ${unsaved.length} QA records successfully saved to Database & Supabase!`, "success");
   });
 
-  // Transfer parsed Test Case to Manual Full Modal
-  on(DOM.aiFillToManualBtn, "click", () => {
-    if (!lastParsedAiTestCase) return;
-    openCreateTestCaseModal();
+  // Batch 22-Column TSV Export for Excel
+  function handleCopyAllTsv() {
+    if (stagedQaRecords.length === 0) {
+      showToast("No QA records available to export. Please parse observations first.", "warning");
+      return;
+    }
+    const tsv = QAAssistant.exportRecordsToTSV(stagedQaRecords);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tsv).then(() => {
+        showToast(`Copied ${stagedQaRecords.length} records in 22-column Excel structure! Press Ctrl+V in Excel or Sheets.`, "success");
+      });
+    }
+  }
 
-    if (DOM.tcTitle) DOM.tcTitle.value = lastParsedAiTestCase.title || "";
-    if (DOM.tcSuite) DOM.tcSuite.value = lastParsedAiTestCase.suiteId || "suite-auth";
-    if (DOM.tcPriority) DOM.tcPriority.value = lastParsedAiTestCase.priority || "P1 - High";
-    if (DOM.tcType) DOM.tcType.value = lastParsedAiTestCase.type || "Functional";
-    if (DOM.tcPreconditions) DOM.tcPreconditions.value = lastParsedAiTestCase.preconditions || "";
-    if (DOM.tcTags) DOM.tcTags.value = (lastParsedAiTestCase.tags || []).join(", ");
-    renderStepRows(lastParsedAiTestCase.steps || []);
+  on(DOM.copyAllTsvBtn, "click", handleCopyAllTsv);
+  on(DOM.aiExportTsvFooterBtn, "click", handleCopyAllTsv);
 
-    if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none";
-    if (DOM.testCaseModal) DOM.testCaseModal.style.display = "flex";
-    showToast("Transferred AI parsed test case into Manual Editor", "info");
+  // Batch 22-Column CSV Export
+  on(DOM.downloadAllCsvBtn, "click", () => {
+    if (stagedQaRecords.length === 0) {
+      showToast("No QA records available to download.", "warning");
+      return;
+    }
+    const csv = QAAssistant.exportRecordsToCSV(stagedQaRecords);
+    QAAssistant.downloadFile(csv, `CampusOS_QA_Tracker_22Col_${new Date().toISOString().split("T")[0]}.csv`, "text/csv;charset=utf-8;");
+    showToast(`Downloaded ${stagedQaRecords.length} QA records as 22-column CSV!`, "success");
+  });
+
+  // -------------------------------------------------------------
+  // Full 22-Column Inline Editor Modal Handlers
+  // -------------------------------------------------------------
+  function populate22ColDropdowns() {
+    const dropdowns = QAAssistant.getDropdowns();
+    
+    function setSelectOptions(id, options) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join("");
+    }
+
+    setSelectOptions("edit_test_module", dropdowns.test_module);
+    setSelectOptions("edit_test_case_type", dropdowns.test_case_type);
+    setSelectOptions("edit_bug_type", dropdowns.bug_type);
+    setSelectOptions("edit_severity", dropdowns.severity);
+    setSelectOptions("edit_test_result", dropdowns.test_result);
+    setSelectOptions("edit_bug_status", dropdowns.bug_status);
+    setSelectOptions("edit_reproducibility", dropdowns.reproducibility);
+    setSelectOptions("edit_side", dropdowns.side);
+  }
+
+  window.editStagedRecord = function(index) {
+    const record = stagedQaRecords[index];
+    if (!record) return;
+
+    populate22ColDropdowns();
+
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val !== undefined && val !== null ? val : "";
+    };
+
+    setVal("editRecordIndex", index);
+    setVal("edit_test_module", record.test_module || "Tasks");
+    setVal("edit_test_case_id", record.test_case_id || "");
+    setVal("edit_test_case_type", record.test_case_type || "Bug");
+    setVal("edit_bug_id", record.bug_id || "");
+    setVal("edit_date", record.date || new Date().toISOString().split("T")[0]);
+    setVal("edit_side", record.side || "Student");
+    setVal("edit_module", record.module || "Student Task Attempt");
+    setVal("edit_feature", record.feature || "General");
+    setVal("edit_bug_type", record.bug_type || "Functional");
+    setVal("edit_severity", record.severity || "Major");
+    setVal("edit_test_result", record.test_result || "Fail");
+    setVal("edit_bug_status", record.bug_status || "Open");
+    setVal("edit_reproducibility", record.reproducibility || "Not Tested");
+    setVal("edit_title", record.title || "");
+    setVal("edit_preconditions", record.preconditions || "");
+    setVal("edit_expected_result", record.expected_result || "");
+    setVal("edit_actual_result", record.actual_result || "");
+    setVal("edit_ai_response", record.ai_response || "Not Applicable");
+    setVal("edit_reference_answer", record.reference_answer || "Not Applicable");
+    setVal("edit_evidence", record.screenshot_evidence || "None");
+    setVal("edit_notes", record.notes || "");
+
+    const stepsVal = Array.isArray(record.steps_to_reproduce)
+      ? record.steps_to_reproduce.join("\n")
+      : (record.steps_to_reproduce || "");
+    setVal("edit_steps", stepsVal);
+
+    if (DOM.qa22ColEditModal) DOM.qa22ColEditModal.style.display = "flex";
+  };
+
+  on(DOM.closeQaEditModalBtn, "click", () => { if (DOM.qa22ColEditModal) DOM.qa22ColEditModal.style.display = "none"; });
+  on(DOM.cancelQaEditModalBtn, "click", () => { if (DOM.qa22ColEditModal) DOM.qa22ColEditModal.style.display = "none"; });
+
+  on(DOM.saveQaEditModalBtn, "click", () => {
+    const idxEl = document.getElementById("editRecordIndex");
+    const index = idxEl ? parseInt(idxEl.value, 10) : -1;
+    if (index < 0 || !stagedQaRecords[index]) return;
+
+    const getVal = (id) => (document.getElementById(id) ? document.getElementById(id).value : "");
+
+    const stepsRaw = getVal("edit_steps");
+    const stepsArr = stepsRaw.split("\n").map(s => s.trim().replace(/^\d+\.\s*/, "")).filter(Boolean);
+
+    stagedQaRecords[index] = {
+      ...stagedQaRecords[index],
+      test_module: getVal("edit_test_module"),
+      test_case_id: getVal("edit_test_case_id"),
+      test_case_type: getVal("edit_test_case_type"),
+      bug_id: getVal("edit_bug_id"),
+      date: getVal("edit_date"),
+      side: getVal("edit_side"),
+      module: getVal("edit_module"),
+      feature: getVal("edit_feature"),
+      bug_type: getVal("edit_bug_type"),
+      severity: getVal("edit_severity"),
+      test_result: getVal("edit_test_result"),
+      bug_status: getVal("edit_bug_status"),
+      reproducibility: getVal("edit_reproducibility"),
+      title: getVal("edit_title"),
+      preconditions: getVal("edit_preconditions"),
+      steps_to_reproduce: stepsArr,
+      expected_result: getVal("edit_expected_result"),
+      actual_result: getVal("edit_actual_result"),
+      ai_response: getVal("edit_ai_response"),
+      reference_answer: getVal("edit_reference_answer"),
+      screenshot_evidence: getVal("edit_evidence"),
+      notes: getVal("edit_notes")
+    };
+
+    renderStagedReviewCards();
+    if (DOM.qa22ColEditModal) DOM.qa22ColEditModal.style.display = "none";
+    showToast("Updated 22-column record successfully", "success");
+  });
+
+  // -------------------------------------------------------------
+  // Task Reference Table Modal Handlers
+  // -------------------------------------------------------------
+  function renderTaskRefTable() {
+    if (!DOM.taskRefTableBody) return;
+    const tasks = QAAssistant.getTaskReferences();
+
+    DOM.taskRefTableBody.innerHTML = tasks.map(t => `
+      <tr>
+        <td><strong>${escapeHtml(t.task_name)}</strong></td>
+        <td><span class="badge badge-secondary text-xs">${escapeHtml(t.task_type)}</span></td>
+        <td><span class="badge badge-subtle text-xs">${escapeHtml(t.difficulty)}</span></td>
+        <td><code>${escapeHtml(t.language)}</code></td>
+        <td>${t.xp} XP</td>
+        <td>${t.time_limit}m</td>
+        <td><strong class="text-primary">${t.question_count} Qs</strong></td>
+        <td><span class="text-xs text-muted">${escapeHtml(t.topic || t.description)}</span></td>
+        <td><span class="badge ${t.published ? 'badge-success' : 'badge-failed'} text-xs">${t.published ? 'Published' : 'Draft'}</span></td>
+        <td>
+          <button type="button" class="btn btn-primary btn-xs" onclick="window.selectTaskBenchmark('${t.task_name}')">
+            <i class="fa-solid fa-play mr-1"></i> Test This
+          </button>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  window.selectTaskBenchmark = function(taskName) {
+    const task = QAAssistant.findTaskReference(taskName);
+    if (task) {
+      QAAssistant.resetSession();
+      QAAssistant.processTesterMessage(`I'm testing ${task.task_name}. It's a ${task.task_type} task, ${task.difficulty} difficulty, ${task.language}, ${task.question_count} questions.`);
+      updateSessionBarUI();
+      renderStagedReviewCards();
+      if (DOM.taskReferenceModal) DOM.taskReferenceModal.style.display = "none";
+      showToast(`Loaded benchmark for ${task.task_name} into Assistant session`, "info");
+    }
+  };
+
+  on(DOM.openTaskRefModalBtn, "click", () => {
+    renderTaskRefTable();
+    if (DOM.taskReferenceModal) DOM.taskReferenceModal.style.display = "flex";
+  });
+
+  on(DOM.closeTaskRefModalBtn, "click", () => { if (DOM.taskReferenceModal) DOM.taskReferenceModal.style.display = "none"; });
+  on(DOM.closeTaskRefModalFooterBtn, "click", () => { if (DOM.taskReferenceModal) DOM.taskReferenceModal.style.display = "none"; });
+
+  on(DOM.addNewTaskRefBtn, "click", () => {
+    const name = prompt("Enter Task Name (e.g. Test 6):");
+    if (!name) return;
+    const type = prompt("Enter Task Type (Fill in the Blanks, Bug Fix, Practical Coding Challenge, MCQ):", "Fill in the Blanks");
+    const count = parseInt(prompt("Trainer Question Count:", "5"), 10) || 5;
+    const lang = prompt("Programming Language:", "Python");
+
+    const tasks = QAAssistant.getTaskReferences();
+    tasks.push({
+      task_name: name,
+      description: `${type} task for ${lang}`,
+      task_type: type || "Fill in the Blanks",
+      difficulty: "Medium",
+      language: lang || "Python",
+      xp: 20,
+      time_limit: 30,
+      question_count: count,
+      question_source: "Trainer Created",
+      topic: `${lang} Exercises`,
+      skills_tags: [lang.toLowerCase()],
+      generation_time: "0.5s",
+      task_content: `${count} exercises.`,
+      ai_quality_check: "Passed",
+      hints_support: "Enabled",
+      batch_selected: "Batch A-2026",
+      published: true,
+      student_attempt: "Assigned",
+      navigation_flow: `Dashboard -> Tasks -> ${name}`,
+      status_notes: "Custom Task Benchmark"
+    });
+
+    QAAssistant.saveTaskReferences(tasks);
+    renderTaskRefTable();
+    showToast(`Added task benchmark ${name}`, "success");
   });
 
   // Action button triggers

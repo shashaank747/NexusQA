@@ -1207,78 +1207,165 @@
     </div>
   </div>
 
-  <!-- MODAL: AI AUTO INPUT STUDIO (ChatGPT / Gemini Style Card) -->
+  <!-- MODAL: AI AUTO INPUT STUDIO (CampusOS Conversational QA Assistant) -->
   <div class="modal-backdrop" id="autoInputModal" style="display: none;">
-    <div class="modal-dialog ai-studio-dialog">
+    <div class="modal-dialog ai-studio-dialog modal-xl">
       <div class="modal-header d-flex align-center justify-between">
         <div class="modal-title-group d-flex align-center gap-2">
           <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-sparkles"></i></div>
           <div>
             <h2 id="autoInputModalTitle" style="display: flex; align-items: center; gap: 8px; font-size: 1.15rem; margin: 0;">
-              Nexus AI Auto-Input Studio
-              <span class="badge badge-primary text-xs" style="text-transform: none; letter-spacing: 0;">⚡ Gemini / ChatGPT AI Engine</span>
+              Conversational AI QA Assistant — CampusOS
+              <span class="badge badge-primary text-xs" style="text-transform: none; letter-spacing: 0;">⚡ NLP Extraction Engine</span>
             </h2>
-            <p class="text-xs text-muted" style="margin: 0;">Smart prompt-to-testcase generator with automatic entity extraction & DB sync</p>
+            <p class="text-xs text-muted" style="margin: 0;">Dictate or type observations naturally • Auto Expected vs Actual • Cross-role comparison • Duplicate detection • 22-col tracker</p>
           </div>
         </div>
         <div class="d-flex align-center gap-2">
-          <div class="d-flex align-center gap-1" style="margin-right: 0.5rem;">
-            <label for="aiTargetSuite" class="text-xs text-muted font-bold" style="white-space: nowrap;">Suite:</label>
-            <select id="aiTargetSuite" class="nexus-select" style="padding: 4px 8px; font-size: 0.78rem; min-width: 140px;"></select>
-          </div>
-          <button class="icon-btn-xs" id="clearAiChatBtn" title="Clear Chat Stream"><i class="fa-solid fa-rotate-left"></i></button>
+          <button type="button" class="btn btn-secondary btn-sm" id="openTaskRefModalBtn" title="View CampusOS Task Reference Table">
+            <i class="fa-solid fa-table-list mr-1"></i> Task References
+          </button>
+          <button class="icon-btn-xs" id="clearAiChatBtn" title="Reset Session & Clear Stream"><i class="fa-solid fa-rotate-left"></i></button>
           <button class="icon-btn close-modal-btn" id="closeAutoInputModalBtn"><i class="fa-solid fa-xmark"></i></button>
         </div>
       </div>
 
+      <!-- Live Testing Session Bar (Context Manager) -->
+      <div class="ai-session-bar">
+        <div class="ai-session-left">
+          <span class="ai-session-label"><i class="fa-solid fa-layer-group text-primary"></i> Active Session:</span>
+          <span class="ai-session-pill" id="pillTestRef"><i class="fa-solid fa-vial"></i> Test: <strong id="valTestRef">Not Set</strong></span>
+          <span class="ai-session-pill" id="pillSide"><i class="fa-solid fa-user-gear"></i> Side: <strong id="valSide">Student</strong></span>
+          <span class="ai-session-pill" id="pillCounts"><i class="fa-solid fa-scale-balanced"></i> Trainer: <strong id="valTrainerCount">-</strong> | Student: <strong id="valStudentCount">-</strong></span>
+          <span class="ai-session-pill pill-warning" id="pillMismatch" style="display: none;"><i class="fa-solid fa-triangle-exclamation"></i> Mismatch Detected</span>
+        </div>
+        <div class="ai-session-right">
+          <div class="d-flex align-center gap-1">
+            <label for="aiTargetSuite" class="text-xs text-muted font-bold" style="white-space: nowrap;">Target Suite:</label>
+            <select id="aiTargetSuite" class="nexus-select" style="padding: 3px 8px; font-size: 0.76rem; min-width: 130px;"></select>
+          </div>
+          <button type="button" class="btn btn-ghost btn-xs" id="resetSessionBtn" title="Reset Context"><i class="fa-solid fa-arrows-rotate mr-1"></i> Reset Context</button>
+        </div>
+      </div>
+
       <div class="modal-body ai-studio-body">
-        <!-- AI Chat / Stream Area -->
-        <div class="ai-chat-stream" id="aiChatStream">
-          <div class="ai-message-row bot-row">
-            <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-robot"></i></div>
-            <div class="ai-message-bubble">
-              <div class="d-flex align-center justify-between gap-2 mb-1">
-                <strong style="color: var(--primary-light, #a5b4fc);">Nexus AI Assistant</strong>
-                <span class="text-xs text-muted">Ready</span>
+        <div class="ai-workspace-split">
+          <!-- Left Column: Conversational Stream & Input Console -->
+          <div class="ai-chat-column">
+            <!-- AI Chat / Stream Area -->
+            <div class="ai-chat-stream" id="aiChatStream">
+              <div class="ai-message-row bot-row">
+                <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="ai-message-bubble">
+                  <div class="d-flex align-center justify-between gap-2 mb-1">
+                    <strong style="color: var(--primary-light, #a5b4fc);">CampusOS QA AI Assistant</strong>
+                    <span class="badge badge-success text-xs">Listening</span>
+                  </div>
+                  <p style="margin: 0 0 0.5rem 0; font-size: 0.86rem; line-height: 1.45;">
+                    Welcome! Type or dictate your testing observations naturally across one or multiple messages. You can attach screenshots of defects, compiler outputs, or task previews. I will automatically extract structured facts, compare Trainer vs Student configuration, identify bugs vs enhancements, search existing defects, and prepare <strong>22-column QA tracker records</strong> for your review.
+                  </p>
+                  
+                  <div class="text-xs text-muted font-bold mb-1"><i class="fa-solid fa-bolt text-amber mr-1"></i> Quick Testing Scenarios (Click to test):</div>
+                  <div class="ai-chip-group">
+                    <button type="button" class="ai-prompt-chip" data-scenario="test5-mismatch">
+                      <i class="fa-solid fa-code-compare text-rose mr-1"></i> Test 5: Trainer (5 Qs) vs Student (1 Q)
+                    </button>
+                    <button type="button" class="ai-prompt-chip" data-scenario="test4-bug-and-enhancement">
+                      <i class="fa-solid fa-bug text-amber mr-1"></i> Test 4: Bug + Split-View Enhancement
+                    </button>
+                    <button type="button" class="ai-prompt-chip" data-scenario="test5-duplicate-bug">
+                      <i class="fa-solid fa-copy text-indigo mr-1"></i> Duplicate Check: BUG-037 Python/Java
+                    </button>
+                    <button type="button" class="ai-prompt-chip" data-scenario="test5-unexpected-challenge">
+                      <i class="fa-solid fa-triangle-exclamation text-rose mr-1"></i> Test 5: Practical Challenge in Fill-in-Blanks
+                    </button>
+                  </div>
+                </div>
               </div>
-              <p style="margin: 0 0 0.5rem 0;">
-                Type or paste your test case description in natural language or structured notes below. I will automatically extract the <strong>Test Title</strong>, <strong>Nature (Positive / Negative / Edge Case)</strong>, <strong>Bug Reference</strong>, <strong>Preconditions</strong>, and <strong>Step-by-Step Verifications</strong>, then save it to your database.
-              </p>
-              <div class="text-xs text-muted font-bold mb-1">Quick Prompt Templates:</div>
-              <div class="ai-chip-group">
-                <button type="button" class="ai-prompt-chip" data-template="positive">
-                  <i class="fa-solid fa-circle-check text-emerald mr-1"></i> Positive Checkout Flow
-                </button>
-                <button type="button" class="ai-prompt-chip" data-template="negative">
-                  <i class="fa-solid fa-triangle-exclamation text-rose mr-1"></i> Negative Password Reset
-                </button>
-                <button type="button" class="ai-prompt-chip" data-template="edge">
-                  <i class="fa-solid fa-bolt text-amber mr-1"></i> Edge API Rate Limiting
-                </button>
-                <button type="button" class="ai-prompt-chip" data-template="bug">
-                  <i class="fa-solid fa-bug text-rose mr-1"></i> Bug-Linked Deadlock Test
-                </button>
+            </div>
+
+            <!-- Screenshot / Evidence Preview Bar -->
+            <div class="ai-evidence-preview-bar" id="aiEvidencePreviewBar" style="display: none;">
+              <div class="d-flex align-center gap-2">
+                <span class="text-xs font-bold text-muted"><i class="fa-solid fa-paperclip text-primary"></i> Attached Evidence:</span>
+                <div class="evidence-thumb-chip" id="evidenceThumbChip">
+                  <img id="evidencePreviewImg" src="" alt="Screenshot Evidence" class="evidence-preview-thumb">
+                  <span id="evidenceFileName" class="text-xs">screenshot.png</span>
+                  <button type="button" class="remove-evidence-btn" id="removeEvidenceBtn" title="Remove Screenshot"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Voice Recording Status Banner -->
+            <div class="voice-recording-banner" id="voiceRecordingBanner" style="display: none;">
+              <div class="voice-pulse-indicator">
+                <span class="pulse-ring"></span>
+                <i class="fa-solid fa-microphone text-rose"></i>
+              </div>
+              <div class="voice-status-text">
+                <strong>Listening to your narration...</strong>
+                <span class="text-xs text-muted">Speak your observation naturally. Click microphone or press Esc to stop.</span>
+              </div>
+              <button type="button" class="btn btn-danger btn-xs" id="stopVoiceBtn">Stop Recording</button>
+            </div>
+
+            <!-- Prompt Console Bar -->
+            <div class="ai-prompt-console-wrapper">
+              <div class="ai-prompt-box">
+                <textarea id="aiTestCasePromptInput" class="ai-prompt-textarea" placeholder="Type or dictate testing observations (e.g. 'I\'m testing Test 5. Trainer created 5 questions, but student only sees one.'). Paste screenshots directly with Ctrl+V..."></textarea>
+                
+                <div class="ai-prompt-toolbar">
+                  <div class="ai-tool-chips">
+                    <button type="button" class="ai-media-btn" id="aiVoiceDictateBtn" title="Dictate with Microphone (Speech-to-Text)">
+                      <i class="fa-solid fa-microphone text-rose"></i>
+                      <span>Voice Dictate</span>
+                    </button>
+                    <label class="ai-media-btn" id="aiAttachScreenshotLabel" title="Attach Screenshot (or Paste Ctrl+V)" style="margin: 0; cursor: pointer;">
+                      <i class="fa-solid fa-image text-indigo"></i>
+                      <span>Screenshot</span>
+                      <input type="file" id="aiScreenshotFileInput" accept="image/*" style="display: none;">
+                    </label>
+                    <button type="button" class="ai-prompt-chip" id="chipTrainerSide"><i class="fa-solid fa-chalkboard-user mr-1"></i> Trainer Side</button>
+                    <button type="button" class="ai-prompt-chip" id="chipStudentSide"><i class="fa-solid fa-user-graduate mr-1"></i> Student Side</button>
+                  </div>
+                  
+                  <button type="button" class="ai-send-btn" id="aiExtractSubmitBtn">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Analyze & Extract</span>
+                    <kbd style="font-size: 0.65rem; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; margin-left: 2px;">Ctrl+Enter</kbd>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Prompt Console Bar -->
-        <div class="ai-prompt-console-wrapper">
-          <div class="ai-prompt-box">
-            <textarea id="aiTestCasePromptInput" class="ai-prompt-textarea" placeholder="Paste or type test case prompt (e.g. Test Case 1: Positive login flow with MFA, Step 1: Navigate to /login, Step 2: Submit credentials...)..."></textarea>
-            <div class="ai-prompt-toolbar">
-              <div class="ai-tool-chips">
-                <button type="button" class="ai-prompt-chip" id="chipAddPositive">+ Positive Test</button>
-                <button type="button" class="ai-prompt-chip" id="chipAddNegative">+ Negative Test</button>
-                <button type="button" class="ai-prompt-chip" id="chipAddEdge">+ Edge Case</button>
-                <button type="button" class="ai-prompt-chip" id="chipAddBug">+ Bug ID: Auto</button>
+          <!-- Right Column: Interactive Review & Staged Records Panel -->
+          <div class="ai-review-column">
+            <div class="ai-review-header d-flex align-center justify-between">
+              <div class="d-flex align-center gap-2">
+                <i class="fa-solid fa-list-check text-emerald"></i>
+                <h3 style="margin: 0; font-size: 0.95rem;">Extracted QA Records</h3>
+                <span class="badge badge-secondary text-xs" id="stagedRecordsCountBadge">0 Pending</span>
               </div>
-              <button type="button" class="ai-send-btn" id="aiExtractSubmitBtn">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                <span>Extract & Parse</span>
-                <kbd style="font-size: 0.65rem; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; margin-left: 2px;">Ctrl+Enter</kbd>
-              </button>
+              <div class="d-flex align-center gap-1">
+                <button type="button" class="btn btn-outline btn-xs" id="copyAllTsvBtn" title="Copy 22-column TSV for Excel">
+                  <i class="fa-solid fa-file-excel text-emerald mr-1"></i> 22-Col TSV
+                </button>
+                <button type="button" class="btn btn-outline btn-xs" id="downloadAllCsvBtn" title="Download 22-column CSV file">
+                  <i class="fa-solid fa-download mr-1"></i> CSV
+                </button>
+              </div>
+            </div>
+
+            <!-- Review Cards List -->
+            <div class="ai-review-cards-list" id="aiReviewCardsList">
+              <div class="empty-review-placeholder" id="emptyReviewPlaceholder">
+                <div class="empty-icon"><i class="fa-solid fa-clipboard-question"></i></div>
+                <h4>No Records Extracted Yet</h4>
+                <p class="text-xs text-muted">
+                  Speak or type your testing notes on the left. The AI will extract facts, expected vs actual behavior, and generate structured 22-column records here for your review and confirmation before saving.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -1286,17 +1373,198 @@
 
       <div class="modal-footer justify-between">
         <div class="d-flex align-center gap-2">
-          <button type="button" class="btn btn-ghost" id="cancelAutoInputModalBtn">Close</button>
-          <span class="text-xs text-muted" id="aiStudioStatusText"><i class="fa-solid fa-circle-check text-emerald"></i> Ready for prompt input</span>
+          <button type="button" class="btn btn-ghost" id="cancelAutoInputModalBtn">Close Assistant</button>
+          <span class="text-xs text-muted" id="aiStudioStatusText"><i class="fa-solid fa-circle-check text-emerald"></i> Ready for observations</span>
         </div>
         <div class="d-flex align-center gap-2">
-          <button type="button" class="btn btn-secondary" id="aiFillToManualBtn" title="Transfer last parsed test case into full manual editor" disabled>
-            <i class="fa-solid fa-pen-to-square"></i> Open in Manual Editor
+          <button type="button" class="btn btn-secondary" id="aiExportTsvFooterBtn">
+            <i class="fa-solid fa-clipboard text-emerald"></i> Copy 22-Col Excel TSV
           </button>
-          <button type="button" class="btn btn-primary" id="aiSaveToDatabaseBtn" disabled>
-            <i class="fa-solid fa-cloud-arrow-up"></i> Save & Sync to Database
+          <button type="button" class="btn btn-primary" id="aiConfirmSaveAllBtn" disabled>
+            <i class="fa-solid fa-cloud-arrow-up"></i> Confirm & Save All to Database
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CAMPUSOS TASK REFERENCE TABLE (20-Field Table) -->
+  <div class="modal-backdrop" id="taskReferenceModal" style="display: none;">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-header d-flex align-center justify-between">
+        <div class="modal-title-group d-flex align-center gap-2">
+          <i class="fa-solid fa-table-list text-primary modal-icon"></i>
+          <div>
+            <h2 style="margin: 0; font-size: 1.15rem;">CampusOS Task Reference Table</h2>
+            <p class="text-xs text-muted" style="margin: 0;">Preconfigured task benchmarks used by AI to compare Trainer vs Student side specifications</p>
+          </div>
+        </div>
+        <button class="icon-btn close-modal-btn" id="closeTaskRefModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex align-center justify-between mb-3">
+          <div class="text-xs text-muted">Showing <strong>3</strong> active task benchmarks</div>
+          <button type="button" class="btn btn-primary btn-sm" id="addNewTaskRefBtn"><i class="fa-solid fa-plus mr-1"></i> Add Task Reference</button>
+        </div>
+        <div class="table-container" style="max-height: 480px; overflow: auto;">
+          <table class="nexus-table" id="taskRefTable">
+            <thead>
+              <tr>
+                <th>Task Name</th>
+                <th>Type</th>
+                <th>Difficulty</th>
+                <th>Language</th>
+                <th>XP</th>
+                <th>Time (mins)</th>
+                <th>Trainer Qs</th>
+                <th>Topic / Description</th>
+                <th>Published</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="taskRefTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer justify-end">
+        <button type="button" class="btn btn-ghost" id="closeTaskRefModalFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: 22-COLUMN QA RECORD FULL INLINE EDITOR -->
+  <div class="modal-backdrop" id="qa22ColEditModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header d-flex align-center justify-between">
+        <div class="modal-title-group d-flex align-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-indigo modal-icon"></i>
+          <div>
+            <h2 id="qaEditModalTitle" style="margin: 0; font-size: 1.15rem;">Edit QA Record (22-Column Schema)</h2>
+            <p class="text-xs text-muted" style="margin: 0;">Verify and customize exact field values with controlled dropdowns before saving</p>
+          </div>
+        </div>
+        <button class="icon-btn close-modal-btn" id="closeQaEditModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="qa22ColForm">
+          <input type="hidden" id="editRecordIndex">
+          
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="edit_test_module">1. Test Module <span class="text-rose">*</span></label>
+              <select id="edit_test_module" class="nexus-select w-100"></select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_test_case_id">2. Test Case ID <span class="text-rose">*</span></label>
+              <input type="text" id="edit_test_case_id" class="nexus-input" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_test_case_type">3. Test Case Type <span class="text-rose">*</span></label>
+              <select id="edit_test_case_type" class="nexus-select w-100"></select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="edit_bug_id">4. Bug ID (If Defect)</label>
+              <input type="text" id="edit_bug_id" class="nexus-input" placeholder="e.g. BUG-035">
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_date">5. Date</label>
+              <input type="date" id="edit_date" class="nexus-input">
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_side">22. Side (Role)</label>
+              <select id="edit_side" class="nexus-select w-100"></select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="edit_module">6. Module (Section)</label>
+              <input type="text" id="edit_module" class="nexus-input" placeholder="e.g. Student Task Attempt">
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_feature">7. Feature</label>
+              <input type="text" id="edit_feature" class="nexus-input" placeholder="e.g. Task Type / Content">
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_bug_type">8. Bug Type</label>
+              <select id="edit_bug_type" class="nexus-select w-100"></select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="edit_severity">9. Severity</label>
+              <select id="edit_severity" class="nexus-select w-100"></select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_test_result">15. Test Result</label>
+              <select id="edit_test_result" class="nexus-select w-100"></select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_bug_status">21. Bug Status</label>
+              <select id="edit_bug_status" class="nexus-select w-100"></select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_reproducibility">18. Reproducibility</label>
+              <select id="edit_reproducibility" class="nexus-select w-100"></select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="edit_title">10. Title <span class="text-rose">*</span></label>
+            <input type="text" id="edit_title" class="nexus-input" required>
+          </div>
+
+          <div class="form-group">
+            <label for="edit_preconditions">11. Preconditions</label>
+            <input type="text" id="edit_preconditions" class="nexus-input">
+          </div>
+
+          <div class="form-group">
+            <label for="edit_steps">12. Steps to Reproduce (1 per line)</label>
+            <textarea id="edit_steps" class="nexus-textarea" rows="3"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="edit_expected_result">13. Expected Result <span class="text-rose">*</span></label>
+              <textarea id="edit_expected_result" class="nexus-textarea" rows="2" required></textarea>
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_actual_result">14. Actual Result <span class="text-rose">*</span></label>
+              <textarea id="edit_actual_result" class="nexus-textarea" rows="2" required></textarea>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="edit_ai_response">16. AI Response</label>
+              <input type="text" id="edit_ai_response" class="nexus-input" value="Not Applicable">
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_reference_answer">17. Reference Answer</label>
+              <input type="text" id="edit_reference_answer" class="nexus-input" value="Not Applicable">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="edit_evidence">19. Screenshot / Evidence</label>
+              <input type="text" id="edit_evidence" class="nexus-input" placeholder="e.g. Screenshot attached">
+            </div>
+            <div class="form-group flex-1">
+              <label for="edit_notes">20. Notes</label>
+              <input type="text" id="edit_notes" class="nexus-input">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer justify-between">
+        <button type="button" class="btn btn-ghost" id="cancelQaEditModalBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveQaEditModalBtn"><i class="fa-solid fa-check mr-1"></i> Update Record</button>
       </div>
     </div>
   </div>
@@ -1601,6 +1869,7 @@
   <script src="js/data.js?v=1.0.4"></script>
   <script src="js/supabase.js?v=1.0.4"></script>
   <script src="js/storage.js?v=1.0.4"></script>
+  <script src="js/qa-assistant.js?v=1.0.4"></script>
   <script src="js/app.js?v=1.0.4"></script>
 </body>
 </html>
