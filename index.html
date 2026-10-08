@@ -20,6 +20,9 @@
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
+  <!-- Base Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+  
   <style>
     * {
       font-family: 'Plus Jakarta Sans', sans-serif;
@@ -297,6 +300,182 @@
       background-color: #282828;
       flex: 1;
       transition: background-color 0.3s ease;
+    }
+
+    /* Legacy 6-Digit Passcode Component Styles */
+    .code-slots-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 8px 0 4px 0;
+      width: 100%;
+    }
+
+    .code-slots {
+      --cs-accent: #6366f1;
+      --cs-ink: #818cf8;
+      --cs-slot: #171717;
+      --cs-digit: #ffffff;
+      --cs-danger: #f43f5e;
+      --cs-size: 46px;
+      --cs-height: 52px;
+      --cs-gap: 8px;
+      --cs-radius: 12px;
+      --cs-font: 22px;
+      position: relative;
+      display: inline-block;
+    }
+
+    .code-slots__row {
+      position: relative;
+      display: inline-flex;
+      gap: var(--cs-gap);
+      cursor: text;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .code-slots__input {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 10 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      outline: 0 !important;
+      background: transparent !important;
+      color: transparent !important;
+      caret-color: transparent !important;
+      font-size: 16px !important;
+      opacity: 0 !important;
+      cursor: text !important;
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      pointer-events: auto !important;
+    }
+
+    .code-slots__slot {
+      position: relative;
+      width: var(--cs-size);
+      height: var(--cs-height);
+      border-radius: var(--cs-radius);
+      overflow: hidden;
+      background-color: #171717 !important;
+      box-shadow: inset 2px 4px 8px rgb(5, 5, 5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .code-slots__slot[data-active] {
+      border-color: rgba(99, 102, 241, 0.6) !important;
+      box-shadow: inset 2px 4px 8px rgb(5, 5, 5), 0 0 14px rgba(99, 102, 241, 0.3) !important;
+    }
+
+    .code-slots__slot[data-filled] {
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    .code-slots__fill {
+      position: absolute;
+      inset: 0;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .code-slots__digit {
+      position: relative;
+      z-index: 2;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--cs-font);
+      font-weight: 700;
+      color: #ffffff;
+      display: inline-block;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .code-slots__caret {
+      position: absolute;
+      top: 12px;
+      bottom: 12px;
+      left: 0;
+      width: 2px;
+      z-index: 3;
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 120ms cubic-bezier(0.2, 0, 0, 1), opacity 150ms ease;
+    }
+
+    .code-slots__caret[data-show] {
+      opacity: 1;
+    }
+
+    .code-slots__caret-line {
+      display: block;
+      width: 2px;
+      height: 100%;
+      background: #818cf8;
+      border-radius: 2px;
+      box-shadow: 0 0 8px #818cf8;
+      animation: code-slots-blink 1s linear infinite;
+    }
+
+    @keyframes code-slots-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .code-slots__wash {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      border-radius: var(--cs-radius);
+      background: #10b981;
+      color: #ffffff;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.95);
+      clip-path: inset(0 50% round var(--cs-radius));
+      transition: clip-path 0.35s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.25s ease, transform 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .code-slots__row[data-status='success'] .code-slots__wash {
+      opacity: 1;
+      clip-path: inset(0 0% round var(--cs-radius));
+      transform: scale(1);
+    }
+
+    .code-slots__check {
+      display: grid;
+      place-items: center;
+      transform: translateY(8px) scale(0.85);
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s, opacity 0.25s ease 0.15s;
+    }
+
+    .code-slots__row[data-status='success'] .code-slots__check {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    .code-slots__sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
   </style>
 </head>
