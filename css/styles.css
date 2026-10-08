@@ -993,27 +993,47 @@ body.light-theme .uiverse-hamburger-switch .hamburger-label div {
   left: 0;
 }
 
-/* Checked / Collapsed Arrow morph state */
-.uiverse-hamburger-switch .label-check:checked + .hamburger-label .line1,
-.dual-sidebar.collapsed .uiverse-hamburger-switch .hamburger-label .line1,
-.sidebar-collapsed .uiverse-hamburger-switch .hamburger-label .line1 {
+/* Arrow morph state when sidebar is OPEN (expanded) */
+.dual-sidebar:not(.collapsed) .uiverse-hamburger-switch .hamburger-label .line1,
+:not(.sidebar-collapsed) .uiverse-hamburger-switch .label-check:checked + .hamburger-label .line1,
+:not(.sidebar-collapsed) .uiverse-hamburger-switch .hamburger-label .line1 {
   transform: rotate(35deg) scaleX(0.55) translate(39px, -4.5px);
   border-radius: 50px 50px 50px 0;
 }
 
-.uiverse-hamburger-switch .label-check:checked + .hamburger-label .line3,
-.dual-sidebar.collapsed .uiverse-hamburger-switch .hamburger-label .line3,
-.sidebar-collapsed .uiverse-hamburger-switch .hamburger-label .line3 {
+.dual-sidebar:not(.collapsed) .uiverse-hamburger-switch .hamburger-label .line3,
+:not(.sidebar-collapsed) .uiverse-hamburger-switch .label-check:checked + .hamburger-label .line3,
+:not(.sidebar-collapsed) .uiverse-hamburger-switch .hamburger-label .line3 {
   transform: rotate(-35deg) scaleX(0.55) translate(39px, 4.5px);
   border-radius: 0 50px 50px 50px;
 }
 
-.uiverse-hamburger-switch .label-check:checked + .hamburger-label .line2,
-.dual-sidebar.collapsed .uiverse-hamburger-switch .hamburger-label .line2,
-.sidebar-collapsed .uiverse-hamburger-switch .hamburger-label .line2 {
+.dual-sidebar:not(.collapsed) .uiverse-hamburger-switch .hamburger-label .line2,
+:not(.sidebar-collapsed) .uiverse-hamburger-switch .label-check:checked + .hamburger-label .line2,
+:not(.sidebar-collapsed) .uiverse-hamburger-switch .hamburger-label .line2 {
   border-top-right-radius: 50px;
   border-bottom-right-radius: 50px;
   width: 45px;
+}
+
+/* 3 Parallel Straight Lines when sidebar is CLOSED (collapsed) */
+.dual-sidebar.collapsed .uiverse-hamburger-switch .hamburger-label .line1,
+.sidebar-collapsed .uiverse-hamburger-switch .hamburger-label .line1 {
+  transform: none !important;
+  border-radius: 4px;
+}
+
+.dual-sidebar.collapsed .uiverse-hamburger-switch .hamburger-label .line3,
+.sidebar-collapsed .uiverse-hamburger-switch .hamburger-label .line3 {
+  transform: none !important;
+  border-radius: 4px;
+}
+
+.dual-sidebar.collapsed .uiverse-hamburger-switch .hamburger-label .line2,
+.sidebar-collapsed .uiverse-hamburger-switch .hamburger-label .line2 {
+  transform: none !important;
+  border-radius: 4px;
+  width: 70px !important;
 }
 
 /* Collapsed Dual Sidebar Mode */
