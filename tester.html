@@ -260,6 +260,12 @@
               <button class="btn btn-outline btn-sm" id="exportDashboardReportBtn">
                 <i class="fa-solid fa-file-export"></i> Export Report
               </button>
+              <button class="btn btn-primary btn-sm" id="dashboardNewTestCaseBtn">
+                <i class="fa-solid fa-plus"></i> Create Test Case
+              </button>
+              <button class="btn btn-outline btn-sm auto-input-pill" id="dashboardAutoInputBtn" title="Open Auto Input card">
+                <i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Auto Input
+              </button>
             </div>
           </div>
 
@@ -508,6 +514,7 @@
               <button class="btn btn-outline btn-sm" id="importTestsBtn"><i class="fa-solid fa-file-import"></i> Import JSON</button>
               <button class="btn btn-outline btn-sm" id="exportTestsBtn"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
               <button class="btn btn-primary btn-sm" id="createNewTestCaseBtn"><i class="fa-solid fa-plus"></i> Create Test Case</button>
+              <button class="btn btn-outline btn-sm auto-input-pill" id="repoAutoInputBtn" title="Open Auto Input card"><i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Auto Input</button>
             </div>
           </div>
 
@@ -1123,11 +1130,130 @@
           </button>
         </div>
         <div class="d-flex align-center gap-2">
-          <button type="button" class="btn btn-outline btn-sm auto-input-pill" id="autoInputTestCaseBtn" title="Auto-fill with a sample realistic test scenario & verification steps">
-            <i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Auto Input
-          </button>
           <button type="button" class="btn btn-ghost" id="cancelTestCaseModalBtn">Cancel</button>
           <button type="button" class="btn btn-primary" id="saveTestCaseBtn"><i class="fa-solid fa-floppy-disk"></i> Save Test Case</button>
+          <button type="button" class="btn btn-outline btn-sm auto-input-pill" id="autoInputTestCaseBtn" title="Open Auto Input card">
+            <i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Auto Input
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AUTO INPUT TEST CASE CARD -->
+  <div class="modal-backdrop" id="autoInputModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <i class="fa-solid fa-wand-magic-sparkles modal-icon text-primary"></i>
+          <div>
+            <h2 id="autoInputModalTitle">Auto Input Test Case</h2>
+            <p class="text-xs text-muted" style="margin: 0;">Configure automated scenario generator parameters and test structure</p>
+          </div>
+        </div>
+        <button class="icon-btn close-modal-btn" id="closeAutoInputModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="autoInputForm">
+          <!-- Preset Selector Card Header -->
+          <div class="p-3 mb-3 rounded-lg" style="background: var(--bg-tertiary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #2d3748); border-radius: 8px;">
+            <div class="d-flex align-center justify-between gap-2 mb-2">
+              <label class="text-xs font-bold text-uppercase" style="letter-spacing: 0.05em; color: var(--text-secondary, #94a3b8);">
+                <i class="fa-solid fa-bolt text-amber mr-1"></i> Quick Scenario Presets
+              </label>
+              <span class="badge badge-primary text-xs"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Auto Input Card</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group flex-1" style="margin-bottom: 0;">
+                <select id="autoInputPresetSelect" class="nexus-select w-100">
+                  <option value="0">⚡ OAuth 2.0 PKCE & SSO Session Persistence</option>
+                  <option value="1">🛒 Stripe Checkout 20% Coupon Calculation</option>
+                  <option value="2">🛡️ REST API 60 req/min Rate Limiting (HTTP 429)</option>
+                  <option value="3">🔍 Multi-Facet Filter & Real-Time Search</option>
+                  <option value="custom">✨ Custom Template (Define your own)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Configuration Fields Container (Ready for custom options) -->
+          <div id="autoInputCustomOptionsContainer">
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label for="autoInputTitle">Test Case Title <span class="text-rose">*</span></label>
+                <input type="text" id="autoInputTitle" class="nexus-input" placeholder="Generated or custom scenario title..." required>
+              </div>
+              <div class="form-group flex-1">
+                <label for="autoInputSuite">Target Test Suite <span class="text-rose">*</span></label>
+                <select id="autoInputSuite" class="nexus-select w-100" required></select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="autoInputPriority">Priority</label>
+                <select id="autoInputPriority" class="nexus-select w-100">
+                  <option value="P0 - Critical">P0 - Critical (Blocker)</option>
+                  <option value="P1 - High" selected>P1 - High</option>
+                  <option value="P2 - Medium">P2 - Medium</option>
+                  <option value="P3 - Low">P3 - Low</option>
+                </select>
+              </div>
+              <div class="form-group flex-1">
+                <label for="autoInputType">Category / Type</label>
+                <select id="autoInputType" class="nexus-select w-100">
+                  <option value="Functional" selected>Functional</option>
+                  <option value="UI / UX">UI / UX</option>
+                  <option value="Regression">Regression</option>
+                  <option value="Smoke">Smoke</option>
+                  <option value="Integration">Integration</option>
+                  <option value="Security">Security</option>
+                  <option value="Performance">Performance</option>
+                  <option value="API">API</option>
+                </select>
+              </div>
+              <div class="form-group flex-1">
+                <label for="autoInputStatus">Initial Status</label>
+                <select id="autoInputStatus" class="nexus-select w-100">
+                  <option value="Untested" selected>Untested</option>
+                  <option value="Passed">Passed</option>
+                  <option value="Failed">Failed</option>
+                  <option value="Blocked">Blocked</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="autoInputPreconditions">Preconditions & Context</label>
+              <textarea id="autoInputPreconditions" class="nexus-textarea" rows="2" placeholder="Required test environment state, credentials, fixtures..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <div class="d-flex align-center justify-between mb-1">
+                <label style="margin: 0;">Test Execution Steps & Verifications</label>
+                <button type="button" class="btn btn-outline btn-xs" id="addAutoInputStepBtn">
+                  <i class="fa-solid fa-plus"></i> Add Step
+                </button>
+              </div>
+              <div class="steps-builder" id="autoInputStepsBuilderList"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="autoInputTags">Tags (comma-separated)</label>
+              <input type="text" id="autoInputTags" class="nexus-input" placeholder="e.g. auth, security, api, automated">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer justify-between">
+        <button type="button" class="btn btn-ghost" id="cancelAutoInputModalBtn">Cancel</button>
+        <div class="d-flex align-center gap-2">
+          <button type="button" class="btn btn-secondary" id="autoInputFillToManualBtn" title="Transfer into manual editor">
+            <i class="fa-solid fa-pen-to-square"></i> Open in Full Editor
+          </button>
+          <button type="button" class="btn btn-primary" id="saveAutoInputBtn">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Create & Apply Test Case
+          </button>
         </div>
       </div>
     </div>

@@ -340,6 +340,28 @@ document.addEventListener("DOMContentLoaded", () => {
     editTestCaseDeleteWrap: document.getElementById("editTestCaseDeleteWrap"),
     deleteTestCaseModalBtn: document.getElementById("deleteTestCaseModalBtn"),
 
+    // Auto Input Card Modal
+    autoInputModal: document.getElementById("autoInputModal"),
+    autoInputForm: document.getElementById("autoInputForm"),
+    autoInputModalTitle: document.getElementById("autoInputModalTitle"),
+    autoInputPresetSelect: document.getElementById("autoInputPresetSelect"),
+    autoInputTitle: document.getElementById("autoInputTitle"),
+    autoInputSuite: document.getElementById("autoInputSuite"),
+    autoInputPriority: document.getElementById("autoInputPriority"),
+    autoInputType: document.getElementById("autoInputType"),
+    autoInputStatus: document.getElementById("autoInputStatus"),
+    autoInputPreconditions: document.getElementById("autoInputPreconditions"),
+    autoInputStepsBuilderList: document.getElementById("autoInputStepsBuilderList"),
+    addAutoInputStepBtn: document.getElementById("addAutoInputStepBtn"),
+    autoInputTags: document.getElementById("autoInputTags"),
+    closeAutoInputModalBtn: document.getElementById("closeAutoInputModalBtn"),
+    cancelAutoInputModalBtn: document.getElementById("cancelAutoInputModalBtn"),
+    saveAutoInputBtn: document.getElementById("saveAutoInputBtn"),
+    autoInputFillToManualBtn: document.getElementById("autoInputFillToManualBtn"),
+    dashboardAutoInputBtn: document.getElementById("dashboardAutoInputBtn"),
+    repoAutoInputBtn: document.getElementById("repoAutoInputBtn"),
+    dashboardNewTestCaseBtn: document.getElementById("dashboardNewTestCaseBtn"),
+
     testCaseDetailModal: document.getElementById("testCaseDetailModal"),
     viewDetailId: document.getElementById("viewDetailId"),
     viewDetailTitle: document.getElementById("viewDetailTitle"),
@@ -3135,7 +3157,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.testCaseModal) DOM.testCaseModal.style.display = "flex";
   };
 
-  // Auto Input Scenarios Pool
+  // Auto Input Scenarios & Modal Controller
   const autoInputScenarios = [
     {
       title: "Verify OAuth 2.0 PKCE redirection and session token persistence across browser restarts",
@@ -3193,41 +3215,166 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   ];
 
-  let autoInputScenarioIndex = 0;
-
-  function handleAutoInputTestCase() {
-    const scenario = autoInputScenarios[autoInputScenarioIndex % autoInputScenarios.length];
-    autoInputScenarioIndex++;
-
-    if (DOM.tcTitle) DOM.tcTitle.value = scenario.title;
-    populateSuiteDropdowns();
-    if (DOM.tcSuite) {
-      DOM.tcSuite.value = scenario.suiteId;
-      // If suite not found, pick first option
-      if (!DOM.tcSuite.value && DOM.tcSuite.options.length > 0) {
-        DOM.tcSuite.selectedIndex = 0;
-      }
+  function populateAutoInputSuiteDropdown() {
+    if (!DOM.autoInputSuite) return;
+    const suites = StorageManager.getSuites();
+    DOM.autoInputSuite.innerHTML = suites.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+    if (state.selectedSuiteId && state.selectedSuiteId !== "all" && DOM.autoInputSuite.querySelector(`option[value="${state.selectedSuiteId}"]`)) {
+      DOM.autoInputSuite.value = state.selectedSuiteId;
     }
-    if (DOM.tcPriority) DOM.tcPriority.value = scenario.priority;
-    if (DOM.tcType) DOM.tcType.value = scenario.type;
-    if (DOM.tcStatus) DOM.tcStatus.value = scenario.status;
-    if (DOM.tcPreconditions) DOM.tcPreconditions.value = scenario.preconditions;
-    if (DOM.tcTags) DOM.tcTags.value = scenario.tags.join(", ");
-    renderStepRows(scenario.steps);
-
-    // Visual smooth flash
-    if (DOM.testCaseForm) {
-      DOM.testCaseForm.style.transition = "opacity 0.2s ease";
-      DOM.testCaseForm.style.opacity = "0.7";
-      setTimeout(() => { DOM.testCaseForm.style.opacity = "1"; }, 200);
-    }
-
-    showToast(`⚡ Auto Input: Pre-filled with scenario: "${scenario.title.substring(0, 38)}..."`, "success");
   }
 
-  on(DOM.autoInputTestCaseBtn, "click", handleAutoInputTestCase);
+  function renderAutoInputStepRows(steps = []) {
+    if (!DOM.autoInputStepsBuilderList) return;
+    DOM.autoInputStepsBuilderList.innerHTML = "";
+    if (!steps || steps.length === 0) {
+      steps = [{ step: 1, action: "Navigate to target page / endpoint", expected: "Target view loads properly with status 200" }];
+    }
+    steps.forEach((s, idx) => addAutoInputStepRow(s.action, s.expected, idx + 1));
+  }
+
+  function addAutoInputStepRow(actionVal = "", expectedVal = "", stepNum = null) {
+    if (!DOM.autoInputStepsBuilderList) return;
+    const currentRows = DOM.autoInputStepsBuilderList.querySelectorAll(".step-builder-row");
+    const num = stepNum || currentRows.length + 1;
+    const row = document.createElement("div");
+    row.className = "step-builder-row";
+    row.innerHTML = `
+      <span class="step-num-badge">${num}</span>
+      <input type="text" class="nexus-input step-input-action" placeholder="Step ${num} Action..." value="${escapeHtml(actionVal)}" required>
+      <input type="text" class="nexus-input step-input-expected" placeholder="Expected Result..." value="${escapeHtml(expectedVal)}" required>
+      <button type="button" class="icon-btn-xs remove-step-btn" title="Remove Step"><i class="fa-solid fa-xmark text-rose"></i></button>
+    `;
+    row.querySelector(".remove-step-btn").addEventListener("click", () => {
+      row.remove();
+      renumberAutoInputSteps();
+    });
+    DOM.autoInputStepsBuilderList.appendChild(row);
+  }
+
+  function renumberAutoInputSteps() {
+    if (!DOM.autoInputStepsBuilderList) return;
+    DOM.autoInputStepsBuilderList.querySelectorAll(".step-builder-row").forEach((row, i) => {
+      const badge = row.querySelector(".step-num-badge");
+      if (badge) badge.textContent = i + 1;
+    });
+  }
+
+  function loadAutoInputPreset(presetKey) {
+    if (presetKey === "custom") {
+      if (DOM.autoInputTitle) DOM.autoInputTitle.value = "";
+      if (DOM.autoInputPreconditions) DOM.autoInputPreconditions.value = "";
+      if (DOM.autoInputTags) DOM.autoInputTags.value = "automated, custom";
+      renderAutoInputStepRows([]);
+      if (DOM.autoInputTitle) DOM.autoInputTitle.focus();
+      return;
+    }
+
+    const idx = parseInt(presetKey, 10);
+    const scenario = autoInputScenarios[isNaN(idx) ? 0 : idx % autoInputScenarios.length];
+    if (!scenario) return;
+
+    if (DOM.autoInputTitle) DOM.autoInputTitle.value = scenario.title;
+    populateAutoInputSuiteDropdown();
+    if (DOM.autoInputSuite) {
+      DOM.autoInputSuite.value = scenario.suiteId;
+      if (!DOM.autoInputSuite.value && DOM.autoInputSuite.options.length > 0) {
+        DOM.autoInputSuite.selectedIndex = 0;
+      }
+    }
+    if (DOM.autoInputPriority) DOM.autoInputPriority.value = scenario.priority;
+    if (DOM.autoInputType) DOM.autoInputType.value = scenario.type;
+    if (DOM.autoInputStatus) DOM.autoInputStatus.value = scenario.status || "Untested";
+    if (DOM.autoInputPreconditions) DOM.autoInputPreconditions.value = scenario.preconditions;
+    if (DOM.autoInputTags) DOM.autoInputTags.value = (scenario.tags || []).join(", ");
+    renderAutoInputStepRows(scenario.steps || []);
+  }
+
+  function openAutoInputModal() {
+    populateAutoInputSuiteDropdown();
+    if (DOM.autoInputPresetSelect) DOM.autoInputPresetSelect.value = "0";
+    loadAutoInputPreset(0);
+    if (DOM.autoInputModal) DOM.autoInputModal.style.display = "flex";
+  }
+
+  on(DOM.autoInputTestCaseBtn, "click", openAutoInputModal);
+  on(DOM.dashboardAutoInputBtn, "click", openAutoInputModal);
+  on(DOM.repoAutoInputBtn, "click", openAutoInputModal);
+  on(DOM.dashboardNewTestCaseBtn, "click", openCreateTestCaseModal);
   on(DOM.createNewTestCaseBtn, "click", openCreateTestCaseModal);
   on(DOM.emptyCreateBtn, "click", openCreateTestCaseModal);
+  on(DOM.addAutoInputStepBtn, "click", () => addAutoInputStepRow());
+  on(DOM.autoInputPresetSelect, "change", (e) => loadAutoInputPreset(e.target.value));
+
+  on(DOM.closeAutoInputModalBtn, "click", () => { if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none"; });
+  on(DOM.cancelAutoInputModalBtn, "click", () => { if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none"; });
+
+  on(DOM.saveAutoInputBtn, "click", () => {
+    const title = DOM.autoInputTitle ? DOM.autoInputTitle.value.trim() : "";
+    if (!title) {
+      showToast("Please enter a test case title", "error");
+      if (DOM.autoInputTitle) DOM.autoInputTitle.focus();
+      return;
+    }
+
+    const steps = [];
+    if (DOM.autoInputStepsBuilderList) {
+      DOM.autoInputStepsBuilderList.querySelectorAll(".step-builder-row").forEach((row, idx) => {
+        const action = row.querySelector(".step-input-action").value.trim();
+        const expected = row.querySelector(".step-input-expected").value.trim();
+        if (action || expected) {
+          steps.push({ step: idx + 1, action: action || `Execute step ${idx + 1}`, expected: expected || "Operation completes successfully." });
+        }
+      });
+    }
+
+    const tags = DOM.autoInputTags ? DOM.autoInputTags.value.split(",").map(t => t.trim().toLowerCase()).filter(Boolean) : [];
+    const testCaseData = {
+      title,
+      suiteId: DOM.autoInputSuite ? DOM.autoInputSuite.value : "general",
+      priority: DOM.autoInputPriority ? DOM.autoInputPriority.value : "P1 - High",
+      type: DOM.autoInputType ? DOM.autoInputType.value : "Functional",
+      status: DOM.autoInputStatus ? DOM.autoInputStatus.value : "Untested",
+      preconditions: DOM.autoInputPreconditions ? DOM.autoInputPreconditions.value.trim() : "",
+      tags,
+      steps
+    };
+
+    const saved = StorageManager.saveTestCase(testCaseData);
+    if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none";
+    renderTestCaseTable();
+    renderSuitesSidebar();
+    renderMetrics();
+    renderDashboard();
+    renderKanban();
+    showToast(`⚡ Auto Input: Created Test Case ${saved.id || ""}`, "success");
+  });
+
+  on(DOM.autoInputFillToManualBtn, "click", () => {
+    openCreateTestCaseModal();
+    if (DOM.tcTitle) DOM.tcTitle.value = DOM.autoInputTitle ? DOM.autoInputTitle.value : "";
+    if (DOM.tcSuite && DOM.autoInputSuite) DOM.tcSuite.value = DOM.autoInputSuite.value;
+    if (DOM.tcPriority && DOM.autoInputPriority) DOM.tcPriority.value = DOM.autoInputPriority.value;
+    if (DOM.tcType && DOM.autoInputType) DOM.tcType.value = DOM.autoInputType.value;
+    if (DOM.tcStatus && DOM.autoInputStatus) DOM.tcStatus.value = DOM.autoInputStatus.value;
+    if (DOM.tcPreconditions && DOM.autoInputPreconditions) DOM.tcPreconditions.value = DOM.autoInputPreconditions.value;
+    if (DOM.tcTags && DOM.autoInputTags) DOM.tcTags.value = DOM.autoInputTags.value;
+
+    const steps = [];
+    if (DOM.autoInputStepsBuilderList) {
+      DOM.autoInputStepsBuilderList.querySelectorAll(".step-builder-row").forEach((row, idx) => {
+        const action = row.querySelector(".step-input-action").value.trim();
+        const expected = row.querySelector(".step-input-expected").value.trim();
+        if (action || expected) steps.push({ step: idx + 1, action, expected });
+      });
+    }
+    renderStepRows(steps);
+
+    if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none";
+    if (DOM.testCaseModal) DOM.testCaseModal.style.display = "flex";
+    showToast("Transferred Auto Input data into Manual Editor", "info");
+  });
+
   on(DOM.closeTestCaseModalBtn, "click", () => { if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none"; });
   on(DOM.cancelTestCaseModalBtn, "click", () => { if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none"; });
   on(DOM.deleteTestCaseModalBtn, "click", () => {
