@@ -346,6 +346,46 @@ const StorageManager = {
   },
 
   /**
+   * Direct Login (Instant 1-Click Access)
+   */
+  directLogin(identifier) {
+    const users = this.getUsers();
+    const cleanId = (identifier || "").toLowerCase().trim();
+    if (!cleanId) {
+      throw new Error("Please enter your work email or username.");
+    }
+
+    let user = users.find(u => 
+      (u.email && u.email.toLowerCase() === cleanId) ||
+      (u.name && u.name.toLowerCase() === cleanId) ||
+      (u.id && u.id.toLowerCase() === cleanId) ||
+      (u.username && u.username.toLowerCase() === cleanId)
+    );
+
+    // If account doesn't exist yet, auto-provision on the fly
+    if (!user) {
+      const isDevHint = cleanId.includes("dev") || cleanId.includes("lead") || cleanId.includes("chhotu");
+      user = {
+        id: `user-${isDevHint ? "dev" : "qa"}-${Date.now()}`,
+        name: cleanId.includes("@") ? cleanId.split("@")[0] : cleanId,
+        email: cleanId.includes("@") ? cleanId : `${cleanId}@nexusqa.io`,
+        role: isDevHint ? "dev" : "qa",
+        roleTitle: isDevHint ? "Developer Lead" : "QA Tester",
+        avatar: (cleanId.slice(0, 2)).toUpperCase(),
+        color: isDevHint ? "#10b981" : "#6366f1",
+        status: "active",
+        emailVerified: true,
+        createdAt: new Date().toISOString()
+      };
+      users.push(user);
+      this.saveUsers(users);
+    }
+
+    this.setCurrentUser(user);
+    return { status: "success", user };
+  },
+
+  /**
    * Request 6-Digit Passcode for Login (Email or Username -> 6-Digit Code)
    */
   requestLoginOtp(identifier, role = null) {

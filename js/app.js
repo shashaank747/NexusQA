@@ -1230,30 +1230,41 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     setTimeout(() => {
       if (state.auth5Role === "dev") {
-        const devUser = StorageManager.getUsers().find(u => u.role === "dev") || {
-          id: "dev-lead-1",
-          name: "Marcus Vance",
-          email: "marcus.dev@nexusqa.io",
-          role: "dev",
-          roleTitle: "Lead Systems Architect & Approver"
-        };
-        StorageManager.setCurrentUser(devUser);
-        showToast(`Authenticated via ${providerName} as Developer Lead: ${devUser.name}!`);
+        const { user } = StorageManager.directLogin("chhotumonster225@gmail.com");
+        showToast(`Authenticated via ${providerName} as Developer Lead: ${user.name}!`);
         setTimeout(() => { window.location.href = "dev.html"; }, 400);
       } else {
-        const testerUser = StorageManager.getUsers().find(u => u.role === "tester" && u.approvedByDev) || {
-          id: "tester-1",
-          name: "Alex Morgan",
-          email: "alex.qa@nexusqa.io",
-          role: "tester",
-          roleTitle: "QA Lead",
-          approvedByDev: true
-        };
-        StorageManager.setCurrentUser(testerUser);
-        showToast(`Authenticated via ${providerName} as QA Tester: ${testerUser.name}!`);
+        const { user } = StorageManager.directLogin("a@a");
+        showToast(`Authenticated via ${providerName} as QA Tester: ${user.name}!`);
         setTimeout(() => { window.location.href = "tester.html"; }, 400);
       }
     }, 450);
+  };
+
+  window.quickDemoLogin = function(role) {
+    const email = role === "dev" ? "chhotumonster225@gmail.com" : "a@a";
+    const emailInput = DOM.testerLoginEmail || document.getElementById("testerLoginEmail");
+    if (emailInput) emailInput.value = email;
+    
+    const submitBtn = DOM.btnTesterLoginSubmit || document.getElementById("btnTesterLoginSubmit");
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Entering Workspace...</span>`;
+    }
+
+    try {
+      const { user } = StorageManager.directLogin(email);
+      showToast(`Welcome back, ${user.name}! Accessing ${user.role === 'dev' ? 'Dev Hub' : 'QA Portal'}...`, "success");
+      setTimeout(() => {
+        window.location.href = user.role === "dev" ? "dev.html" : "tester.html";
+      }, 350);
+    } catch (err) {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Sign In to Workspace</span> <i class="fa-solid fa-arrow-right"></i>`;
+      }
+      showToast(err.message, "error");
+    }
   };
 
   function startResendCooldown(durationSeconds = 60) {
@@ -1556,26 +1567,40 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   // Setup Auth Form Listeners
   function setupAuthListeners() {
-    // 1. Unified Username / Email Sign In -> Transition to 6-Digit Squares Passcode
+    // 1. Unified Username / Email Sign In -> Direct Workspace Login
     if (DOM.testerLoginForm) {
       DOM.testerLoginForm.addEventListener("submit", (e) => {
         e.preventDefault();
         window.hideAuthAlert();
         const identifier = (DOM.testerLoginEmail || document.getElementById("testerLoginEmail")).value.trim();
 
-        try {
-          const res = StorageManager.requestLoginOtp(identifier);
-          state.pendingRegistrationEmail = res.user.email;
-          state.isRegistrationFlow = false;
+        if (!identifier) {
+          window.showAuthAlert("Please enter your username or work email.");
+          return;
+        }
 
-          if (res.status === "pending_approval") {
-            window.showPendingState(res.user.email);
-            showToast("Your account is awaiting Senior Dev approval.", "info");
-          } else if (res.status === "otp_sent") {
-            state.currentOtpCode = res.otpCode;
-            window.showInboxState(res.user.email, res.otpCode);
-          }
+        const submitBtn = DOM.btnTesterLoginSubmit || document.getElementById("btnTesterLoginSubmit");
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Entering Workspace...</span>`;
+        }
+
+        try {
+          const { user } = StorageManager.directLogin(identifier);
+          showToast(`Welcome back, ${user.name}! Logging into workspace...`, "success");
+
+          setTimeout(() => {
+            if (user.role === "dev") {
+              window.location.href = "dev.html";
+            } else {
+              window.location.href = "tester.html";
+            }
+          }, 350);
         } catch (err) {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Sign In to Workspace</span> <i class="fa-solid fa-arrow-right"></i>`;
+          }
           window.showAuthAlert(err.message);
           showToast(err.message, "error");
         }
