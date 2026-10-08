@@ -138,6 +138,9 @@ const SupabaseManager = {
 
     this.realtimeChannel = this.client
       .channel("nexusqa_db_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "nexus_users" }, (payload) => {
+        this.handleRemoteUserChange(payload);
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "nexus_test_cases" }, (payload) => {
         this.handleRemoteTestCaseChange(payload);
       })
@@ -157,6 +160,25 @@ const SupabaseManager = {
   // -------------------------------------------------------------
   // Remote Realtime Event Handlers
   // -------------------------------------------------------------
+  handleRemoteUserChange(payload) {
+    const users = StorageManager.getUsers();
+    if (payload.eventType === "INSERT") {
+      const exists = users.some(u => u.id === payload.new.id || (u.email && u.email.toLowerCase() === (payload.new.email || "").toLowerCase()));
+      if (!exists) {
+        users.push(this.mapUserFromDB(payload.new));
+        StorageManager.saveUsers(users, true);
+      }
+    } else if (payload.eventType === "UPDATE") {
+      const idx = users.findIndex(u => u.id === payload.new.id || (u.email && u.email.toLowerCase() === (payload.new.email || "").toLowerCase()));
+      if (idx !== -1) {
+        users[idx] = this.mapUserFromDB(payload.new);
+        StorageManager.saveUsers(users, true);
+      }
+    } else if (payload.eventType === "DELETE") {
+      const filtered = users.filter(u => u.id !== payload.old.id);
+      StorageManager.saveUsers(filtered, true);
+    }
+  },
   handleRemoteTestCaseChange(payload) {
     const cases = StorageManager.getTestCases();
     if (payload.eventType === "INSERT") {
@@ -234,6 +256,38 @@ const SupabaseManager = {
   // -------------------------------------------------------------
   // Data Mappers (DB <-> Client)
   // -------------------------------------------------------------
+  mapUserToDB(u) {
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      username: u.username || u.email,
+      role: u.role || "qa",
+      role_title: u.roleTitle || (u.role === "dev" ? "Senior Developer" : "QA Tester"),
+      avatar: u.avatar || (u.name ? u.name.slice(0, 2).toUpperCase() : "QA"),
+      color: u.color || (u.role === "dev" ? "#10b981" : "#6366f1"),
+      status: u.status || "active",
+      email_verified: u.emailVerified !== false,
+      updated_at: new Date().toISOString()
+    };
+  },
+
+  mapUserFromDB(row) {
+    return {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      username: row.username || row.email,
+      role: row.role || "qa",
+      roleTitle: row.role_title || (row.role === "dev" ? "Senior Developer" : "QA Tester"),
+      avatar: row.avatar || (row.name ? row.name.slice(0, 2).toUpperCase() : "QA"),
+      color: row.color || (row.role === "dev" ? "#10b981" : "#6366f1"),
+      status: row.status || "active",
+      emailVerified: row.email_verified !== false,
+      createdAt: row.created_at || new Date().toISOString()
+    };
+  },
+
   mapTestCaseToDB(tc) {
     return {
       id: tc.id,
@@ -340,10 +394,11 @@ const SupabaseManager = {
     if (!this.client || !this.isConnected) return false;
 
     try {
-      const [suitesRes, testCasesRes, defectsRes] = await Promise.all([
+      const [suitesRes, testCasesRes, defectsRes, usersRes] = await Promise.all([
         this.client.from("nexus_suites").select("*"),
         this.client.from("nexus_test_cases").select("*"),
-        this.client.from("nexus_defects").select("*").order("created_at", { ascending: false })
+        this.client.from("nexus_defects").select("*").order("created_at", { ascending: false }),
+        this.client.from("nexus_users").select("*")
       ]);
 
       if (suitesRes.data && suitesRes.data.length > 0) {
@@ -356,6 +411,10 @@ const SupabaseManager = {
       if (defectsRes.data) {
         const mapped = defectsRes.data.map(d => this.mapDefectFromDB(d));
         StorageManager.saveDefects(mapped, false);
+      }
+      if (usersRes.data && usersRes.data.length > 0) {
+        const mapped = usersRes.data.map(u => this.mapUserFromDB(u));
+        StorageManager.saveUsers(mapped, true);
       }
 
       return true;
@@ -387,10 +446,12 @@ const SupabaseManager = {
       const suites = StorageManager.getSuites();
       const testCases = StorageManager.getTestCases().map(tc => this.mapTestCaseToDB(tc));
       const defects = StorageManager.getDefects().map(d => this.mapDefectToDB(d));
+      const users = StorageManager.getUsers().map(u => this.mapUserToDB(u));
 
       if (suites.length > 0) await this.client.from("nexus_suites").upsert(suites);
       if (testCases.length > 0) await this.client.from("nexus_test_cases").upsert(testCases);
       if (defects.length > 0) await this.client.from("nexus_defects").upsert(defects);
+      if (users.length > 0) await this.client.from("nexus_users").upsert(users);
 
       return true;
     } catch (err) {
@@ -399,9 +460,35 @@ const SupabaseManager = {
     }
   },
 
+  async pushUsersToSupabase(usersList) {
+    if (!this.client || !this.isConnected || !usersList || usersList.length === 0) return;
+    try {
+      const payload = usersList.map(u => this.mapUserToDB(u));
+      await this.client.from("nexus_users").upsert(payload);
+    } catch(e) {
+      console.warn("Error syncing users to Supabase:", e);
+    }
+  },
+
   // -------------------------------------------------------------
   // Async Mutations with Supabase Sync
   // -------------------------------------------------------------
+  async syncUserUpsert(user) {
+    if (this.client && this.isConnected) {
+      try {
+        await this.client.from("nexus_users").upsert(this.mapUserToDB(user));
+      } catch(e) { console.warn("Supabase user upsert error:", e); }
+    }
+  },
+
+  async syncUserDelete(userId) {
+    if (this.client && this.isConnected) {
+      try {
+        await this.client.from("nexus_users").delete().eq("id", userId);
+      } catch(e) { console.warn("Supabase user delete error:", e); }
+    }
+  },
+
   async syncTestCaseUpsert(testCase) {
     if (this.client && this.isConnected) {
       try {

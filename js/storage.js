@@ -220,9 +220,12 @@ const StorageManager = {
     return { success: true, user: targetUser };
   },
 
-  saveUsers(users) {
+  saveUsers(users, skipRemote = false) {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     this.broadcast("USERS_UPDATED");
+    if (!skipRemote && typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+      SupabaseManager.pushUsersToSupabase(users);
+    }
   },
 
   getCurrentUser() {
