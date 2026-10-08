@@ -3,321 +3,884 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NexusQA - Unified QA & Developer Gateway</title>
-  <meta name="description" content="Unified single-link entrance for QA Testers and Developers. Features dedicated tester authentication with 6-digit email OTP verification and developer access approvals.">
+  <title>NexusQA - Interactive Dark Login Portal</title>
+  <meta name="description" content="Interactive Dark Login Portal for NexusQA Quality Engineering and Developer Command Center.">
   
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="Glossy Neon Coding Loop Logo.png">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
   
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    * {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #0b0b0d;
+      color: #e5e7eb;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 1rem;
+    }
+
+    /* Ambient dynamic glow background */
+    .glow-orb-1 {
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, rgba(17, 24, 39, 0) 70%);
+      top: 15%;
+      left: 15%;
+      border-radius: 50%;
+      filter: blur(50px);
+      animation: floatSlow 12s infinite alternate ease-in-out;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .glow-orb-2 {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(236, 72, 153, 0.09) 0%, rgba(17, 24, 39, 0) 70%);
+      bottom: 10%;
+      right: 15%;
+      border-radius: 50%;
+      filter: blur(60px);
+      animation: floatSlow2 15s infinite alternate ease-in-out;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    @keyframes floatSlow {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(40px, 30px) scale(1.1); }
+    }
+
+    @keyframes floatSlow2 {
+      0% { transform: translate(0, 0) scale(1.1); }
+      100% { transform: translate(-35px, -45px) scale(0.95); }
+    }
+
+    /* Background Interactive Canvas */
+    .auth-canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #authInteractiveCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Form container incorporating signature design */
+    .styled-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 2.2em 2em 1.8em 2em;
+      background-color: #171717;
+      border-radius: 28px;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 100%;
+      max-width: 430px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+      position: relative;
+      z-index: 10;
+    }
+
+    .styled-form:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+    }
+
+    #heading {
+      text-align: center;
+      margin-bottom: 0.2em;
+      color: #ffffff;
+      font-size: 1.4em;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    /* Inset shadow styling requested by the user */
+    .field {
+      display: flex;
+      align-items: center;
+      gap: 0.6em;
+      border-radius: 25px;
+      padding: 0.65em 1em;
+      border: 1px solid transparent;
+      outline: none;
+      color: white;
+      background-color: #171717;
+      box-shadow: inset 2px 5px 10px rgb(5, 5, 5);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .field:focus-within {
+      border-color: rgba(99, 102, 241, 0.5);
+      box-shadow: inset 2px 4px 8px rgb(4, 4, 4), 0 0 0 1px rgba(99, 102, 241, 0.25);
+    }
+
+    .field.is-invalid {
+      border-color: rgba(239, 68, 68, 0.6);
+    }
+
+    .input-icon {
+      height: 1.25em;
+      width: 1.25em;
+      fill: #8b8b8b;
+      flex-shrink: 0;
+      transition: fill 0.2s ease;
+    }
+
+    .field:focus-within .input-icon {
+      fill: #818cf8;
+    }
+
+    .input-field {
+      background: none;
+      border: none;
+      outline: none;
+      width: 100%;
+      color: #eaeaea;
+      font-size: 0.92rem;
+    }
+
+    .input-field::placeholder {
+      color: #636363;
+    }
+
+    /* Custom select styling inside inset pill */
+    select.input-field {
+      background-color: transparent;
+      cursor: pointer;
+    }
+
+    select.input-field option {
+      background-color: #171717;
+      color: #eaeaea;
+    }
+
+    /* User buttons with sleek states */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 1em;
+    }
+
+    .button1 {
+      flex: 1;
+      padding: 0.68em 1.2em;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      outline: none;
+      transition: all 0.25s ease;
+      background-color: #252525;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.92rem;
+    }
+
+    .button1:hover:not(:disabled) {
+      background-color: #000000;
+      color: #ffffff;
+      border-color: rgba(99, 102, 241, 0.4);
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.25);
+    }
+
+    .button1:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .button2 {
+      padding: 0.68em 1.5em;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      outline: none;
+      transition: all 0.25s ease;
+      background-color: #1e1e1e;
+      color: #b5b5b5;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 0.92rem;
+    }
+
+    .button2:hover {
+      background-color: #252525;
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .button3 {
+      padding: 0.5em;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      transition: all 0.25s ease;
+      background-color: transparent;
+      color: #7b7b7b;
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-align: center;
+      width: 100%;
+    }
+
+    .button3:hover {
+      color: #818cf8;
+      background-color: rgba(99, 102, 241, 0.08);
+    }
+
+    /* Custom Checkbox */
+    .custom-checkbox {
+      appearance: none;
+      background-color: #121212;
+      box-shadow: inset 1px 2px 4px #040404;
+      border-radius: 4px;
+      width: 17px;
+      height: 17px;
+      display: inline-grid;
+      place-content: center;
+      cursor: pointer;
+      border: 1px solid #282828;
+    }
+
+    .custom-checkbox::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      transform: scale(0);
+      transition: 120ms transform ease-in-out;
+      box-shadow: inset 1em 1em #818cf8;
+      border-radius: 2px;
+    }
+
+    .custom-checkbox:checked::before {
+      transform: scale(1);
+    }
+
+    /* Strength bars */
+    .meter-seg {
+      height: 3px;
+      border-radius: 2px;
+      background-color: #282828;
+      flex: 1;
+      transition: background-color 0.3s ease;
+    }
+  </style>
 </head>
-<body class="light-theme page-landing-auth">
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="glow-orb-1"></div>
+  <div class="glow-orb-2"></div>
 
-  <!-- Background Interactive Motion Mesh & Physics Canvas -->
-  <div class="auth-bg-mesh" id="authBgMesh">
-    <canvas id="authInteractiveCanvas" class="auth-interactive-canvas"></canvas>
-    <div class="auth-mouse-spotlight" id="authMouseSpotlight"></div>
-    <div class="auth-bg-orb auth-bg-orb-1" id="authOrb1"></div>
-    <div class="auth-bg-orb auth-bg-orb-2" id="authOrb2"></div>
-    <div class="auth-bg-orb auth-bg-orb-3" id="authOrb3"></div>
-    <div class="auth-bg-orb auth-bg-orb-4" id="authOrb4"></div>
-    <div class="auth-grid-overlay"></div>
-    <div class="auth-vignette-overlay"></div>
+  <!-- Background Interactive Canvas Container -->
+  <div class="auth-canvas-container">
+    <canvas id="authInteractiveCanvas"></canvas>
   </div>
 
-  <!-- Main Unified Gateway Container -->
-  <div class="auth5-container">
-    <div class="auth5-card" id="auth5Card">
-      <!-- 1. Header with Logo & Dynamic Titles -->
-      <div class="auth5-header">
-        <div class="auth-brand-badge">
-          <div class="auth5-logo-badge">
-            <img src="Glossy Neon Coding Loop Logo.png" alt="NexusQA Logo" class="brand-logo-img">
+  <!-- Main View Container -->
+  <div class="w-full flex items-center justify-center relative z-10 py-6">
+    
+    <!-- AUTH CARD -->
+    <div id="authCard" class="styled-form">
+      
+      <!-- Brand & Mode Tabs Header -->
+      <div class="flex items-center justify-between border-b border-neutral-800/80 pb-3 mb-1">
+        <div class="flex items-center gap-2">
+          <img src="Glossy Neon Coding Loop Logo.png" alt="NexusQA" class="w-7 h-7 rounded-lg object-contain">
+          <div class="flex gap-1.5 ml-1">
+            <button type="button" id="tabLogin" onclick="switchMode('login')" class="text-xs uppercase tracking-wider font-semibold px-3 py-1.5 rounded-full bg-neutral-800 text-white transition-all">Login</button>
+            <button type="button" id="tabSignup" onclick="switchMode('signup')" class="text-xs uppercase tracking-wider font-medium px-3 py-1.5 rounded-full text-neutral-400 hover:text-white transition-all">Sign Up</button>
           </div>
-          <span class="auth-brand-name">NEXUS<span class="brand-accent">QA</span></span>
         </div>
-        <h1 class="auth5-title" id="auth5Title">Welcome to NexusQA</h1>
-        <p class="auth5-subtitle" id="auth5Subtitle">Enter your credentials to access the workspace</p>
+        <span id="brandBadge" class="text-xs text-neutral-500 font-mono tracking-tight">NexusQA</span>
       </div>
 
-      <!-- 2. STATE A: CREDENTIALS / SIGN IN / SIGN UP FORM -->
-      <div class="auth5-state-form" id="auth5StateForm">
-        <!-- OAuth Fallback Grid -->
-        <div class="auth5-oauth-grid">
-          <button type="button" class="auth5-oauth-btn" id="btnOAuthGithub" onclick="window.handleOAuthSignIn('github')">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"></path>
+      <!-- Heading -->
+      <div>
+        <p id="heading">Welcome Back</p>
+        <p id="subHeading" class="text-center text-xs text-neutral-400 -mt-2 mb-2">Sign in with your workspace credentials to continue</p>
+      </div>
+
+      <!-- In-Card Error Banner -->
+      <div id="authInlineAlert" class="hidden items-center gap-2 p-2.5 rounded-xl bg-red-950/40 border border-red-800/50 text-red-300 text-xs">
+        <i class="fa-solid fa-circle-exclamation text-red-400"></i>
+        <span id="authInlineAlertText">Invalid username or email.</span>
+      </div>
+
+      <!-- FORM -->
+      <form id="mainForm" onsubmit="handleFormSubmit(event)" novalidate class="flex flex-col gap-3">
+        
+        <!-- Full Name Field (Sign Up Only) -->
+        <div id="nameFieldGroup" class="hidden flex-col gap-1">
+          <div class="field" id="field-name">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
             </svg>
-            GitHub
-          </button>
-          <button type="button" class="auth5-oauth-btn" id="btnOAuthGoogle" onclick="window.handleOAuthSignIn('google')">
-            <svg viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"></path>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"></path>
+            <input id="fullNameInput" autoComplete="name" placeholder="Full Name" class="input-field" type="text" />
+          </div>
+          <span id="nameError" class="text-[11px] text-red-400 px-3 hidden"></span>
+        </div>
+
+        <!-- Identifier / Username Field -->
+        <div class="flex flex-col gap-1">
+          <div class="field" id="field-username">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M13.106 7.222c0-2.967-2.249-5.032-5.482-5.032-3.35 0-5.646 2.318-5.646 5.702 0 3.493 2.235 5.708 5.762 5.708.862 0 1.689-.123 2.304-.335v-.862c-.43.199-1.354.328-2.29.328-2.926 0-4.813-1.88-4.813-4.798 0-2.844 1.921-4.881 4.594-4.881 2.735 0 4.608 1.688 4.608 4.156 0 1.682-.554 2.769-1.416 2.769-.492 0-.772-.28-.772-.76V5.206H8.923v.834h-.11c-.266-.595-.881-.964-1.6-.964-1.4 0-2.378 1.162-2.378 2.823 0 1.737.957 2.906 2.379 2.906.8 0 1.415-.39 1.709-1.087h.11c.081.67.703 1.148 1.503 1.148 1.572 0 2.57-1.415 2.57-3.643zm-7.177.704c0-1.197.54-1.907 1.456-1.907.93 0 1.524.738 1.524 1.907S8.308 9.84 7.371 9.84c-.895 0-1.442-.725-1.442-1.914z" />
             </svg>
-            Google
-          </button>
-        </div>
-
-        <div class="auth5-divider">
-          <span>or sign in with workspace email</span>
-        </div>
-
-        <!-- In-Card Error / Warning Alert Banner (Front of User) -->
-        <div id="authInlineAlert" class="auth-inline-alert alert-error" style="display: none;">
-          <i class="fa-solid fa-circle-exclamation"></i>
-          <span id="authInlineAlertText">Invalid username or email.</span>
-        </div>
-
-        <!-- Unified Passcode Login Form (Email -> 6-Digit Squares) -->
-        <form id="testerLoginForm" class="auth5-form">
-          <div class="auth5-form-group">
-            <label class="auth5-label">
-              <span>Username or Work Email</span>
-            </label>
-            <div class="auth5-input-wrapper">
-              <i class="fa-regular fa-envelope auth5-input-icon"></i>
-              <input type="text" id="testerLoginEmail" class="auth5-input" placeholder="Enter username or work email" required autocomplete="username">
-            </div>
+            <input id="userInput" autoComplete="username" placeholder="Username or Email" class="input-field" type="text" />
           </div>
+          <span id="userError" class="text-[11px] text-red-400 px-3 hidden"></span>
+        </div>
 
-          <button type="submit" class="auth5-submit-btn" id="btnTesterLoginSubmit">
-            <span>Sign In to Workspace</span>
-            <i class="fa-solid fa-arrow-right"></i>
-          </button>
+        <!-- Role Selector Field (Sign Up Only) -->
+        <div id="roleFieldGroup" class="hidden flex-col gap-1">
+          <div class="field" id="field-role">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7Zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5.784 6A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216ZM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
+            </svg>
+            <select id="roleSelect" class="input-field">
+              <option value="qa">QA Tester Portal (/qa)</option>
+              <option value="dev">Developer Command Center (/dev)</option>
+            </select>
+          </div>
+        </div>
 
-          <!-- Modern Redesigned Switcher Pill -->
-          <div class="auth-action-switcher">
-            <span class="auth-switcher-prompt">Need a new workspace account?</span>
-            <button type="button" class="btn-auth-switch" onclick="window.switchAuthMode('signup')">
-              <span>Create Account (Tester / Dev)</span>
-              <i class="fa-solid fa-arrow-right"></i>
+        <!-- Password Field -->
+        <div id="passwordFieldGroup" class="flex flex-col gap-1">
+          <div class="field" id="field-password">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+            </svg>
+            <input id="passwordInput" placeholder="Password (Optional / any password)" class="input-field" type="password" oninput="handlePasswordStrength(this.value)" />
+            <!-- Toggle password visibility button -->
+            <button type="button" onclick="togglePasswordVisibility('passwordInput', this)" class="text-neutral-500 hover:text-white p-1 transition-colors focus:outline-none" title="Toggle password visibility">
+              <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+              </svg>
             </button>
           </div>
-        </form>
-
-        <!-- New Account Registration Form -->
-        <form id="testerSignupForm" class="auth5-form" style="display: none;">
-          <div class="auth-info-banner mb-3">
-            <i class="fa-solid fa-circle-info"></i>
-            <span><strong>Step 1:</strong> Enter details & verify 6-digit code ➔ <strong>Step 2:</strong> Senior Dev grants workspace access.</span>
-          </div>
-
-          <div class="auth5-form-group">
-            <label class="auth5-label"><span>Full Name</span></label>
-            <div class="auth5-input-wrapper">
-              <i class="fa-regular fa-user auth5-input-icon"></i>
-              <input type="text" id="testerSignupName" class="auth5-input" placeholder="e.g. Jordan Hayes" required autocomplete="name">
+          
+          <!-- Password strength meter for registration -->
+          <div id="strengthContainer" class="hidden mt-1 px-1">
+            <div class="flex gap-1.5 mb-1">
+              <div id="bar1" class="meter-seg"></div>
+              <div id="bar2" class="meter-seg"></div>
+              <div id="bar3" class="meter-seg"></div>
+            </div>
+            <div class="flex justify-between items-center text-[11px] text-neutral-400">
+              <span id="strengthText">Password strength: optional</span>
+              <span class="text-neutral-500">Min 4 chars</span>
             </div>
           </div>
+          <span id="passwordError" class="text-[11px] text-red-400 px-3 hidden"></span>
+        </div>
 
-          <div class="auth5-form-group">
-            <label class="auth5-label"><span>Work Email</span></label>
-            <div class="auth5-input-wrapper">
-              <i class="fa-regular fa-envelope auth5-input-icon"></i>
-              <input type="email" id="testerSignupEmail" class="auth5-input" placeholder="e.g. jordan@company.com" required autocomplete="email">
-            </div>
+        <!-- Confirm Password Field (Sign Up Only) -->
+        <div id="confirmPasswordFieldGroup" class="hidden flex-col gap-1">
+          <div class="field" id="field-confirm-password">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M9.5 6.5a1.5 1.5 0 0 1-1-1.415V2.5A1.5 1.5 0 0 1 10 1h4a1.5 1.5 0 0 1 1.5 1.5v2.585A1.5 1.5 0 0 1 14.5 6.5H14v2h.5A1.5 1.5 0 0 1 16 10v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 9 14v-4a1.5 1.5 0 0 1 1.5-1.5H11v-2h-1.5zM1 3.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 4a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 4a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
+            </svg>
+            <input id="confirmPasswordInput" placeholder="Confirm Password" class="input-field" type="password" />
           </div>
+          <span id="confirmError" class="text-[11px] text-red-400 px-3 hidden"></span>
+        </div>
 
-          <div class="auth5-form-group">
-            <label class="auth5-label"><span>Account Role</span></label>
-            <div class="auth5-select-wrapper">
-              <select id="testerSignupRoleTitle" class="auth5-select">
-                <option value="Tester">QA Tester</option>
-                <option value="Dev">Developer Lead / Junior Dev</option>
-              </select>
-              <i class="fa-solid fa-chevron-down auth5-select-caret"></i>
-            </div>
-          </div>
+        <!-- Options Row (Remember me) -->
+        <div id="optionsRow" class="flex items-center justify-between text-xs text-neutral-400 px-1 mt-1">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" id="rememberMe" class="custom-checkbox" checked />
+            <span>Remember me</span>
+          </label>
+          <span class="text-[11px] text-neutral-500">Secure AES-256</span>
+        </div>
 
-          <button type="submit" class="auth5-submit-btn" id="btnTesterSendOtp">
-            <span>Request Access & Send 6-Digit Passcode</span>
-            <i class="fa-solid fa-paper-plane"></i>
+        <!-- Submit & Secondary Action Buttons -->
+        <div class="btn-row">
+          <button id="submitBtn" type="submit" class="button1">
+            <span id="btnSpinner" class="hidden">
+              <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            </span>
+            <span id="submitBtnText">Sign In to Workspace</span>
           </button>
+          <button type="button" id="toggleAltBtn" onclick="toggleModeAlternative()" class="button2">Sign Up</button>
+        </div>
 
-          <!-- Modern Redesigned Switcher Pill -->
-          <div class="auth-action-switcher">
-            <span class="auth-switcher-prompt">Already have an active account?</span>
-            <button type="button" class="btn-auth-switch" onclick="window.switchAuthMode('login')">
-              <span>Sign In to Workspace</span>
-              <i class="fa-solid fa-arrow-right"></i>
+        <!-- Forgot Password / Switch Trigger -->
+        <button type="button" id="forgotBtn" onclick="switchMode('forgot')" class="button3">Forgot Password</button>
+
+        <!-- Social Separator & Logins -->
+        <div id="socialSection" class="pt-2 border-t border-neutral-800/80">
+          <div class="text-center text-[11px] uppercase tracking-wider text-neutral-500 mb-3">Or continue with</div>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="handleSocialAuth('Google')" class="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#1f1f1f] hover:bg-black border border-neutral-800 hover:border-neutral-700 text-xs text-neutral-300 transition-all">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24">
+                <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/>
+                <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.8z"/>
+                <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.2c0 2.8.7 5.5 1.9 7.8l3.7-2.9z"/>
+                <path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16.5C3.7 20.3 7.5 23.5 12 23.5z"/>
+              </svg>
+              <span>Google</span>
+            </button>
+            <button type="button" onclick="handleSocialAuth('GitHub')" class="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-[#1f1f1f] hover:bg-black border border-neutral-800 hover:border-neutral-700 text-xs text-neutral-300 transition-all">
+              <svg class="w-3.5 h-3.5 fill-current text-neutral-300" viewBox="0 0 16 16">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+              </svg>
+              <span>GitHub</span>
             </button>
           </div>
-        </form>
-      </div>
-
-      <!-- 4. STATE B: 6-DIGIT SQUARES PASSCODE (State Swap with <CodeSlots /> & Tick Animation) -->
-      <div class="auth5-inbox-state" id="auth5InboxState" style="display: none;">
-        <div class="auth5-inbox-icon-wrap">
-          <i class="fa-solid fa-shield-halved"></i>
-        </div>
-        <h2 class="auth5-title">Enter 6-Digit Passcode</h2>
-        <p class="auth5-subtitle">Enter your 6-digit security PIN for</p>
-
-        <div class="auth5-email-chip">
-          <span id="otpRecipientEmailLabel">tester@company.com</span>
-          <button type="button" class="auth5-email-edit-btn" onclick="window.backToAuthForm()" title="Change email">
-            <i class="fa-solid fa-pen"></i>
-          </button>
         </div>
 
-        <!-- Simulated Email OTP Notification Banner with Auto-Fill -->
-        <div class="otp-simulation-pill" style="margin-bottom: 14px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <span style="font-size: 10px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.6px; color: var(--accent-indigo, #818cf8); display: block;">Verification Code</span>
-            <strong id="simulatedOtpCodeBadge" style="font-family: monospace; font-size: 19px; letter-spacing: 3px; color: #ffffff;">654321</strong>
-          </div>
-          <button type="button" id="btnAutoFillOtp" class="btn btn-primary btn-sm" style="padding: 5px 12px; font-size: 12px;">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fill
-          </button>
-        </div>
-
-        <!-- Integrated React Bits CodeSlots Component -->
-        <form id="testerOtpForm">
-          <div class="code-slots-wrapper">
-            <div class="code-slots" id="otpCodeSlots" style="--cs-accent: #6366f1; --cs-ink: #818cf8; --cs-slot: #131d31; --cs-digit: #ffffff; --cs-danger: #f43f5e; --cs-size: 48px; --cs-height: 56px; --cs-gap: 10px; --cs-radius: 12px; --cs-font: 24px;">
-              <div class="code-slots__row" id="codeSlotsRow" data-status="idle" data-focused="">
-                <input
-                  id="codeSlotsInput"
-                  class="code-slots__input"
-                  type="text"
-                  inputmode="numeric"
-                  autocomplete="one-time-code"
-                  pattern="[0-9]*"
-                  value=""
-                  maxlength="6"
-                  aria-label="One-time verification code"
-                  autofocus
-                />
-                <span class="code-slots__slot" data-active="" data-index="0">
-                  <span class="code-slots__fill"></span>
-                  <span class="code-slots__digit"></span>
-                </span>
-                <span class="code-slots__slot" data-index="1">
-                  <span class="code-slots__fill"></span>
-                  <span class="code-slots__digit"></span>
-                </span>
-                <span class="code-slots__slot" data-index="2">
-                  <span class="code-slots__fill"></span>
-                  <span class="code-slots__digit"></span>
-                </span>
-                <span class="code-slots__slot" data-index="3">
-                  <span class="code-slots__fill"></span>
-                  <span class="code-slots__digit"></span>
-                </span>
-                <span class="code-slots__slot" data-index="4">
-                  <span class="code-slots__fill"></span>
-                  <span class="code-slots__digit"></span>
-                </span>
-                <span class="code-slots__slot" data-index="5">
-                  <span class="code-slots__fill"></span>
-                  <span class="code-slots__digit"></span>
-                </span>
-
-                <span class="code-slots__wash" aria-hidden="true">
-                  <span class="code-slots__check">
-                    <svg class="cs-tick-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  </span>
-                </span>
-                <span class="code-slots__caret" id="codeSlotsCaret" aria-hidden="true" data-show="">
-                  <span class="code-slots__caret-line"></span>
-                </span>
-              </div>
-              <span id="codeSlotsSrCount" class="code-slots__sr" aria-live="polite">0 of 6 digits entered</span>
-            </div>
-          </div>
-
-          <!-- Resend Cooldown Bar -->
-          <div class="auth5-resend-box">
-            <span class="text-muted"><i class="fa-regular fa-clock"></i> Expires: <strong class="text-amber" id="otpTimerLabel">15:00</strong></span>
-            <button type="button" class="auth5-resend-btn" id="btnResendOtp">
-              <i class="fa-solid fa-rotate-right"></i> Resend code (<span id="auth5ResendCountdown">60s</span>)
-            </button>
-          </div>
-
-          <button type="submit" class="auth5-submit-btn" id="btnVerifyOtpSubmit">
-            <i class="fa-solid fa-shield-check"></i> Verify Code & Submit Request
-          </button>
-        </form>
-
-        <button type="button" class="auth5-back-btn" onclick="window.backToAuthForm()">
-          <i class="fa-solid fa-arrow-left"></i> Back to sign in
-        </button>
-      </div>
-
-      <!-- 5. STATE C: PENDING DEVELOPER APPROVAL -->
-      <div class="auth5-inbox-state" id="testerPendingApprovalView" style="display: none;">
-        <div class="radar-pulse-container">
-          <div class="radar-circle circle-1"></div>
-          <div class="radar-circle circle-2"></div>
-          <div class="radar-circle circle-3"></div>
-          <div class="radar-icon">
-            <i class="fa-solid fa-user-clock text-amber"></i>
-          </div>
-        </div>
-
-        <h2 class="auth5-title mt-3">Awaiting Dev Lead Approval</h2>
-        <p class="auth5-subtitle">
-          Email <strong class="text-main" id="pendingUserEmailLabel">tester@company.com</strong> verified.
-        </p>
-
-        <div class="approval-status-card mt-3 text-left">
-          <div class="status-row">
-            <span class="status-badge-dot bg-emerald"></span>
-            <span>Email Verification: <strong>Completed (OTP Validated)</strong></span>
-          </div>
-          <div class="status-row mt-2">
-            <span class="status-badge-dot bg-amber pulse-anim"></span>
-            <span>Developer Authorization: <strong class="text-amber">Pending Approval</strong></span>
-          </div>
-          <div class="status-row mt-2">
-            <span class="status-badge-dot bg-cyan"></span>
-            <span>Assigned Approver: <strong>Marcus Vance (Dev Lead)</strong></span>
-          </div>
-        </div>
-
-        <div class="live-listener-banner mt-3">
-          <div class="sync-dot-pulse"></div>
-          <span class="text-xs">Listening in real-time... Automatically unlocks tester.html when authorized.</span>
-        </div>
-
-        <div class="d-flex gap-2 mt-4">
-          <button type="button" class="btn btn-secondary btn-sm flex-1" onclick="window.setAuth5Role('dev')">
-            <i class="fa-solid fa-laptop-code"></i> Switch to Dev Hub to Approve
-          </button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="window.backToAuthForm()">
-            <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign In Another User
-          </button>
-        </div>
-      </div>
-
+      </form>
     </div>
+
   </div>
 
-  <!-- Toast Notification Container -->
-  <div class="toast-container" id="toastContainer"></div>
+  <!-- Toast Notification element -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm shadow-2xl transition-all transform translate-y-16 opacity-0 pointer-events-none">
+    <span id="toastIcon" class="text-emerald-400">✓</span>
+    <span id="toastMsg" class="text-neutral-200 text-xs font-medium">Notification message</span>
+  </div>
 
-  <!-- Supabase JS Client SDK -->
+  <!-- Supabase & Storage SDKs -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- Scripts -->
-  <script src="js/data.js?v=1.0.4"></script>
-  <script src="js/supabase.js?v=1.0.4"></script>
-  <script src="js/storage.js?v=1.0.4"></script>
-  <script src="js/app.js?v=1.0.4"></script>
-  <script src="js/auth-motion.js?v=1.0.5"></script>
+  <script src="js/data.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/auth-motion.js"></script>
+
+  <script>
+    // State machine
+    let currentMode = 'login'; // 'login' | 'signup' | 'forgot'
+    let isSubmitting = false;
+
+    // Element references
+    const heading = document.getElementById('heading');
+    const subHeading = document.getElementById('subHeading');
+    const tabLogin = document.getElementById('tabLogin');
+    const tabSignup = document.getElementById('tabSignup');
+    const nameFieldGroup = document.getElementById('nameFieldGroup');
+    const roleFieldGroup = document.getElementById('roleFieldGroup');
+    const passwordFieldGroup = document.getElementById('passwordFieldGroup');
+    const confirmPasswordFieldGroup = document.getElementById('confirmPasswordFieldGroup');
+    const strengthContainer = document.getElementById('strengthContainer');
+    const optionsRow = document.getElementById('optionsRow');
+    const forgotBtn = document.getElementById('forgotBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const toggleAltBtn = document.getElementById('toggleAltBtn');
+    const socialSection = document.getElementById('socialSection');
+    const btnSpinner = document.getElementById('btnSpinner');
+    const authInlineAlert = document.getElementById('authInlineAlert');
+    const authInlineAlertText = document.getElementById('authInlineAlertText');
+
+    // Input fields
+    const fullNameInput = document.getElementById('fullNameInput');
+    const userInput = document.getElementById('userInput');
+    const roleSelect = document.getElementById('roleSelect');
+    const passwordInput = document.getElementById('passwordInput');
+    const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+
+    /**
+     * Switch UI between Login, Sign Up, and Forgot Password modes
+     */
+    function switchMode(mode) {
+      currentMode = mode;
+      clearErrors();
+
+      if (mode === 'login') {
+        heading.textContent = 'Welcome Back';
+        subHeading.textContent = 'Sign in with your workspace credentials to continue';
+        userInput.placeholder = 'Username or Email';
+
+        tabLogin.className = 'text-xs uppercase tracking-wider font-semibold px-3 py-1.5 rounded-full bg-neutral-800 text-white transition-all';
+        tabSignup.className = 'text-xs uppercase tracking-wider font-medium px-3 py-1.5 rounded-full text-neutral-400 hover:text-white transition-all';
+
+        nameFieldGroup.classList.add('hidden');
+        roleFieldGroup.classList.add('hidden');
+        passwordFieldGroup.classList.remove('hidden');
+        confirmPasswordFieldGroup.classList.add('hidden');
+        strengthContainer.classList.add('hidden');
+        optionsRow.classList.remove('hidden');
+        socialSection.classList.remove('hidden');
+
+        submitBtnText.textContent = 'Sign In to Workspace';
+        toggleAltBtn.textContent = 'Sign Up';
+        toggleAltBtn.style.display = 'block';
+
+        forgotBtn.textContent = 'Forgot Password';
+        forgotBtn.classList.remove('text-indigo-400');
+        forgotBtn.onclick = () => switchMode('forgot');
+
+      } else if (mode === 'signup') {
+        heading.textContent = 'Create Account';
+        subHeading.textContent = 'Register a new QA Tester or Developer identity';
+        userInput.placeholder = 'Work Email or Username';
+
+        tabSignup.className = 'text-xs uppercase tracking-wider font-semibold px-3 py-1.5 rounded-full bg-neutral-800 text-white transition-all';
+        tabLogin.className = 'text-xs uppercase tracking-wider font-medium px-3 py-1.5 rounded-full text-neutral-400 hover:text-white transition-all';
+
+        nameFieldGroup.classList.remove('hidden');
+        roleFieldGroup.classList.remove('hidden');
+        passwordFieldGroup.classList.remove('hidden');
+        confirmPasswordFieldGroup.classList.remove('hidden');
+        strengthContainer.classList.remove('hidden');
+        optionsRow.classList.remove('hidden');
+        socialSection.classList.remove('hidden');
+
+        submitBtnText.textContent = 'Create & Enter Workspace';
+        toggleAltBtn.textContent = 'Sign In';
+        toggleAltBtn.style.display = 'block';
+
+        forgotBtn.textContent = 'Already have an account? Sign In';
+        forgotBtn.onclick = () => switchMode('login');
+
+      } else if (mode === 'forgot') {
+        heading.textContent = 'Reset Password';
+        subHeading.textContent = 'Enter your workspace email to receive recovery instructions';
+        userInput.placeholder = 'Account Email address';
+
+        tabLogin.className = 'text-xs uppercase tracking-wider font-medium px-3 py-1.5 rounded-full text-neutral-400 hover:text-white transition-all';
+        tabSignup.className = 'text-xs uppercase tracking-wider font-medium px-3 py-1.5 rounded-full text-neutral-400 hover:text-white transition-all';
+
+        nameFieldGroup.classList.add('hidden');
+        roleFieldGroup.classList.add('hidden');
+        passwordFieldGroup.classList.add('hidden');
+        confirmPasswordFieldGroup.classList.add('hidden');
+        strengthContainer.classList.add('hidden');
+        optionsRow.classList.add('hidden');
+        socialSection.classList.add('hidden');
+
+        submitBtnText.textContent = 'Send Reset Link';
+        toggleAltBtn.style.display = 'none';
+
+        forgotBtn.textContent = '← Back to Login';
+        forgotBtn.onclick = () => switchMode('login');
+      }
+    }
+
+    /**
+     * Alternative toggle button on right side of primary action
+     */
+    function toggleModeAlternative() {
+      if (currentMode === 'login') {
+        switchMode('signup');
+      } else {
+        switchMode('login');
+      }
+    }
+
+    /**
+     * Show / Hide password visibility
+     */
+    function togglePasswordVisibility(fieldId, btnElement) {
+      const input = document.getElementById(fieldId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btnElement.classList.add('text-indigo-400');
+      } else {
+        input.type = 'password';
+        btnElement.classList.remove('text-indigo-400');
+      }
+    }
+
+    /**
+     * Password strength evaluation
+     */
+    function handlePasswordStrength(pass) {
+      if (currentMode !== 'signup') return;
+
+      const bar1 = document.getElementById('bar1');
+      const bar2 = document.getElementById('bar2');
+      const bar3 = document.getElementById('bar3');
+      const text = document.getElementById('strengthText');
+
+      if (!pass || pass.length === 0) {
+        bar1.style.backgroundColor = '#282828';
+        bar2.style.backgroundColor = '#282828';
+        bar3.style.backgroundColor = '#282828';
+        text.textContent = 'Password strength: optional';
+        return;
+      }
+
+      let score = 0;
+      if (pass.length >= 4) score++;
+      if (pass.length >= 8 && /[A-Z0-9]/.test(pass)) score++;
+      if (pass.length >= 10) score++;
+
+      if (score === 1) {
+        bar1.style.backgroundColor = '#ef4444';
+        bar2.style.backgroundColor = '#282828';
+        bar3.style.backgroundColor = '#282828';
+        text.textContent = 'Strength: Basic';
+        text.className = 'text-[11px] text-red-400';
+      } else if (score === 2) {
+        bar1.style.backgroundColor = '#f59e0b';
+        bar2.style.backgroundColor = '#f59e0b';
+        bar3.style.backgroundColor = '#282828';
+        text.textContent = 'Strength: Medium';
+        text.className = 'text-[11px] text-yellow-400';
+      } else {
+        bar1.style.backgroundColor = '#10b981';
+        bar2.style.backgroundColor = '#10b981';
+        bar3.style.backgroundColor = '#10b981';
+        text.textContent = 'Strength: Strong';
+        text.className = 'text-[11px] text-emerald-400';
+      }
+    }
+
+    /**
+     * Form Validation & Submission
+     */
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      if (isSubmitting) return;
+
+      clearErrors();
+      let hasError = false;
+
+      const userVal = userInput.value.trim();
+      const passVal = passwordInput.value;
+
+      // Username / Email validation
+      if (!userVal) {
+        showFieldError('userError', 'field-username', 'Please enter your username or work email');
+        hasError = true;
+      } else if (currentMode === 'forgot' && !/^\S+@\S+\.\S+$/.test(userVal)) {
+        showFieldError('userError', 'field-username', 'Please enter a valid email address');
+        hasError = true;
+      }
+
+      // Mode specific validations
+      if (currentMode === 'signup') {
+        const nameVal = fullNameInput.value.trim();
+        if (!nameVal) {
+          showFieldError('nameError', 'field-name', 'Full name is required');
+          hasError = true;
+        }
+
+        const confirmVal = confirmPasswordInput.value;
+        if (passVal && confirmVal !== passVal) {
+          showFieldError('confirmError', 'field-confirm-password', 'Passwords do not match');
+          hasError = true;
+        }
+      }
+
+      if (hasError) return;
+
+      setLoading(true);
+
+      setTimeout(() => {
+        try {
+          if (currentMode === 'forgot') {
+            setLoading(false);
+            showToast(`Recovery instructions dispatched to ${userVal}`, 'success');
+            setTimeout(() => switchMode('login'), 2000);
+            return;
+          }
+
+          if (currentMode === 'signup') {
+            const nameVal = fullNameInput.value.trim();
+            const selectedRole = roleSelect ? roleSelect.value : 'qa';
+            
+            // Create user via StorageManager
+            const users = StorageManager.getUsers();
+            let newUser = {
+              id: `user-${selectedRole}-${Date.now()}`,
+              name: nameVal,
+              email: userVal.includes('@') ? userVal.toLowerCase().trim() : `${userVal.toLowerCase().trim()}@nexusqa.io`,
+              username: userVal.toLowerCase().trim(),
+              role: selectedRole,
+              roleTitle: selectedRole === 'dev' ? 'Senior Developer' : 'QA Tester',
+              avatar: nameVal.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || (selectedRole === 'dev' ? 'DEV' : 'QA'),
+              color: selectedRole === 'dev' ? '#10b981' : '#6366f1',
+              status: 'active',
+              emailVerified: true,
+              createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+            };
+
+            users.push(newUser);
+            StorageManager.saveUsers(users);
+            StorageManager.setCurrentUser(newUser);
+
+            showToast(`Account created! Welcome, ${newUser.name}`, 'success');
+            setLoading(false);
+
+            setTimeout(() => {
+              window.location.href = selectedRole === 'dev' ? 'dev.html' : 'tester.html';
+            }, 600);
+            return;
+          }
+
+          // LOGIN MODE: Direct login with role routing
+          const result = StorageManager.directLogin(userVal);
+          if (result && result.user) {
+            const targetUrl = result.user.role === 'dev' ? 'dev.html' : 'tester.html';
+            showToast(`Welcome back, ${result.user.name || result.user.email}!`, 'success');
+            setLoading(false);
+            setTimeout(() => {
+              window.location.href = targetUrl;
+            }, 500);
+          } else {
+            throw new Error("Unable to authenticate user.");
+          }
+
+        } catch (err) {
+          setLoading(false);
+          showInlineError(err.message || "Authentication failed. Please check credentials.");
+        }
+      }, 700);
+    }
+
+    function showFieldError(errorElementId, fieldBoxId, message) {
+      const errEl = document.getElementById(errorElementId);
+      const fieldEl = document.getElementById(fieldBoxId);
+      if (errEl) {
+        errEl.textContent = message;
+        errEl.classList.remove('hidden');
+      }
+      if (fieldEl) {
+        fieldEl.classList.add('is-invalid');
+      }
+    }
+
+    function showInlineError(msg) {
+      if (authInlineAlert && authInlineAlertText) {
+        authInlineAlertText.textContent = msg;
+        authInlineAlert.classList.remove('hidden');
+        authInlineAlert.classList.add('flex');
+      }
+    }
+
+    function clearErrors() {
+      ['nameError', 'userError', 'passwordError', 'confirmError'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      ['field-name', 'field-username', 'field-password', 'field-confirm-password'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('is-invalid');
+      });
+      if (authInlineAlert) {
+        authInlineAlert.classList.add('hidden');
+        authInlineAlert.classList.remove('flex');
+      }
+    }
+
+    function setLoading(loading) {
+      isSubmitting = loading;
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = loading;
+      if (loading) {
+        btnSpinner.classList.remove('hidden');
+        submitBtnText.textContent = 'Authenticating...';
+      } else {
+        btnSpinner.classList.add('hidden');
+        submitBtnText.textContent = currentMode === 'login' ? 'Sign In to Workspace' : (currentMode === 'signup' ? 'Create & Enter Workspace' : 'Send Reset Link');
+      }
+    }
+
+    function handleSocialAuth(provider) {
+      showToast(`Initiating authentic handshake with ${provider}...`, 'info');
+      setTimeout(() => {
+        const role = provider === 'GitHub' ? 'dev' : 'qa';
+        const user = {
+          id: `oauth-${provider.toLowerCase()}-${Date.now()}`,
+          name: `${provider} Engineer`,
+          email: `${provider.toLowerCase()}_user@nexusqa.io`,
+          role: role,
+          roleTitle: role === 'dev' ? 'Developer Lead' : 'QA Tester',
+          avatar: provider === 'GitHub' ? 'GH' : 'GG',
+          color: role === 'dev' ? '#10b981' : '#6366f1',
+          status: 'active',
+          emailVerified: true
+        };
+        StorageManager.setCurrentUser(user);
+        showToast(`Connected with ${provider}! Redirecting...`, 'success');
+        setTimeout(() => {
+          window.location.href = role === 'dev' ? 'dev.html' : 'tester.html';
+        }, 600);
+      }, 700);
+    }
+
+    /**
+     * Toast notification utility
+     */
+    let toastTimeout;
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+
+      if (!toast) return;
+
+      clearTimeout(toastTimeout);
+      toastMsg.textContent = message;
+
+      if (type === 'success') {
+        toastIcon.textContent = '✓';
+        toastIcon.className = 'text-emerald-400 font-bold';
+      } else if (type === 'error') {
+        toastIcon.textContent = '✕';
+        toastIcon.className = 'text-rose-400 font-bold';
+      } else {
+        toastIcon.textContent = 'ℹ';
+        toastIcon.className = 'text-indigo-400 font-bold';
+      }
+
+      toast.classList.remove('translate-y-16', 'opacity-0', 'pointer-events-none');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-16', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    // Check if coming back with an authentication error notice
+    window.addEventListener('DOMContentLoaded', () => {
+      const notice = sessionStorage.getItem("nexus_auth_error");
+      if (notice) {
+        sessionStorage.removeItem("nexus_auth_error");
+        showInlineError(notice);
+      }
+    });
+  </script>
 </body>
 </html>

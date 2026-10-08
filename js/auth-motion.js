@@ -6,7 +6,7 @@
 
 (function initAuthMotionBackground() {
   const canvas = document.getElementById("authInteractiveCanvas");
-  const card = document.getElementById("auth5Card");
+  const card = document.getElementById("authCard") || document.getElementById("auth5Card");
   const spotlight = document.getElementById("authMouseSpotlight");
   const orb1 = document.getElementById("authOrb1");
   const orb2 = document.getElementById("authOrb2");
