@@ -30,7 +30,10 @@ document.addEventListener("DOMContentLoaded", () => {
     devOnlyMyBugs: false,
     pendingRegistrationEmail: "",
     currentOtpCode: "",
-    otpTimerInterval: null
+    otpTimerInterval: null,
+    activeConferenceProjectId: null,
+    conferenceProjectFilter: "all",
+    conferenceProjectSearch: ""
   };
 
   // Cache DOM Elements
@@ -2588,9 +2591,180 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   // =========================================================================
   // CONFERENCE ROOM LOGIC (Live QA <-> Dev Real-Time Chat)
   // =========================================================================
+  // =========================================================================
+  // CONFERENCE ROOM LOGIC (Project Cards & Live QA <-> Dev Real-Time Chat)
+  // =========================================================================
+
+  window.openConferenceProject = function(projectId) {
+    if (!projectId) return;
+    state.activeConferenceProjectId = projectId;
+    renderConference();
+  };
+
+  window.closeConferenceProject = function() {
+    state.activeConferenceProjectId = null;
+    renderConference();
+  };
+
   function renderConference() {
+    const viewConference = document.getElementById("view-conference");
+    if (!viewConference) return;
+
+    const projectsSection = document.getElementById("conferenceProjectsSection");
+    const chatSection = document.getElementById("conferenceChatSection");
+
+    if (!state.activeConferenceProjectId) {
+      if (projectsSection) projectsSection.style.display = "block";
+      if (chatSection) chatSection.style.display = "none";
+      renderConferenceProjects();
+    } else {
+      if (projectsSection) projectsSection.style.display = "none";
+      if (chatSection) chatSection.style.display = "block";
+      renderConferenceChat(state.activeConferenceProjectId);
+    }
+  }
+
+  function renderConferenceProjects() {
+    const grid = document.getElementById("conferenceProjectsGrid");
+    if (!grid) return;
+
+    const currentUser = StorageManager.getCurrentUser() || state.currentUser || {
+      name: state.currentPortal === "dev" ? "Dev Engineer" : "QA Tester",
+      role: state.currentPortal === "dev" ? "dev" : "qa"
+    };
+
+    const isSenior = StorageManager.isSeniorDev(currentUser);
+
+    // Configure the New Project button based on Senior Dev authorization
+    const newProjectBtn = document.getElementById("btnOpenNewProjectModal");
+    if (newProjectBtn) {
+      if (isSenior) {
+        newProjectBtn.className = "btn btn-primary btn-sm";
+        newProjectBtn.title = "Create a new Conference Project channel (Senior Developer Verified)";
+        newProjectBtn.innerHTML = '<i class="fa-solid fa-plus mr-1"></i> <span>New Project</span>';
+      } else {
+        newProjectBtn.className = "btn btn-secondary btn-sm btn-locked-indicator";
+        newProjectBtn.title = "Project creation is restricted to Senior Developers only";
+        newProjectBtn.innerHTML = '<i class="fa-solid fa-lock text-amber mr-1"></i> <span>New Project</span> <span class="badge badge-warning text-2xs ml-1">Senior Dev</span>';
+      }
+    }
+
+    // Update Category Pills Active State
+    const pills = document.querySelectorAll("#conferenceCategoryPills .cat-pill");
+    pills.forEach(pill => {
+      const cat = pill.getAttribute("data-cat");
+      if (cat === state.conferenceProjectFilter) {
+        pill.classList.add("active");
+      } else {
+        pill.classList.remove("active");
+      }
+    });
+
+    let projects = StorageManager.getConferenceProjects();
+
+    // Filter by Category
+    if (state.conferenceProjectFilter && state.conferenceProjectFilter !== "all") {
+      projects = projects.filter(p => p.category === state.conferenceProjectFilter);
+    }
+
+    // Filter by Search Query
+    if (state.conferenceProjectSearch && state.conferenceProjectSearch.trim()) {
+      const q = state.conferenceProjectSearch.toLowerCase().trim();
+      projects = projects.filter(p => 
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.description && p.description.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.slug && p.slug.toLowerCase().includes(q))
+      );
+    }
+
+    if (projects.length === 0) {
+      grid.innerHTML = `
+        <div class="conference-empty-state" style="grid-column: 1 / -1; padding: 3rem 1.5rem;">
+          <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
+          <h3>No Conference Projects Found</h3>
+          <p class="text-sm text-muted">No channels match "${escapeHtml(state.conferenceProjectSearch || state.conferenceProjectFilter)}". Try adjusting your search query or category filters.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const iconMap = {
+      "Payments": "fa-credit-card",
+      "Security": "fa-shield-halved",
+      "AI & NLP": "fa-brain",
+      "Frontend": "fa-mobile-screen",
+      "Backend": "fa-server",
+      "DevOps": "fa-cubes"
+    };
+
+    grid.innerHTML = projects.map(proj => {
+      const icon = proj.icon || iconMap[proj.category] || "fa-diagram-project";
+      const messages = StorageManager.getConferenceMessages(proj.id);
+      const msgCount = messages.length;
+
+      let statusBadgeClass = "badge-passed";
+      if (proj.status === "Active Sprint") statusBadgeClass = "badge-primary";
+      else if (proj.status === "Release Candidate") statusBadgeClass = "badge-passed";
+      else if (proj.status === "In Triage") statusBadgeClass = "badge-failed";
+      else if (proj.status === "Regression Pass") statusBadgeClass = "badge-version";
+
+      return `
+        <div class="conference-project-card" onclick="window.openConferenceProject('${escapeHtml(proj.id)}')">
+          <div class="project-card-top">
+            <div class="project-icon-box cat-${escapeHtml((proj.category || 'general').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase())}">
+              <i class="fa-solid ${icon}"></i>
+            </div>
+            <div class="project-badges">
+              <span class="badge badge-primary">${escapeHtml(proj.category || 'General')}</span>
+              <span class="badge ${statusBadgeClass}">${escapeHtml(proj.status || 'Active')}</span>
+            </div>
+          </div>
+          <div class="project-card-body">
+            <h3 class="project-card-title">${escapeHtml(proj.name)}</h3>
+            <p class="project-card-desc">${escapeHtml(proj.description)}</p>
+            <div class="project-channel-slug">
+              <i class="fa-solid fa-hashtag text-primary"></i> ${escapeHtml(proj.slug || proj.id)}
+            </div>
+          </div>
+          <div class="project-card-footer">
+            <div class="project-meta-stats">
+              <span title="Messages count"><i class="fa-solid fa-comments"></i> <strong>${msgCount}</strong> msgs</span>
+              <span title="Synced portals"><i class="fa-solid fa-users"></i> ${proj.participantsCount || 4}</span>
+              <span title="Last updated"><i class="fa-regular fa-clock"></i> ${escapeHtml(proj.lastActivity || 'Live')}</span>
+            </div>
+            <button type="button" class="btn btn-secondary btn-xs btn-open-project-chat" onclick="event.stopPropagation(); window.openConferenceProject('${escapeHtml(proj.id)}')">
+              <span>Open Chat</span> <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderConferenceChat(projectId) {
     const container = document.getElementById("conferenceMessagesContainer");
     if (!container) return;
+
+    const project = StorageManager.getConferenceProjectById(projectId);
+
+    // Update Chat Header details
+    const titleEl = document.getElementById("chatProjectTitle");
+    const subEl = document.getElementById("chatProjectSubtitle");
+    const catBadgeEl = document.getElementById("chatProjectCatBadge");
+    const slugEl = document.getElementById("chatChannelSlug");
+    const topicEl = document.getElementById("chatProjectTopic");
+    const iconEl = document.getElementById("chatProjectIcon");
+
+    if (titleEl) titleEl.textContent = project ? project.name : "Conference Room";
+    if (subEl) subEl.textContent = project ? project.description : "Cross-portal real-time discussion";
+    if (catBadgeEl) catBadgeEl.textContent = project ? project.category : "General";
+    if (slugEl) slugEl.textContent = `# ${project ? (project.slug || project.id) : "general-channel"}`;
+    if (topicEl) topicEl.textContent = project ? project.description : "Real-time collaboration";
+    if (iconEl) {
+      const icon = project ? (project.icon || "fa-comments") : "fa-comments";
+      iconEl.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+    }
 
     const currentUser = StorageManager.getCurrentUser() || state.currentUser || {
       name: state.currentPortal === "dev" ? "Dev Engineer" : "QA Tester",
@@ -2611,14 +2785,14 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       roleBadgeEl.className = `badge ${currentUser.role === "dev" ? "badge-dev" : "badge-qa"}`;
     }
 
-    const messages = StorageManager.getConferenceMessages();
+    const messages = StorageManager.getConferenceMessages(projectId);
 
     if (messages.length === 0) {
       container.innerHTML = `
         <div class="conference-empty-state">
           <div class="empty-icon"><i class="fa-solid fa-comments"></i></div>
-          <h3>Conference Room Ready</h3>
-          <p class="text-sm text-muted">No messages posted yet. Use the input below or select a quick prompt to start the real-time discussion between Testers and Developers.</p>
+          <h3>${escapeHtml(project ? project.name : "Conference Channel")} Ready</h3>
+          <p class="text-sm text-muted">No messages posted yet in this channel. Use the input below or select a quick prompt to start the real-time discussion between QA Testers and Developers.</p>
         </div>
       `;
       return;
@@ -2690,7 +2864,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       avatar: state.currentPortal === "dev" ? "DV" : "QA"
     };
 
+    const targetProjectId = state.activeConferenceProjectId || "proj-payments";
+
     StorageManager.addConferenceMessage({
+      projectId: targetProjectId,
       senderId: currentUser.id || "usr-" + Date.now(),
       senderName: currentUser.name || (currentUser.role === "dev" ? "Developer" : "QA Tester"),
       senderRole: currentUser.role || (state.currentPortal === "dev" ? "dev" : "qa"),
@@ -2711,6 +2888,128 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const refreshBtn = document.getElementById("conferenceRefreshBtn");
     const clearBtn = document.getElementById("conferenceClearBtn");
 
+    const backBtn = document.getElementById("btnBackToProjects");
+    const refreshProjectsBtn = document.getElementById("conferenceRefreshProjectsBtn");
+    const searchInput = document.getElementById("conferenceProjectSearchInput");
+    const categoryPills = document.querySelectorAll("#conferenceCategoryPills .cat-pill");
+
+    // Modal elements
+    const newProjectBtn = document.getElementById("btnOpenNewProjectModal");
+    const newProjectModal = document.getElementById("newConferenceProjectModal");
+    const closeNewProjectModalBtn = document.getElementById("closeNewConferenceProjectModalBtn");
+    const cancelNewProjectModalBtn = document.getElementById("cancelNewConferenceProjectModalBtn");
+    const saveNewProjectBtn = document.getElementById("saveNewConferenceProjectBtn");
+    const newProjectForm = document.getElementById("newConferenceProjectForm");
+
+    // Back to Projects view button
+    if (backBtn) {
+      backBtn.addEventListener("click", () => {
+        state.activeConferenceProjectId = null;
+        renderConference();
+      });
+    }
+
+    // Refresh projects list
+    if (refreshProjectsBtn) {
+      refreshProjectsBtn.addEventListener("click", () => {
+        renderConferenceProjects();
+        showToast("Conference projects refreshed!");
+      });
+    }
+
+    // Category filter pills
+    categoryPills.forEach(pill => {
+      pill.addEventListener("click", () => {
+        const cat = pill.getAttribute("data-cat") || "all";
+        state.conferenceProjectFilter = cat;
+        categoryPills.forEach(p => p.classList.remove("active"));
+        pill.classList.add("active");
+        renderConferenceProjects();
+      });
+    });
+
+    // Project search input
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        state.conferenceProjectSearch = e.target.value;
+        renderConferenceProjects();
+      });
+    }
+
+    // + New Project button clicked -> Check Senior Dev Authorization!
+    if (newProjectBtn) {
+      newProjectBtn.addEventListener("click", () => {
+        const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+        if (!StorageManager.isSeniorDev(currentUser)) {
+          showToast("Access Denied: Project creation is strictly restricted to Senior Developers only.", "error");
+          return;
+        }
+
+        // Senior Dev verified: Open modal
+        if (newProjectForm) newProjectForm.reset();
+        if (newProjectModal) newProjectModal.style.display = "flex";
+      });
+    }
+
+    // Modal Close buttons
+    if (closeNewProjectModalBtn && newProjectModal) {
+      closeNewProjectModalBtn.addEventListener("click", () => {
+        newProjectModal.style.display = "none";
+      });
+    }
+    if (cancelNewProjectModalBtn && newProjectModal) {
+      cancelNewProjectModalBtn.addEventListener("click", () => {
+        newProjectModal.style.display = "none";
+      });
+    }
+    if (newProjectModal) {
+      newProjectModal.addEventListener("click", (e) => {
+        if (e.target === newProjectModal) {
+          newProjectModal.style.display = "none";
+        }
+      });
+    }
+
+    // Modal Save Project Submission
+    if (saveNewProjectBtn) {
+      saveNewProjectBtn.addEventListener("click", () => {
+        const nameInput = document.getElementById("confProjName");
+        const catInput = document.getElementById("confProjCategory");
+        const descInput = document.getElementById("confProjDescription");
+        const statusInput = document.getElementById("confProjStatus");
+
+        const name = nameInput ? nameInput.value.trim() : "";
+        const category = catInput ? catInput.value : "Backend";
+        const description = descInput ? descInput.value.trim() : "";
+        const status = statusInput ? statusInput.value : "Active Sprint";
+
+        if (!name || !description) {
+          showToast("Please provide both a project name and description.", "warning");
+          return;
+        }
+
+        const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+        try {
+          const newProject = StorageManager.addConferenceProject({
+            name,
+            category,
+            description,
+            status
+          }, currentUser);
+
+          if (newProjectModal) newProjectModal.style.display = "none";
+          showToast(`Project channel "${newProject.name}" created successfully!`, "success");
+
+          // Open the new project channel directly
+          state.activeConferenceProjectId = newProject.id;
+          renderConference();
+        } catch (err) {
+          showToast(err.message || "Failed to create project channel.", "error");
+        }
+      });
+    }
+
+    // Chat form submit
     if (form) {
       form.addEventListener("submit", (e) => {
         e.preventDefault();
@@ -2762,10 +3061,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     if (clearBtn) {
       clearBtn.addEventListener("click", () => {
-        if (confirm("Are you sure you want to clear the conference chat history? This will be cleared for both Devs and QA.")) {
-          StorageManager.clearConferenceMessages();
+        if (confirm("Are you sure you want to clear the messages in this project channel?")) {
+          StorageManager.clearConferenceMessages(state.activeConferenceProjectId);
           renderConference();
-          showToast("Conference chat cleared.");
+          showToast("Channel messages cleared.");
         }
       });
     }
@@ -2787,6 +3086,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
               badge.classList.remove("pulse-highlight");
             }, 6000);
           }
+        }
+      } else if (msg.type === "CONFERENCE_PROJECT_CREATED") {
+        if (state.currentView === "conference") {
+          renderConference();
+          showToast(`New conference project channel created: "${msg.project ? msg.project.name : 'Project'}"`, "info");
         }
       } else if (msg.type === "CONFERENCE_CLEARED") {
         if (state.currentView === "conference") {

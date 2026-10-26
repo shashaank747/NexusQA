@@ -917,72 +917,121 @@
 
         <!-- QA & DEV CONFERENCE VIEW -->
         <section class="view-panel" id="view-conference">
-          <div class="view-header">
-            <div>
-              <div class="d-flex align-center gap-2 mb-1">
-                <span class="badge badge-primary"><i class="fa-solid fa-satellite-dish"></i> Real-Time Channel</span>
-                <span class="badge badge-passed" id="conferenceLiveStatus"><i class="fa-solid fa-circle status-dot-online"></i> Live Cross-Portal Sync</span>
+          <!-- 1. PROJECTS VIEW (Default View) -->
+          <div id="conferenceProjectsSection">
+            <div class="view-header">
+              <div>
+                <div class="d-flex align-center gap-2 mb-1">
+                  <span class="badge badge-primary"><i class="fa-solid fa-satellite-dish"></i> Live Conference Hub</span>
+                  <span class="badge badge-passed" id="conferenceLiveStatus"><i class="fa-solid fa-circle status-dot-online"></i> Cross-Portal Sync</span>
+                </div>
+                <h1 class="view-title">Dev ↔ QA Conference Projects</h1>
+                <p class="view-subtitle">Select a project channel to collaborate on bug triage, repro steps, and hotfix verification in real time.</p>
               </div>
-              <h1 class="view-title">Dev &amp; Tester Conference Room</h1>
-              <p class="view-subtitle">Instant bi-directional collaboration between QA Testers and Developers for triage, repro steps, and build validations.</p>
+              <div class="view-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="conferenceRefreshProjectsBtn" title="Refresh projects"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnOpenNewProjectModal" title="Create a new Conference Project channel">
+                  <i class="fa-solid fa-plus"></i>
+                  <span>New Project</span>
+                </button>
+              </div>
             </div>
-            <div class="view-actions">
-              <button type="button" class="btn btn-secondary btn-sm" id="conferenceRefreshBtn" title="Refresh messages"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
-              <button type="button" class="btn btn-ghost btn-sm" id="conferenceClearBtn" title="Clear chat history"><i class="fa-solid fa-trash-can"></i> Clear History</button>
+
+            <!-- Project Filters and Search Bar -->
+            <div class="conference-filter-bar">
+              <div class="conference-search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="conferenceProjectSearchInput" placeholder="Filter projects by title, scope, or tag..." />
+              </div>
+              <div class="conference-category-pills" id="conferenceCategoryPills">
+                <button type="button" class="cat-pill active" data-cat="all">All Channels</button>
+                <button type="button" class="cat-pill" data-cat="Payments">Payments</button>
+                <button type="button" class="cat-pill" data-cat="Security">Security</button>
+                <button type="button" class="cat-pill" data-cat="AI & NLP">AI &amp; NLP</button>
+                <button type="button" class="cat-pill" data-cat="Frontend">Frontend</button>
+              </div>
+            </div>
+
+            <!-- Project Cards Grid -->
+            <div class="conference-projects-grid" id="conferenceProjectsGrid">
+              <!-- Rendered via JS -->
             </div>
           </div>
 
-          <!-- Conference Main Card -->
-          <div class="conference-card">
-            <!-- Channel Sub-Header -->
-            <div class="conference-channel-bar">
-              <div class="conference-channel-info">
-                <div class="conference-channel-icon"><i class="fa-solid fa-comments"></i></div>
+          <!-- 2. PROJECT CHAT ROOM VIEW (Active when a project card is opened) -->
+          <div id="conferenceChatSection" style="display: none;">
+            <div class="view-header">
+              <div class="d-flex align-center gap-3">
+                <button type="button" class="btn btn-secondary btn-sm" id="btnBackToProjects" title="Back to All Projects">
+                  <i class="fa-solid fa-arrow-left mr-1"></i> All Projects
+                </button>
                 <div>
-                  <div class="conference-channel-name"># dev-qa-bridge</div>
-                  <div class="conference-channel-topic">Collaborative triage, immediate blockers, test verification &amp; hotfix notifications</div>
+                  <div class="d-flex align-center gap-2 mb-1">
+                    <span class="badge badge-primary" id="chatProjectCatBadge">Payments</span>
+                    <span class="badge badge-passed"><i class="fa-solid fa-circle status-dot-online"></i> Live Synchronized</span>
+                  </div>
+                  <h1 class="view-title" id="chatProjectTitle">E-Commerce Checkout &amp; Payments</h1>
+                  <p class="view-subtitle" id="chatProjectSubtitle">Real-time collaboration between QA Engineers &amp; Developers</p>
                 </div>
               </div>
-              <div class="conference-participants-badge">
-                <div class="participant-avatars">
-                  <span class="p-avatar qa-avatar" title="QA Lead (Tester)">QA</span>
-                  <span class="p-avatar dev-avatar" title="Developer">DV</span>
-                </div>
-                <span class="participant-text"><strong id="conferenceOnlineCount">2</strong> portals synced</span>
+              <div class="view-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="conferenceRefreshBtn" title="Refresh messages"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="conferenceClearBtn" title="Clear chat history for this project"><i class="fa-solid fa-trash-can"></i> Clear Room</button>
               </div>
             </div>
 
-            <!-- Messages Stream Container -->
-            <div class="conference-messages-stream" id="conferenceMessagesContainer">
-              <!-- Rendered via JS -->
-            </div>
-
-            <!-- Quick Action Suggestion Chips -->
-            <div class="conference-quick-chips">
-              <span class="chips-label"><i class="fa-solid fa-bolt text-amber"></i> Quick Prompts:</span>
-              <button type="button" class="quick-chip" data-text="🚨 Critical blocker identified! Please inspect high-priority defect.">🚨 Critical blocker</button>
-              <button type="button" class="quick-chip" data-text="🔍 Repro steps confirmed: cleared cache &amp; re-tested on staging.">🔍 Repro steps confirmed</button>
-              <button type="button" class="quick-chip" data-text="💻 Dev: Hotfix pushed to branch. Ready for QA re-test.">💻 Fix deployed</button>
-              <button type="button" class="quick-chip" data-text="✅ Test passed in current build. Closing defect ticket.">✅ Verified &amp; passed</button>
-              <button type="button" class="quick-chip" data-text="📸 Requesting HAR log trace / full screenshot for investigation.">📸 Requesting logs</button>
-            </div>
-
-            <!-- Message Input Area -->
-            <div class="conference-input-area">
-              <div class="conference-sender-indicator" id="conferenceSenderIndicator">
-                <span class="sender-avatar" id="conferenceUserAvatar">AM</span>
-                <span class="sender-name" id="conferenceUserName">Posting as Alex Morgan</span>
-                <span class="badge badge-version" id="conferenceUserRoleBadge">QA Lead</span>
-              </div>
-              <form class="conference-form" id="conferenceForm">
-                <div class="conference-input-wrapper">
-                  <textarea id="conferenceInput" class="conference-textarea" placeholder="Type a message to Devs &amp; Testers... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
-                  <button type="submit" class="conference-send-btn" id="conferenceSendBtn" title="Send Message (Enter)">
-                    <i class="fa-solid fa-paper-plane"></i>
-                    <span>Send</span>
-                  </button>
+            <!-- Conference Main Card -->
+            <div class="conference-card">
+              <!-- Channel Sub-Header -->
+              <div class="conference-channel-bar">
+                <div class="conference-channel-info">
+                  <div class="conference-channel-icon" id="chatProjectIcon"><i class="fa-solid fa-comments"></i></div>
+                  <div>
+                    <div class="conference-channel-name" id="chatChannelSlug"># project-channel</div>
+                    <div class="conference-channel-topic" id="chatProjectTopic">Collaborative triage, immediate blockers, test verification &amp; hotfix notifications</div>
+                  </div>
                 </div>
-              </form>
+                <div class="conference-participants-badge">
+                  <div class="participant-avatars">
+                    <span class="p-avatar qa-avatar" title="QA Lead (Tester)">QA</span>
+                    <span class="p-avatar dev-avatar" title="Developer">DV</span>
+                  </div>
+                  <span class="participant-text"><strong id="conferenceOnlineCount">2</strong> portals synced</span>
+                </div>
+              </div>
+
+              <!-- Messages Stream Container -->
+              <div class="conference-messages-stream" id="conferenceMessagesContainer">
+                <!-- Rendered via JS -->
+              </div>
+
+              <!-- Quick Action Suggestion Chips -->
+              <div class="conference-quick-chips">
+                <span class="chips-label"><i class="fa-solid fa-bolt text-amber"></i> Quick Prompts:</span>
+                <button type="button" class="quick-chip" data-text="🚨 Critical blocker identified! Please inspect high-priority defect.">🚨 Critical blocker</button>
+                <button type="button" class="quick-chip" data-text="🔍 Repro steps confirmed: cleared cache &amp; re-tested on staging.">🔍 Repro steps confirmed</button>
+                <button type="button" class="quick-chip" data-text="💻 Dev: Hotfix pushed to branch. Ready for QA re-test.">💻 Fix deployed</button>
+                <button type="button" class="quick-chip" data-text="✅ Test passed in current build. Closing defect ticket.">✅ Verified &amp; passed</button>
+                <button type="button" class="quick-chip" data-text="📸 Requesting HAR log trace / full screenshot for investigation.">📸 Requesting logs</button>
+              </div>
+
+              <!-- Message Input Area -->
+              <div class="conference-input-area">
+                <div class="conference-sender-indicator" id="conferenceSenderIndicator">
+                  <span class="sender-avatar" id="conferenceUserAvatar">AM</span>
+                  <span class="sender-name" id="conferenceUserName">Posting as Alex Morgan</span>
+                  <span class="badge badge-version" id="conferenceUserRoleBadge">QA Lead</span>
+                </div>
+                <form class="conference-form" id="conferenceForm">
+                  <div class="conference-input-wrapper">
+                    <textarea id="conferenceInput" class="conference-textarea" placeholder="Type a message to Devs &amp; Testers in this project... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+                    <button type="submit" class="conference-send-btn" id="conferenceSendBtn" title="Send Message (Enter)">
+                      <i class="fa-solid fa-paper-plane"></i>
+                      <span>Send</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </section>
@@ -1616,6 +1665,66 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" id="cancelSuiteModalBtn">Cancel</button>
         <button type="button" class="btn btn-primary" id="saveSuiteBtn">Save Suite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE CONFERENCE PROJECT (SENIOR DEV ACCESS ONLY) -->
+  <div class="modal-backdrop" id="newConferenceProjectModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header d-flex justify-between align-center">
+        <div class="modal-title-group d-flex align-center gap-2">
+          <i class="fa-solid fa-folder-plus text-primary modal-icon"></i>
+          <div>
+            <h2 id="newProjectModalTitle">Create Conference Project</h2>
+            <div class="d-flex align-center gap-2 mt-1">
+              <span class="badge badge-passed"><i class="fa-solid fa-shield-halved"></i> Senior Dev Access Required</span>
+            </div>
+          </div>
+        </div>
+        <button class="icon-btn close-modal-btn" id="closeNewConferenceProjectModalBtn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="newConferenceProjectForm">
+          <div class="form-group mb-3">
+            <label for="confProjName" class="font-semibold">Project Name <span class="text-rose">*</span></label>
+            <input type="text" id="confProjName" class="nexus-input" placeholder="e.g. Payment Gateway v2" required>
+          </div>
+
+          <div class="form-group mb-3">
+            <label for="confProjCategory" class="font-semibold">Category <span class="text-rose">*</span></label>
+            <select id="confProjCategory" class="nexus-select w-100">
+              <option value="Payments">Payments &amp; Billing</option>
+              <option value="Security">Security &amp; Auth</option>
+              <option value="AI & NLP">AI &amp; NLP Studio</option>
+              <option value="Frontend">Frontend &amp; Mobile</option>
+              <option value="Backend">Backend &amp; Microservices</option>
+              <option value="DevOps">DevOps &amp; Infrastructure</option>
+            </select>
+          </div>
+
+          <div class="form-group mb-3">
+            <label for="confProjDescription" class="font-semibold">Description / Scope <span class="text-rose">*</span></label>
+            <textarea id="confProjDescription" class="nexus-textarea" rows="3" placeholder="Define the testing objectives, active sprint features, or defect triage focus..." required></textarea>
+          </div>
+
+          <div class="form-group mb-3">
+            <label for="confProjStatus" class="font-semibold">Initial Status</label>
+            <select id="confProjStatus" class="nexus-select w-100">
+              <option value="Active Sprint">Active Sprint</option>
+              <option value="Regression Pass">Regression Pass</option>
+              <option value="Release Candidate">Release Candidate</option>
+              <option value="In Triage">In Triage</option>
+              <option value="Hotfix Validation">Hotfix Validation</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer justify-between">
+        <button type="button" class="btn btn-ghost" id="cancelNewConferenceProjectModalBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveNewConferenceProjectBtn">
+          <i class="fa-solid fa-plus mr-1"></i> Create Project Channel
+        </button>
       </div>
     </div>
   </div>

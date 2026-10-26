@@ -12,7 +12,8 @@ const STORAGE_KEYS = {
   TEST_RUNS: "nexusqa_test_runs",
   ACTIVE_RUN_ID: "nexusqa_active_run_id",
   THEME: "nexusqa_theme",
-  CONFERENCE_MESSAGES: "nexusqa_conference_messages"
+  CONFERENCE_MESSAGES: "nexusqa_conference_messages",
+  CONFERENCE_PROJECTS: "nexusqa_conference_projects"
 };
 
 const syncChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("nexusqa_sync_channel") : null;
@@ -141,39 +142,66 @@ const StorageManager = {
   },
 
   // -------------------------------------------------------------
-  // Conference Messages (Live QA <-> Dev Chat Interface)
+  // Conference Projects & Channels (Cards & Project Chat)
   // -------------------------------------------------------------
-  getConferenceMessages() {
-    const raw = localStorage.getItem(STORAGE_KEYS.CONFERENCE_MESSAGES);
+  getConferenceProjects() {
+    const raw = localStorage.getItem(STORAGE_KEYS.CONFERENCE_PROJECTS);
     if (!raw) {
-      const now = new Date();
-      const timeStr1 = new Date(Date.now() - 3600000 * 2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const timeStr2 = new Date(Date.now() - 3600000 * 1).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const seed = [
         {
-          id: "msg-seed-1",
-          senderId: "dev-lead",
-          senderName: "Dev Engineering Lead",
-          senderRole: "dev",
-          roleTitle: "Lead Developer",
-          senderAvatar: "DV",
-          text: "Welcome to the Dev ↔ Tester Conference! This is a live bidirectional bridge for discussing triage, repro logs, and verifying hotfixes in real time.",
-          time: timeStr1,
-          date: "Today"
+          id: "proj-1",
+          name: "E-Commerce Checkout & Payments",
+          description: "Payment gateway integration, Stripe & 3D secure test validations, cart abandonment recovery",
+          category: "Payments",
+          icon: "fa-solid fa-credit-card",
+          color: "#06b6d4",
+          status: "Active Sprint",
+          leadDev: "Marcus Vance",
+          leadQa: "Alex Morgan",
+          createdAt: "2026-10-20",
+          membersCount: 8
         },
         {
-          id: "msg-seed-2",
-          senderId: "qa-lead",
-          senderName: "QA Lead",
-          senderRole: "qa",
-          roleTitle: "Senior QA Lead",
-          senderAvatar: "QA",
-          text: "Thanks! We are actively running regression passes. Any critical blocker or verified fix can be communicated here directly.",
-          time: timeStr2,
-          date: "Today"
+          id: "proj-2",
+          name: "Auth & Identity Security Service",
+          description: "OTP email verification, AES-256 session tokens, RBAC permissions, and SSO provider bridge",
+          category: "Security",
+          icon: "fa-solid fa-shield-halved",
+          color: "#6366f1",
+          status: "Regression Pass",
+          leadDev: "Chhotu Monster",
+          leadQa: "Alex Morgan",
+          createdAt: "2026-10-21",
+          membersCount: 6
+        },
+        {
+          id: "proj-3",
+          name: "CampusOS NLP & Test Creator Studio",
+          description: "Conversational voice assistant, 22-column Excel tracker generator, and discrepancy auditor",
+          category: "AI & NLP",
+          icon: "fa-solid fa-wand-magic-sparkles",
+          color: "#a855f7",
+          status: "Release Candidate",
+          leadDev: "Marcus Vance",
+          leadQa: "Alex Morgan",
+          createdAt: "2026-10-22",
+          membersCount: 10
+        },
+        {
+          id: "proj-4",
+          name: "Mobile Portal & Responsive UI",
+          description: "Cross-browser testing on WebKit/Blink, touch gesture handling, and low-latency cache sync",
+          category: "Frontend",
+          icon: "fa-solid fa-mobile-screen-button",
+          color: "#10b981",
+          status: "In Triage",
+          leadDev: "Marcus Vance",
+          leadQa: "Alex Morgan",
+          createdAt: "2026-10-24",
+          membersCount: 5
         }
       ];
-      localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify(seed));
+      localStorage.setItem(STORAGE_KEYS.CONFERENCE_PROJECTS, JSON.stringify(seed));
       return seed;
     }
     try {
@@ -184,11 +212,112 @@ const StorageManager = {
     }
   },
 
+  getConferenceProjectById(id) {
+    return this.getConferenceProjects().find(p => p.id === id);
+  },
+
+  addConferenceProject(projData, user) {
+    if (!this.isSeniorDev(user)) {
+      throw new Error("Unauthorized: Project creation is strictly restricted to Senior Developers only.");
+    }
+
+    const projects = this.getConferenceProjects();
+    const newProj = {
+      id: "proj-" + Date.now(),
+      name: (projData.name || "Untitled Project").trim(),
+      description: (projData.description || "Active engineering & QA collaboration channel").trim(),
+      category: projData.category || "General",
+      icon: projData.icon || "fa-solid fa-cubes",
+      color: projData.color || "#6366f1",
+      status: projData.status || "Active Sprint",
+      leadDev: user ? (user.name || "Senior Developer") : "Senior Developer",
+      leadQa: "QA Team",
+      createdAt: new Date().toISOString().split("T")[0],
+      membersCount: 2
+    };
+
+    projects.unshift(newProj);
+    localStorage.setItem(STORAGE_KEYS.CONFERENCE_PROJECTS, JSON.stringify(projects));
+    this.broadcast("CONFERENCE_PROJECT_CREATED", { project: newProj });
+    return newProj;
+  },
+
+  // -------------------------------------------------------------
+  // Conference Messages (Live QA <-> Dev Project Chat)
+  // -------------------------------------------------------------
+  getConferenceMessages(projectId = null) {
+    const raw = localStorage.getItem(STORAGE_KEYS.CONFERENCE_MESSAGES);
+    let msgs = [];
+    if (!raw) {
+      const timeStr1 = new Date(Date.now() - 3600000 * 2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const timeStr2 = new Date(Date.now() - 3600000 * 1).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const seed = [
+        {
+          id: "msg-seed-1",
+          projectId: "proj-1",
+          senderId: "dev-lead",
+          senderName: "Marcus Vance",
+          senderRole: "dev",
+          roleTitle: "Senior Developer",
+          senderAvatar: "MV",
+          text: "Welcome to the E-Commerce Checkout & Payments conference room! QA team, please verify the 3D-Secure payment flow on staging.",
+          time: timeStr1,
+          date: "Today"
+        },
+        {
+          id: "msg-seed-2",
+          projectId: "proj-1",
+          senderId: "qa-lead",
+          senderName: "Alex Morgan",
+          senderRole: "qa",
+          roleTitle: "QA Lead",
+          senderAvatar: "QA",
+          text: "On it! Running regression pass on Stripe webhook simulation right now. Will flag any blocker defects here.",
+          time: timeStr2,
+          date: "Today"
+        },
+        {
+          id: "msg-seed-3",
+          projectId: "proj-2",
+          senderId: "dev-lead",
+          senderName: "Marcus Vance",
+          senderRole: "dev",
+          roleTitle: "Senior Developer",
+          senderAvatar: "MV",
+          text: "Auth Gateway v2 is ready for regression. Passcode auto-verification is live.",
+          time: timeStr1,
+          date: "Today"
+        }
+      ];
+      localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify(seed));
+      msgs = seed;
+    } else {
+      try {
+        const parsed = JSON.parse(raw);
+        msgs = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        msgs = [];
+      }
+    }
+
+    if (projectId) {
+      return msgs.filter(m => (m.projectId || "proj-1") === projectId);
+    }
+    return msgs;
+  },
+
   addConferenceMessage(message) {
-    const messages = this.getConferenceMessages();
+    const raw = localStorage.getItem(STORAGE_KEYS.CONFERENCE_MESSAGES);
+    let messages = [];
+    try {
+      messages = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(messages)) messages = [];
+    } catch(e) { messages = []; }
+
     const now = new Date();
     const newMsg = {
       id: "msg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6),
+      projectId: message.projectId || "proj-1",
       time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       date: "Today",
       timestamp: Date.now(),
@@ -200,9 +329,15 @@ const StorageManager = {
     return newMsg;
   },
 
-  clearConferenceMessages() {
-    localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify([]));
-    this.broadcast("CONFERENCE_CLEARED", {});
+  clearConferenceMessages(projectId = null) {
+    if (projectId) {
+      const all = this.getConferenceMessages();
+      const filtered = all.filter(m => (m.projectId || "proj-1") !== projectId);
+      localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify(filtered));
+    } else {
+      localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify([]));
+    }
+    this.broadcast("CONFERENCE_CLEARED", { projectId });
   },
 
   // -------------------------------------------------------------
@@ -249,6 +384,9 @@ const StorageManager = {
 
   isSeniorDev(user) {
     if (!user) return false;
+    // Strict role check: QA testers are NEVER senior dev
+    if (user.role !== "dev") return false;
+
     const title = (user.roleTitle || "").toLowerCase();
     const level = (user.devLevel || "").toLowerCase();
     const email = (user.email || "").toLowerCase();
@@ -260,14 +398,23 @@ const StorageManager = {
       return true;
     }
 
-    return user.role === "dev" && (
+    // Strict reject of junior developers
+    if (level === "junior" || title.includes("junior")) {
+      return false;
+    }
+
+    // Dedicated hardcoded dev account or senior titles
+    if ((user.username && user.username.toLowerCase() === "dev") || email === "dev@nexusqa.io") {
+      return true;
+    }
+
+    return (
       level === "senior" || 
       level === "lead" || 
       title.includes("lead") || 
       title.includes("senior") || 
       title.includes("principal") ||
-      title.includes("architect") ||
-      user.role === "dev"
+      title.includes("architect")
     );
   },
 
