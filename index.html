@@ -562,7 +562,7 @@
                   pattern="[0-9]*"
                   value=""
                   maxlength="6"
-                  tabindex="-1"
+                  tabindex="0"
                   aria-label="6-Digit security passcode"
                 />
                 <span class="code-slots__slot" data-index="0" style="box-shadow: inset 2px 4px 8px rgb(5, 5, 5); background: #171717; border: 1px solid rgba(255, 255, 255, 0.08);">
@@ -699,7 +699,7 @@
 
     function renderCodeSlots() {
       if (!codeSlotsRow) return;
-      const digits = codeSlotsState.value.split("");
+      const digits = (codeSlotsState.value || "").split("");
       const slots = codeSlotsRow.querySelectorAll(".code-slots__slot");
 
       slots.forEach((slot, idx) => {
@@ -747,17 +747,77 @@
       }
     }
 
+    function focusPasscodeInput() {
+      if (!codeSlotsInput) return;
+      if (codeSlotsState.status === "error") {
+        codeSlotsState.status = "idle";
+        codeSlotsState.value = "";
+        codeSlotsInput.value = "";
+        renderCodeSlots();
+      }
+      codeSlotsInput.focus();
+      const len = codeSlotsInput.value.length;
+      try {
+        codeSlotsInput.setSelectionRange(len, len);
+      } catch (err) {}
+    }
+
     if (codeSlotsInput) {
+      // Keydown handler: ensures pressing numbers always works even if previously at 6 digits or after error
+      codeSlotsInput.addEventListener("keydown", (e) => {
+        // If typing a digit (0-9)
+        if (/^[0-9]$/.test(e.key)) {
+          // If in error state or input is already full (6 digits), reset so the new digit starts fresh
+          if (codeSlotsState.status === "error" || (codeSlotsInput.value.length >= codeSlotsState.length && codeSlotsInput.selectionStart === codeSlotsInput.selectionEnd)) {
+            codeSlotsInput.value = "";
+            codeSlotsState.value = "";
+            codeSlotsState.status = "idle";
+            renderCodeSlots();
+          }
+          if (authInlineAlert) authInlineAlert.classList.add("hidden");
+        }
+
+        // If Backspace
+        if (e.key === "Backspace") {
+          if (codeSlotsState.status === "error") {
+            e.preventDefault();
+            codeSlotsInput.value = "";
+            codeSlotsState.value = "";
+            codeSlotsState.status = "idle";
+            renderCodeSlots();
+            return;
+          }
+        }
+      });
+
       codeSlotsInput.addEventListener("input", (e) => {
         const clean = (e.target.value || "").replace(/\D/g, "").slice(0, codeSlotsState.length);
         codeSlotsState.value = clean;
         codeSlotsState.active = Math.min(clean.length, codeSlotsState.length - 1);
+        codeSlotsState.status = "idle";
         e.target.value = clean;
         renderCodeSlots();
 
         if (clean.length === codeSlotsState.length) {
           // Auto submit when 6 digits are complete and username is present
-          if (userInput.value.trim()) {
+          if (userInput && userInput.value.trim()) {
+            handleFormSubmit(new Event("submit"));
+          }
+        }
+      });
+
+      // Handle paste of 6-digit codes
+      codeSlotsInput.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData("text");
+        const clean = (pasted || "").replace(/\D/g, "").slice(0, codeSlotsState.length);
+        if (clean) {
+          codeSlotsState.status = "idle";
+          codeSlotsState.value = clean;
+          codeSlotsInput.value = clean;
+          codeSlotsState.active = Math.min(clean.length, codeSlotsState.length - 1);
+          renderCodeSlots();
+          if (clean.length === codeSlotsState.length && userInput && userInput.value.trim()) {
             handleFormSubmit(new Event("submit"));
           }
         }
@@ -765,6 +825,9 @@
 
       codeSlotsInput.addEventListener("focus", () => {
         codeSlotsState.focused = true;
+        if (codeSlotsState.status === "error") {
+          codeSlotsState.status = "idle";
+        }
         renderCodeSlots();
       });
 
@@ -773,11 +836,46 @@
         renderCodeSlots();
       });
 
+      codeSlotsInput.addEventListener("click", () => {
+        const len = codeSlotsInput.value.length;
+        try {
+          codeSlotsInput.setSelectionRange(len, len);
+        } catch (err) {}
+      });
+
+      // Click on any slot or wrapper reliably focuses input
+      const clickTargets = [
+        codeSlotsRow,
+        document.getElementById("otpCodeSlots"),
+        document.querySelector(".code-slots-wrapper"),
+        document.getElementById("otpFieldGroup")
+      ];
+      clickTargets.forEach(target => {
+        if (target) {
+          target.addEventListener("click", (e) => {
+            if (e.target !== codeSlotsInput) {
+              focusPasscodeInput();
+            }
+          });
+        }
+      });
+
       if (codeSlotsRow) {
-        codeSlotsRow.addEventListener("click", () => {
-          codeSlotsInput.focus();
+        codeSlotsRow.querySelectorAll(".code-slots__slot").forEach(slot => {
+          slot.addEventListener("click", () => {
+            focusPasscodeInput();
+          });
         });
       }
+    }
+
+    if (userInput) {
+      userInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          focusPasscodeInput();
+        }
+      });
     }
 
     /**
@@ -786,6 +884,11 @@
     function switchMode(mode) {
       currentMode = mode;
       clearErrors();
+      codeSlotsState.value = "";
+      if (codeSlotsInput) codeSlotsInput.value = "";
+      codeSlotsState.status = "idle";
+      codeSlotsState.active = 0;
+      renderCodeSlots();
 
       if (mode === 'login') {
         heading.textContent = 'Welcome Back';
@@ -1006,7 +1109,6 @@
           }
 
           // LOGIN MODE: Authenticate & Verify status
-          const cleanUser = (userVal || "").toLowerCase().trim();
           if (cleanUser === "dev") {
             if (!otpVal || otpVal.trim() !== "111111") {
               throw new Error("Invalid password for 'dev'. (Expected: 111111)");
@@ -1037,6 +1139,9 @@
           renderCodeSlots();
           setLoading(false);
           showInlineError(err.message || "Authentication failed. Please check credentials.");
+          if (codeSlotsInput) {
+            try { codeSlotsInput.select(); } catch(e) {}
+          }
         }
       }, 700);
     }

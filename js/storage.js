@@ -11,7 +11,8 @@ const STORAGE_KEYS = {
   DEFECTS: "nexusqa_defects",
   TEST_RUNS: "nexusqa_test_runs",
   ACTIVE_RUN_ID: "nexusqa_active_run_id",
-  THEME: "nexusqa_theme"
+  THEME: "nexusqa_theme",
+  CONFERENCE_MESSAGES: "nexusqa_conference_messages"
 };
 
 const syncChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("nexusqa_sync_channel") : null;
@@ -135,7 +136,73 @@ const StorageManager = {
     localStorage.removeItem(STORAGE_KEYS.DEFECTS);
     localStorage.removeItem(STORAGE_KEYS.TEST_RUNS);
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_RUN_ID);
+    localStorage.removeItem(STORAGE_KEYS.CONFERENCE_MESSAGES);
     this.broadcast("WIPE_DATA");
+  },
+
+  // -------------------------------------------------------------
+  // Conference Messages (Live QA <-> Dev Chat Interface)
+  // -------------------------------------------------------------
+  getConferenceMessages() {
+    const raw = localStorage.getItem(STORAGE_KEYS.CONFERENCE_MESSAGES);
+    if (!raw) {
+      const now = new Date();
+      const timeStr1 = new Date(Date.now() - 3600000 * 2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const timeStr2 = new Date(Date.now() - 3600000 * 1).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const seed = [
+        {
+          id: "msg-seed-1",
+          senderId: "dev-lead",
+          senderName: "Dev Engineering Lead",
+          senderRole: "dev",
+          roleTitle: "Lead Developer",
+          senderAvatar: "DV",
+          text: "Welcome to the Dev ↔ Tester Conference! This is a live bidirectional bridge for discussing triage, repro logs, and verifying hotfixes in real time.",
+          time: timeStr1,
+          date: "Today"
+        },
+        {
+          id: "msg-seed-2",
+          senderId: "qa-lead",
+          senderName: "QA Lead",
+          senderRole: "qa",
+          roleTitle: "Senior QA Lead",
+          senderAvatar: "QA",
+          text: "Thanks! We are actively running regression passes. Any critical blocker or verified fix can be communicated here directly.",
+          time: timeStr2,
+          date: "Today"
+        }
+      ];
+      localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify(seed));
+      return seed;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  addConferenceMessage(message) {
+    const messages = this.getConferenceMessages();
+    const now = new Date();
+    const newMsg = {
+      id: "msg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6),
+      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: "Today",
+      timestamp: Date.now(),
+      ...message
+    };
+    messages.push(newMsg);
+    localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify(messages));
+    this.broadcast("CONFERENCE_MESSAGE", { message: newMsg });
+    return newMsg;
+  },
+
+  clearConferenceMessages() {
+    localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify([]));
+    this.broadcast("CONFERENCE_CLEARED", {});
   },
 
   // -------------------------------------------------------------

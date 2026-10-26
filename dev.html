@@ -152,6 +152,9 @@
               <li class="rail-nav-item" data-view="dev-failures" title="Failed Test Diagnostics">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-bug-slash"></i></button>
               </li>
+              <li class="rail-nav-item" data-view="conference" title="Dev &amp; Tester Conference">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-comments text-cyan"></i></button>
+              </li>
             </ul>
           </div>
           <div class="rail-bottom">
@@ -204,6 +207,13 @@
                     <i class="fa-solid fa-bug-slash"></i>
                     <span>Failed Test Diagnostics</span>
                     <span class="nav-badge badge-blocked" id="devFailedTestsBadge">2</span>
+                  </a>
+                </li>
+                <li class="nav-item" data-view="conference">
+                  <a href="javascript:void(0)" class="nav-link">
+                    <i class="fa-solid fa-comments text-cyan"></i>
+                    <span>Conference</span>
+                    <span class="nav-badge badge-active" id="devConferenceNavBadge">Live</span>
                   </a>
                 </li>
                 <li class="nav-item" data-view="settings">
@@ -632,6 +642,78 @@
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- QA & DEV CONFERENCE VIEW -->
+        <section class="view-panel" id="view-conference">
+          <div class="view-header">
+            <div>
+              <div class="d-flex align-center gap-2 mb-1">
+                <span class="badge badge-primary"><i class="fa-solid fa-satellite-dish"></i> Real-Time Channel</span>
+                <span class="badge badge-passed" id="conferenceLiveStatus"><i class="fa-solid fa-circle status-dot-online"></i> Live Cross-Portal Sync</span>
+              </div>
+              <h1 class="view-title">Dev &amp; Tester Conference Room</h1>
+              <p class="view-subtitle">Instant bi-directional collaboration between QA Testers and Developers for triage, repro steps, and build validations.</p>
+            </div>
+            <div class="view-actions">
+              <button type="button" class="btn btn-secondary btn-sm" id="conferenceRefreshBtn" title="Refresh messages"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="conferenceClearBtn" title="Clear chat history"><i class="fa-solid fa-trash-can"></i> Clear History</button>
+            </div>
+          </div>
+
+          <!-- Conference Main Card -->
+          <div class="conference-card">
+            <!-- Channel Sub-Header -->
+            <div class="conference-channel-bar">
+              <div class="conference-channel-info">
+                <div class="conference-channel-icon"><i class="fa-solid fa-comments"></i></div>
+                <div>
+                  <div class="conference-channel-name"># dev-qa-bridge</div>
+                  <div class="conference-channel-topic">Collaborative triage, immediate blockers, test verification &amp; hotfix notifications</div>
+                </div>
+              </div>
+              <div class="conference-participants-badge">
+                <div class="participant-avatars">
+                  <span class="p-avatar qa-avatar" title="QA Lead (Tester)">QA</span>
+                  <span class="p-avatar dev-avatar" title="Developer">DV</span>
+                </div>
+                <span class="participant-text"><strong id="conferenceOnlineCount">2</strong> portals synced</span>
+              </div>
+            </div>
+
+            <!-- Messages Stream Container -->
+            <div class="conference-messages-stream" id="conferenceMessagesContainer">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Quick Action Suggestion Chips -->
+            <div class="conference-quick-chips">
+              <span class="chips-label"><i class="fa-solid fa-bolt text-amber"></i> Quick Prompts:</span>
+              <button type="button" class="quick-chip" data-text="🚨 Critical blocker identified! Please inspect high-priority defect.">🚨 Critical blocker</button>
+              <button type="button" class="quick-chip" data-text="🔍 Repro steps confirmed: cleared cache &amp; re-tested on staging.">🔍 Repro steps confirmed</button>
+              <button type="button" class="quick-chip" data-text="💻 Dev: Hotfix pushed to branch. Ready for QA re-test.">💻 Fix deployed</button>
+              <button type="button" class="quick-chip" data-text="✅ Test passed in current build. Closing defect ticket.">✅ Verified &amp; passed</button>
+              <button type="button" class="quick-chip" data-text="📸 Requesting HAR log trace / full screenshot for investigation.">📸 Requesting logs</button>
+            </div>
+
+            <!-- Message Input Area -->
+            <div class="conference-input-area">
+              <div class="conference-sender-indicator" id="conferenceSenderIndicator">
+                <span class="sender-avatar" id="conferenceUserAvatar">DV</span>
+                <span class="sender-name" id="conferenceUserName">Posting as Marcus Vance</span>
+                <span class="badge badge-version" id="conferenceUserRoleBadge">Developer</span>
+              </div>
+              <form class="conference-form" id="conferenceForm">
+                <div class="conference-input-wrapper">
+                  <textarea id="conferenceInput" class="conference-textarea" placeholder="Type a message to Devs &amp; Testers... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+                  <button type="submit" class="conference-send-btn" id="conferenceSendBtn" title="Send Message (Enter)">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Send</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </section>

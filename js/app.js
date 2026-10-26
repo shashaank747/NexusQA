@@ -2151,6 +2151,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       defects: "Defects & Bug Tracking",
       "ai-generator": "Voice & AI Chat Studio",
       suites: "Suites & Modules",
+      conference: "Dev & Tester Conference Room",
       "dev-dashboard": "Dev Defect Command Center",
       "dev-approvals": "Employees & Access Control",
       "dev-kanban": "Bug Triage Kanban",
@@ -2160,16 +2161,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     };
 
     let hasMatchingPanel = false;
-    if (DOM.viewPanels) {
-      DOM.viewPanels.forEach(panel => {
-        if (panel.id === `view-${viewName}`) {
-          panel.classList.add("active-view");
-          hasMatchingPanel = true;
-        } else {
-          panel.classList.remove("active-view");
-        }
-      });
-    }
+    const allPanels = (DOM.viewPanels && DOM.viewPanels.length > 0) ? DOM.viewPanels : document.querySelectorAll(".view-panel");
+    allPanels.forEach(panel => {
+      if (panel.id === `view-${viewName}`) {
+        panel.classList.add("active-view");
+        hasMatchingPanel = true;
+      } else {
+        panel.classList.remove("active-view");
+      }
+    });
 
     let notFoundPanel = document.getElementById("view-404");
     if (!hasMatchingPanel && !titles[viewName]) {
@@ -2206,6 +2206,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (viewName === "defects") renderDefects();
     if (viewName === "ai-generator") renderAIGeneratorSuiteDropdown();
     if (viewName === "suites") renderSuitesView();
+    if (viewName === "conference") renderConference();
     if (viewName === "dev-dashboard") renderDevDashboard();
     if (viewName === "dev-approvals") renderDevApprovals();
     if (viewName === "dev-kanban") renderDevKanban();
@@ -2583,6 +2584,217 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       window.openDevFixModal(newBug.id);
     }
   };
+
+  // =========================================================================
+  // CONFERENCE ROOM LOGIC (Live QA <-> Dev Real-Time Chat)
+  // =========================================================================
+  function renderConference() {
+    const container = document.getElementById("conferenceMessagesContainer");
+    if (!container) return;
+
+    const currentUser = StorageManager.getCurrentUser() || state.currentUser || {
+      name: state.currentPortal === "dev" ? "Dev Engineer" : "QA Tester",
+      role: state.currentPortal === "dev" ? "dev" : "qa",
+      roleTitle: state.currentPortal === "dev" ? "Developer" : "QA Lead",
+      avatar: state.currentPortal === "dev" ? "DV" : "QA"
+    };
+
+    // Update sender indicator at bottom dock
+    const avatarEl = document.getElementById("conferenceUserAvatar");
+    const nameEl = document.getElementById("conferenceUserName");
+    const roleBadgeEl = document.getElementById("conferenceUserRoleBadge");
+
+    if (avatarEl) avatarEl.textContent = currentUser.avatar || (currentUser.role === "dev" ? "DV" : "QA");
+    if (nameEl) nameEl.textContent = `Posting as ${currentUser.name || (currentUser.role === "dev" ? "Developer" : "QA Tester")}`;
+    if (roleBadgeEl) {
+      roleBadgeEl.textContent = currentUser.roleTitle || (currentUser.role === "dev" ? "Developer" : "QA Tester");
+      roleBadgeEl.className = `badge ${currentUser.role === "dev" ? "badge-dev" : "badge-qa"}`;
+    }
+
+    const messages = StorageManager.getConferenceMessages();
+
+    if (messages.length === 0) {
+      container.innerHTML = `
+        <div class="conference-empty-state">
+          <div class="empty-icon"><i class="fa-solid fa-comments"></i></div>
+          <h3>Conference Room Ready</h3>
+          <p class="text-sm text-muted">No messages posted yet. Use the input below or select a quick prompt to start the real-time discussion between Testers and Developers.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = messages.map(msg => {
+      const isDev = msg.senderRole === "dev" || (msg.roleTitle && msg.roleTitle.toLowerCase().includes("dev"));
+      const isMe = (currentUser && currentUser.id && msg.senderId === currentUser.id) ||
+                   (currentUser && currentUser.name && msg.senderName === currentUser.name) ||
+                   (currentUser && currentUser.role === msg.senderRole && !msg.senderId);
+
+      const roleClass = isDev ? "role-dev" : "role-qa";
+      const roleBadgeText = msg.roleTitle || (isDev ? "Developer" : "QA Tester");
+      const avatarLetters = msg.senderAvatar || (isDev ? "DV" : "QA");
+
+      // Format text: convert #BUG-xxx or #TC-xxx to interactive pill tags
+      let formattedText = escapeHtml(msg.text);
+      formattedText = formattedText.replace(/#?(BUG-\d+)/gi, '<span class="conference-tag-pill conference-bug-pill" onclick="window.handleConferenceTagClick(\'$1\')" title="View Defect $1"><i class="fa-solid fa-bug"></i> $1</span>');
+      formattedText = formattedText.replace(/#?(TC-\d+)/gi, '<span class="conference-tag-pill conference-tc-pill" onclick="window.handleConferenceTagClick(\'$1\')" title="View Test Case $1"><i class="fa-solid fa-vial"></i> $1</span>');
+
+      return `
+        <div class="conference-msg-row ${roleClass} ${isMe ? 'is-me' : ''}" data-msg-id="${msg.id}">
+          <div class="conference-msg-avatar ${roleClass}">
+            <span>${escapeHtml(avatarLetters)}</span>
+          </div>
+          <div class="conference-msg-content">
+            <div class="conference-msg-header">
+              <span class="sender-name">${escapeHtml(msg.senderName || 'Team Member')}</span>
+              <span class="role-pill ${roleClass}"><i class="fa-solid ${isDev ? 'fa-laptop-code' : 'fa-flask-vial'}"></i> ${escapeHtml(roleBadgeText)}</span>
+              <span class="msg-time"><i class="fa-regular fa-clock"></i> ${escapeHtml(msg.time || '')}</span>
+            </div>
+            <div class="conference-msg-bubble">
+              ${formattedText}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // Scroll to bottom smoothly
+    container.scrollTop = container.scrollHeight;
+  }
+
+  window.handleConferenceTagClick = function(tagId) {
+    if (!tagId) return;
+    tagId = tagId.toUpperCase();
+    if (tagId.startsWith("BUG-")) {
+      if (state.currentPortal === "dev") {
+        switchView("dev-kanban");
+      } else {
+        switchView("defects");
+      }
+    } else if (tagId.startsWith("TC-")) {
+      switchView("test-cases");
+    }
+  };
+
+  function handleSendConferenceMessage() {
+    const input = document.getElementById("conferenceInput");
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    const currentUser = StorageManager.getCurrentUser() || state.currentUser || {
+      id: state.currentPortal === "dev" ? "dev-usr" : "qa-usr",
+      name: state.currentPortal === "dev" ? "Developer" : "QA Tester",
+      role: state.currentPortal === "dev" ? "dev" : "qa",
+      roleTitle: state.currentPortal === "dev" ? "Software Engineer" : "QA Lead",
+      avatar: state.currentPortal === "dev" ? "DV" : "QA"
+    };
+
+    StorageManager.addConferenceMessage({
+      senderId: currentUser.id || "usr-" + Date.now(),
+      senderName: currentUser.name || (currentUser.role === "dev" ? "Developer" : "QA Tester"),
+      senderRole: currentUser.role || (state.currentPortal === "dev" ? "dev" : "qa"),
+      roleTitle: currentUser.roleTitle || (currentUser.role === "dev" ? "Software Engineer" : "QA Tester"),
+      senderAvatar: currentUser.avatar || (currentUser.role === "dev" ? "DV" : "QA"),
+      text: text
+    });
+
+    input.value = "";
+    input.style.height = "auto";
+    renderConference();
+  }
+
+  function initConferenceRoom() {
+    const form = document.getElementById("conferenceForm");
+    const input = document.getElementById("conferenceInput");
+    const sendBtn = document.getElementById("conferenceSendBtn");
+    const refreshBtn = document.getElementById("conferenceRefreshBtn");
+    const clearBtn = document.getElementById("conferenceClearBtn");
+
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        handleSendConferenceMessage();
+      });
+    }
+
+    if (sendBtn) {
+      sendBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        handleSendConferenceMessage();
+      });
+    }
+
+    if (input) {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleSendConferenceMessage();
+        }
+      });
+
+      // Auto-grow height on multiline input
+      input.addEventListener("input", () => {
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 120) + "px";
+      });
+    }
+
+    // Quick prompt chips
+    document.querySelectorAll(".conference-quick-chips .quick-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const text = chip.getAttribute("data-text");
+        if (input && text) {
+          input.value = text;
+          input.focus();
+          input.style.height = "auto";
+          input.style.height = Math.min(input.scrollHeight, 120) + "px";
+        }
+      });
+    });
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", () => {
+        renderConference();
+        showToast("Conference messages updated!");
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        if (confirm("Are you sure you want to clear the conference chat history? This will be cleared for both Devs and QA.")) {
+          StorageManager.clearConferenceMessages();
+          renderConference();
+          showToast("Conference chat cleared.");
+        }
+      });
+    }
+
+    // Subscribe to cross-tab & storage broadcasts
+    StorageManager.subscribe((msg) => {
+      if (!msg) return;
+      if (msg.type === "CONFERENCE_MESSAGE") {
+        if (state.currentView === "conference") {
+          renderConference();
+        } else {
+          // Highlight the sidebar pill badge
+          const badge = document.getElementById("conferenceNavBadge") || document.getElementById("devConferenceNavBadge");
+          if (badge) {
+            badge.classList.add("pulse-highlight");
+            badge.textContent = "New";
+            setTimeout(() => {
+              badge.textContent = "Live";
+              badge.classList.remove("pulse-highlight");
+            }, 6000);
+          }
+        }
+      } else if (msg.type === "CONFERENCE_CLEARED") {
+        if (state.currentView === "conference") {
+          renderConference();
+        }
+      }
+    });
+  }
 
   // =========================================================================
   // QA PORTAL LOGIC (Analytics, Repository, Runner, Defects, AI Generator)
@@ -5195,9 +5407,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   }
 
-  // Boot Back to Top & Routing
+  // Boot Back to Top, Routing & Conference Room
   initBackToTopButton();
   initRouting();
+  initConferenceRoom();
   applyUrlViewRouting();
 });
 
