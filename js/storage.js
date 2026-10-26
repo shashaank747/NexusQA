@@ -582,7 +582,11 @@ const StorageManager = {
     return newMsg;
   },
 
-  clearConferenceMessages(projectId = null) {
+  clearConferenceMessages(projectId = null, user = null) {
+    if (!user) user = this.getCurrentUser();
+    if (!this.isSeniorDev(user)) {
+      throw new Error("Access Denied: Only Senior Developers are permitted to clear conference room channels.");
+    }
     if (projectId) {
       const all = this.getConferenceMessages();
       const filtered = all.filter(m => (m.projectId || "proj-1") !== projectId);

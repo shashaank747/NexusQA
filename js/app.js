@@ -2850,6 +2850,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       roleBadgeEl.className = `badge ${currentUser.role === "dev" ? "badge-dev" : "badge-qa"}`;
     }
 
+    // Senior Developer restriction for Clear Room button
+    const isSenior = StorageManager.isSeniorDev(currentUser);
+    const clearBtnEl = document.getElementById("conferenceClearBtn");
+    if (clearBtnEl) {
+      clearBtnEl.style.display = isSenior ? "inline-flex" : "none";
+    }
+
     const messages = StorageManager.getConferenceMessages(projectId);
 
     if (messages.length === 0) {
@@ -3499,10 +3506,19 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     if (clearBtn) {
       clearBtn.addEventListener("click", () => {
-        if (confirm("Are you sure you want to clear the messages in this project channel?")) {
-          StorageManager.clearConferenceMessages(state.activeConferenceProjectId);
-          renderConference();
-          showToast("Channel messages cleared.");
+        const curUser = StorageManager.getCurrentUser() || state.currentUser;
+        if (!StorageManager.isSeniorDev(curUser)) {
+          showToast("Access Denied: Only Senior Developers can clear conference channels.", "error");
+          return;
+        }
+        if (confirm("Are you sure you want to clear the messages in this project channel? This action is permanent.")) {
+          try {
+            StorageManager.clearConferenceMessages(state.activeConferenceProjectId, curUser);
+            renderConference();
+            showToast("Channel messages cleared.");
+          } catch(err) {
+            showToast(err.message, "error");
+          }
         }
       });
     }
