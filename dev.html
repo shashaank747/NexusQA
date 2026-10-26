@@ -729,13 +729,18 @@
                     <div class="conference-channel-topic" id="chatProjectTopic">Collaborative triage, immediate blockers, test verification &amp; hotfix notifications</div>
                   </div>
                 </div>
-                <div class="conference-participants-badge" id="chatParticipantsBadgeBtn" title="Click to view all allotted team members" style="cursor: pointer;">
-                  <div class="participant-avatars" id="chatChannelAvatarsList">
-                    <span class="p-avatar qa-avatar" title="QA Lead (Tester)">QA</span>
-                    <span class="p-avatar dev-avatar" title="Developer">DV</span>
+                <div class="conference-channel-right-controls d-flex align-center gap-2">
+                  <button type="button" class="btn btn-primary btn-sm btn-launch-meeting" id="btnLaunchMeeting" title="Launch live team sync meeting for this project">
+                    <i class="fa-solid fa-video"></i> <span>Launch Meeting</span>
+                  </button>
+                  <div class="conference-participants-badge" id="chatParticipantsBadgeBtn" title="Click to view all allotted team members" style="cursor: pointer;">
+                    <div class="participant-avatars" id="chatChannelAvatarsList">
+                      <span class="p-avatar qa-avatar" title="QA Lead (Tester)">QA</span>
+                      <span class="p-avatar dev-avatar" title="Developer">DV</span>
+                    </div>
+                    <span class="participant-text"><strong id="conferenceOnlineCount">0</strong> allotted</span>
+                    <i class="fa-solid fa-chevron-right ml-1 text-2xs" style="opacity: 0.7;"></i>
                   </div>
-                  <span class="participant-text"><strong id="conferenceOnlineCount">0</strong> allotted</span>
-                  <i class="fa-solid fa-chevron-right ml-1 text-2xs" style="opacity: 0.7;"></i>
                 </div>
               </div>
 
@@ -1172,6 +1177,96 @@
           <i class="fa-solid fa-circle-info mr-1 text-primary"></i> <span id="projectMembersTotalCountText">0 team members allotted</span>
         </div>
         <button type="button" class="btn btn-secondary" id="closeProjectMembersModalBottomBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Conference Meeting Modal -->
+  <div class="modal-backdrop" id="conferenceMeetingModal" style="display: none;">
+    <div class="modal-dialog modal-dialog-xl meeting-room-dialog">
+      <!-- Meeting Header -->
+      <div class="meeting-modal-header">
+        <div class="meeting-header-left">
+          <div class="meeting-live-pill">
+            <span class="live-pulse-dot"></span>
+            <span>LIVE SYNC</span>
+          </div>
+          <div>
+            <h3 class="meeting-room-title m-0" id="meetingModalTitle">Project Sync &amp; Triage Meeting</h3>
+            <p class="meeting-room-subtitle m-0 text-xs text-muted" id="meetingModalSubtitle">Connecting allotted team members via real-time WebRTC room</p>
+          </div>
+        </div>
+        <div class="meeting-header-actions d-flex align-center gap-2">
+          <button type="button" class="btn btn-secondary btn-xs" id="btnCopyMeetingLink" title="Copy meeting link to clipboard">
+            <i class="fa-solid fa-link mr-1"></i> Copy Link
+          </button>
+          <span class="badge badge-primary text-xs" id="meetingModalAllottedBadge">
+            <i class="fa-solid fa-users mr-1"></i> <span id="meetingParticipantCount">4</span> allotted
+          </span>
+          <button type="button" class="btn-icon modal-close-btn" id="closeMeetingModalBtn" title="Leave &amp; Close Meeting">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Meeting Stage (Video / Speaker Grid) -->
+      <div class="meeting-modal-body">
+        <div class="meeting-video-grid" id="meetingVideoGrid">
+          <!-- Dynamically populated with active participant video tiles -->
+        </div>
+
+        <!-- Optional Screen Share Area -->
+        <div class="meeting-screenshare-stage" id="meetingScreenShareStage" style="display: none;">
+          <div class="screenshare-header">
+            <span><i class="fa-solid fa-desktop text-cyan mr-1"></i> Live Screen Presentation — <strong id="screensharePresenter">Marcus Vance</strong></span>
+            <button type="button" class="btn btn-xs btn-ghost" id="stopScreenShareBtn">Stop Presenting</button>
+          </div>
+          <div class="screenshare-content">
+            <div class="simulated-app-preview">
+              <div class="preview-browser-bar">
+                <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                <span class="browser-url" id="screenshareUrl">https://staging.nexusqa.io/checkout/3d-secure-v2</span>
+              </div>
+              <div class="preview-screen-body">
+                <i class="fa-solid fa-credit-card text-cyan mb-2" style="font-size: 32px;"></i>
+                <div class="font-bold text-sm">Stripe 3D-Secure Test Validation Flow</div>
+                <div class="text-xs text-muted mt-1">Shared live in meeting for collaborative defect verification &amp; triage</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Meeting Controls Dock -->
+      <div class="meeting-controls-dock">
+        <div class="dock-actions-left text-xs text-muted">
+          <i class="fa-solid fa-shield-halved text-emerald mr-1"></i> End-to-End Encrypted
+        </div>
+        <div class="dock-actions-center">
+          <button type="button" class="dock-btn" id="meetingToggleMicBtn" title="Mute / Unmute Microphone">
+            <i class="fa-solid fa-microphone"></i>
+            <span>Mic On</span>
+          </button>
+          <button type="button" class="dock-btn" id="meetingToggleCamBtn" title="Turn Camera On / Off">
+            <i class="fa-solid fa-video"></i>
+            <span>Cam On</span>
+          </button>
+          <button type="button" class="dock-btn" id="meetingToggleScreenBtn" title="Share Screen">
+            <i class="fa-solid fa-desktop"></i>
+            <span>Share</span>
+          </button>
+          <button type="button" class="dock-btn" id="meetingRaiseHandBtn" title="Raise Hand">
+            <i class="fa-regular fa-hand"></i>
+            <span>Raise</span>
+          </button>
+          <button type="button" class="dock-btn btn-leave-meeting" id="meetingLeaveBtn" title="Leave Meeting">
+            <i class="fa-solid fa-phone-slash"></i>
+            <span>Leave</span>
+          </button>
+        </div>
+        <div class="dock-actions-right">
+          <span class="badge badge-version text-2xs font-mono" id="meetingTimerBadge">00:00</span>
+        </div>
       </div>
     </div>
   </div>

@@ -38,7 +38,15 @@ document.addEventListener("DOMContentLoaded", () => {
     memberBarSearchQuery: "",
     memberBarRoleFilter: "all",
     projectMembersFilter: "all",
-    projectMembersSearch: ""
+    projectMembersSearch: "",
+    meetingActive: false,
+    meetingTimerInterval: null,
+    meetingSeconds: 0,
+    meetingMicMuted: false,
+    meetingCamOff: false,
+    meetingScreenSharing: false,
+    meetingSpeakerInterval: null,
+    meetingHandRaised: false
   };
 
   // Cache DOM Elements
@@ -3584,6 +3592,328 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       projMembersSearchInput.addEventListener("input", (e) => {
         state.projectMembersSearch = e.target.value;
         window.renderAllottedMembersList(state.activeConferenceProjectId);
+      });
+    }
+
+    // =========================================================================
+    // LIVE CONFERENCE MEETING ROOM LOGIC & CONTROLS
+    // =========================================================================
+    const btnLaunchMeeting = document.getElementById("btnLaunchMeeting");
+    const meetingModal = document.getElementById("conferenceMeetingModal");
+    const closeMeetingModalBtn = document.getElementById("closeMeetingModalBtn");
+    const meetingLeaveBtn = document.getElementById("meetingLeaveBtn");
+    const meetingToggleMicBtn = document.getElementById("meetingToggleMicBtn");
+    const meetingToggleCamBtn = document.getElementById("meetingToggleCamBtn");
+    const meetingToggleScreenBtn = document.getElementById("meetingToggleScreenBtn");
+    const stopScreenShareBtn = document.getElementById("stopScreenShareBtn");
+    const meetingRaiseHandBtn = document.getElementById("meetingRaiseHandBtn");
+    const btnCopyMeetingLink = document.getElementById("btnCopyMeetingLink");
+
+    const avatarGradients = [
+      "linear-gradient(135deg, #06b6d4, #3b82f6)",
+      "linear-gradient(135deg, #10b981, #059669)",
+      "linear-gradient(135deg, #8b5cf6, #6366f1)",
+      "linear-gradient(135deg, #f59e0b, #d97706)",
+      "linear-gradient(135deg, #ec4899, #be185d)",
+      "linear-gradient(135deg, #14b8a6, #0d9488)"
+    ];
+
+    window.openConferenceMeeting = function(projectId) {
+      const pId = projectId || state.activeConferenceProjectId || "proj-1";
+      const project = StorageManager.getConferenceProjectById(pId);
+      const currentUser = StorageManager.getCurrentUser() || state.currentUser || {
+        id: "cur-user",
+        name: state.currentPortal === "dev" ? "Dev Engineer" : "QA Lead",
+        role: state.currentPortal === "dev" ? "dev" : "qa",
+        roleTitle: state.currentPortal === "dev" ? "Developer" : "QA Lead",
+        avatar: state.currentPortal === "dev" ? "DV" : "QA"
+      };
+
+      const titleEl = document.getElementById("meetingModalTitle");
+      const subEl = document.getElementById("meetingModalSubtitle");
+      const countEl = document.getElementById("meetingParticipantCount");
+      const videoGrid = document.getElementById("meetingVideoGrid");
+      const timerBadge = document.getElementById("meetingTimerBadge");
+
+      const projName = project ? project.name : "Team Sync";
+      if (titleEl) titleEl.textContent = `${projName} — Live Team Sync`;
+      if (subEl) subEl.textContent = `Live WebRTC room for #${project ? (project.slug || project.id) : 'project-room'}`;
+
+      // Retrieve allotted team members
+      let members = StorageManager.getProjectAllottedUsers(pId);
+      if (!members || members.length === 0) {
+        members = StorageManager.getUsers().slice(0, 4);
+      }
+
+      // Ensure current user is in the list
+      const hasCurrent = members.some(m => m.id === currentUser.id || m.name === currentUser.name);
+      if (!hasCurrent) {
+        members = [currentUser, ...members];
+      }
+
+      if (countEl) countEl.textContent = members.length;
+
+      // Reset meeting states
+      state.meetingActive = true;
+      state.meetingSeconds = 0;
+      state.meetingMicMuted = false;
+      state.meetingCamOff = false;
+      state.meetingScreenSharing = false;
+      state.meetingHandRaised = false;
+
+      if (meetingToggleMicBtn) {
+        meetingToggleMicBtn.className = "dock-btn";
+        meetingToggleMicBtn.innerHTML = '<i class="fa-solid fa-microphone"></i><span>Mic On</span>';
+      }
+      if (meetingToggleCamBtn) {
+        meetingToggleCamBtn.className = "dock-btn";
+        meetingToggleCamBtn.innerHTML = '<i class="fa-solid fa-video"></i><span>Cam On</span>';
+      }
+      if (meetingToggleScreenBtn) {
+        meetingToggleScreenBtn.className = "dock-btn";
+        meetingToggleScreenBtn.innerHTML = '<i class="fa-solid fa-desktop"></i><span>Share</span>';
+      }
+      if (meetingRaiseHandBtn) {
+        meetingRaiseHandBtn.className = "dock-btn";
+        meetingRaiseHandBtn.innerHTML = '<i class="fa-regular fa-hand"></i><span>Raise</span>';
+      }
+
+      const screenStage = document.getElementById("meetingScreenShareStage");
+      if (screenStage) screenStage.style.display = "none";
+
+      // Render Video Tiles
+      if (videoGrid) {
+        videoGrid.innerHTML = members.map((m, idx) => {
+          const isMe = m.id === currentUser.id || m.name === currentUser.name;
+          const isSpeaking = !isMe && idx === 1;
+          const grad = avatarGradients[idx % avatarGradients.length];
+          const initials = escapeHtml(m.avatar || (m.name ? m.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "US"));
+
+          return `
+            <div class="meeting-video-tile ${isSpeaking ? 'is-speaking' : ''} ${isMe ? 'is-me' : ''}" id="tile-member-${m.id || idx}">
+              <div class="tile-avatar-wrap">
+                <div class="tile-avatar" style="background: ${grad};">
+                  ${initials}
+                </div>
+                <div class="tile-audio-wave" style="display: ${isSpeaking ? 'flex' : 'none'};">
+                  <span class="wave-bar"></span>
+                  <span class="wave-bar"></span>
+                  <span class="wave-bar"></span>
+                  <span class="wave-bar"></span>
+                </div>
+              </div>
+              <div class="tile-overlay-info">
+                <div class="tile-name-tag">
+                  <span>${escapeHtml(m.name)}${isMe ? ' (You)' : ''}</span>
+                  ${m.isHead ? '<i class="fa-solid fa-crown text-amber text-2xs" title="Project Head"></i>' : ''}
+                </div>
+                <div class="tile-mic-status" id="mic-status-${m.id || idx}">
+                  <i class="fa-solid fa-microphone"></i>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // Start meeting timer
+      if (timerBadge) timerBadge.textContent = "00:00";
+      clearInterval(state.meetingTimerInterval);
+      state.meetingTimerInterval = setInterval(() => {
+        state.meetingSeconds++;
+        const mins = Math.floor(state.meetingSeconds / 60).toString().padStart(2, "0");
+        const secs = (state.meetingSeconds % 60).toString().padStart(2, "0");
+        if (timerBadge) timerBadge.textContent = `${mins}:${secs}`;
+      }, 1000);
+
+      // Dynamic speaking simulation (alternates active speaker wave)
+      clearInterval(state.meetingSpeakerInterval);
+      state.meetingSpeakerInterval = setInterval(() => {
+        if (!state.meetingActive) return;
+        const tiles = document.querySelectorAll(".meeting-video-tile:not(.is-me)");
+        if (tiles.length === 0) return;
+        tiles.forEach(t => {
+          t.classList.remove("is-speaking");
+          const wave = t.querySelector(".tile-audio-wave");
+          if (wave) wave.style.display = "none";
+        });
+        const randIndex = Math.floor(Math.random() * tiles.length);
+        const activeTile = tiles[randIndex];
+        if (activeTile) {
+          activeTile.classList.add("is-speaking");
+          const wave = activeTile.querySelector(".tile-audio-wave");
+          if (wave) wave.style.display = "flex";
+        }
+      }, 4000);
+
+      // Post notification to channel chat
+      try {
+        StorageManager.addConferenceMessage({
+          projectId: pId,
+          senderId: currentUser.id || "usr-" + Date.now(),
+          senderName: currentUser.name,
+          senderRole: currentUser.role,
+          roleTitle: currentUser.roleTitle,
+          senderAvatar: currentUser.avatar,
+          text: `🎥 Started a live team sync meeting for this project.`
+        });
+        if (state.currentView === "conference" && state.activeConferenceProjectId === pId) {
+          renderConference();
+        }
+      } catch (e) {
+        // non-blocking
+      }
+
+      if (meetingModal) meetingModal.style.display = "flex";
+      showToast(`Live meeting started for "${projName}"!`, "success");
+    };
+
+    window.closeConferenceMeeting = function() {
+      state.meetingActive = false;
+      clearInterval(state.meetingTimerInterval);
+      clearInterval(state.meetingSpeakerInterval);
+
+      if (meetingModal) meetingModal.style.display = "none";
+      showToast("You left the conference meeting.");
+    };
+
+    // Wire up buttons
+    if (btnLaunchMeeting) {
+      btnLaunchMeeting.addEventListener("click", () => {
+        const pId = state.activeConferenceProjectId || "proj-1";
+        window.openConferenceMeeting(pId);
+      });
+    }
+
+    if (closeMeetingModalBtn) {
+      closeMeetingModalBtn.addEventListener("click", () => {
+        window.closeConferenceMeeting();
+      });
+    }
+
+    if (meetingLeaveBtn) {
+      meetingLeaveBtn.addEventListener("click", () => {
+        window.closeConferenceMeeting();
+      });
+    }
+
+    if (meetingModal) {
+      meetingModal.addEventListener("click", (e) => {
+        if (e.target === meetingModal) {
+          window.closeConferenceMeeting();
+        }
+      });
+    }
+
+    // Toggle Mic
+    if (meetingToggleMicBtn) {
+      meetingToggleMicBtn.addEventListener("click", () => {
+        state.meetingMicMuted = !state.meetingMicMuted;
+        const myTile = document.querySelector(".meeting-video-tile.is-me");
+        const myMicStatus = myTile ? myTile.querySelector(".tile-mic-status") : null;
+
+        if (state.meetingMicMuted) {
+          meetingToggleMicBtn.className = "dock-btn is-muted";
+          meetingToggleMicBtn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i><span>Muted</span>';
+          if (myMicStatus) {
+            myMicStatus.className = "tile-mic-status is-muted";
+            myMicStatus.innerHTML = '<i class="fa-solid fa-microphone-slash"></i>';
+          }
+          if (myTile) myTile.classList.remove("is-speaking");
+          showToast("Microphone muted");
+        } else {
+          meetingToggleMicBtn.className = "dock-btn";
+          meetingToggleMicBtn.innerHTML = '<i class="fa-solid fa-microphone"></i><span>Mic On</span>';
+          if (myMicStatus) {
+            myMicStatus.className = "tile-mic-status";
+            myMicStatus.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+          }
+          showToast("Microphone active");
+        }
+      });
+    }
+
+    // Toggle Camera
+    if (meetingToggleCamBtn) {
+      meetingToggleCamBtn.addEventListener("click", () => {
+        state.meetingCamOff = !state.meetingCamOff;
+        const myTile = document.querySelector(".meeting-video-tile.is-me");
+
+        if (state.meetingCamOff) {
+          meetingToggleCamBtn.className = "dock-btn is-muted";
+          meetingToggleCamBtn.innerHTML = '<i class="fa-solid fa-video-slash"></i><span>Cam Off</span>';
+          if (myTile) myTile.classList.add("cam-off");
+          showToast("Camera disabled");
+        } else {
+          meetingToggleCamBtn.className = "dock-btn";
+          meetingToggleCamBtn.innerHTML = '<i class="fa-solid fa-video"></i><span>Cam On</span>';
+          if (myTile) myTile.classList.remove("cam-off");
+          showToast("Camera enabled");
+        }
+      });
+    }
+
+    // Screen Share
+    if (meetingToggleScreenBtn) {
+      meetingToggleScreenBtn.addEventListener("click", () => {
+        state.meetingScreenSharing = !state.meetingScreenSharing;
+        const stage = document.getElementById("meetingScreenShareStage");
+        const presenterEl = document.getElementById("screensharePresenter");
+        const cur = StorageManager.getCurrentUser() || state.currentUser;
+
+        if (stage) stage.style.display = state.meetingScreenSharing ? "block" : "none";
+        if (presenterEl && cur) presenterEl.textContent = cur.name;
+
+        if (state.meetingScreenSharing) {
+          meetingToggleScreenBtn.className = "dock-btn is-active";
+          meetingToggleScreenBtn.innerHTML = '<i class="fa-solid fa-desktop"></i><span>Sharing</span>';
+          showToast("Presenting your screen to participants");
+        } else {
+          meetingToggleScreenBtn.className = "dock-btn";
+          meetingToggleScreenBtn.innerHTML = '<i class="fa-solid fa-desktop"></i><span>Share</span>';
+          showToast("Stopped screen share");
+        }
+      });
+    }
+
+    if (stopScreenShareBtn) {
+      stopScreenShareBtn.addEventListener("click", () => {
+        state.meetingScreenSharing = false;
+        const stage = document.getElementById("meetingScreenShareStage");
+        if (stage) stage.style.display = "none";
+        if (meetingToggleScreenBtn) {
+          meetingToggleScreenBtn.className = "dock-btn";
+          meetingToggleScreenBtn.innerHTML = '<i class="fa-solid fa-desktop"></i><span>Share</span>';
+        }
+        showToast("Stopped screen share");
+      });
+    }
+
+    // Raise Hand
+    if (meetingRaiseHandBtn) {
+      meetingRaiseHandBtn.addEventListener("click", () => {
+        state.meetingHandRaised = !state.meetingHandRaised;
+        if (state.meetingHandRaised) {
+          meetingRaiseHandBtn.className = "dock-btn is-active";
+          meetingRaiseHandBtn.innerHTML = '<i class="fa-solid fa-hand"></i><span>Raised</span>';
+          showToast("✋ You raised your hand in the meeting");
+        } else {
+          meetingRaiseHandBtn.className = "dock-btn";
+          meetingRaiseHandBtn.innerHTML = '<i class="fa-regular fa-hand"></i><span>Raise</span>';
+          showToast("Hand lowered");
+        }
+      });
+    }
+
+    // Copy Meeting Link
+    if (btnCopyMeetingLink) {
+      btnCopyMeetingLink.addEventListener("click", () => {
+        const pId = state.activeConferenceProjectId || "proj-1";
+        const link = `https://staging.nexusqa.io/conference/meet/${pId}`;
+        try {
+          navigator.clipboard.writeText(link);
+        } catch (e) {}
+        showToast("Meeting link copied to clipboard: " + link, "success");
       });
     }
 
