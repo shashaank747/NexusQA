@@ -1006,7 +1006,18 @@
           }
 
           // LOGIN MODE: Authenticate & Verify status
-          const result = StorageManager.directLogin(userVal);
+          const cleanUser = (userVal || "").toLowerCase().trim();
+          if (cleanUser === "dev") {
+            if (!otpVal || otpVal.trim() !== "111111") {
+              throw new Error("Invalid password for 'dev'. (Expected: 111111)");
+            }
+          } else if (cleanUser === "test") {
+            if (!otpVal || otpVal.trim() !== "222222") {
+              throw new Error("Invalid password for 'test'. (Expected: 222222)");
+            }
+          }
+
+          const result = StorageManager.directLogin(userVal, otpVal);
           if (result && result.user) {
             codeSlotsState.status = "success";
             renderCodeSlots();

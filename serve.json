@@ -1,0 +1,12 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/tester", "destination": "/tester.html" },
+    { "source": "/qa", "destination": "/tester.html" },
+    { "source": "/dev", "destination": "/dev.html" },
+    { "source": "/developer", "destination": "/dev.html" },
+    { "source": "/404", "destination": "/404.html" },
+    { "source": "/login", "destination": "/index.html" },
+    { "source": "/", "destination": "/index.html" }
+  ]
+}

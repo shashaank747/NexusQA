@@ -4,6 +4,8 @@
   "description": "NexusQA is a dual-role Quality Assurance and Developer collaboration platform backed by **Supabase PostgreSQL** and **Vercel**.",
   "main": "index.js",
   "scripts": {
+    "dev": "serve -l 3000 .",
+    "start": "serve -l 3000 .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

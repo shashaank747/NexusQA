@@ -147,12 +147,10 @@ const StorageManager = {
     if (!Array.isArray(users)) users = [];
 
     const legacyPurge = [
-      "dev@nexusqa.io",
       "a@a",
       "alex.qa@nexusqa.io",
       "marcus.dev@nexusqa.io",
-      "a",
-      "dev"
+      "a"
     ];
 
     // Filter out purged legacy demo accounts
@@ -282,8 +280,10 @@ const StorageManager = {
   setCurrentUser(user) {
     if (user) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+      localStorage.setItem("nexus_qa_current_user", JSON.stringify(user));
     } else {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      localStorage.removeItem("nexus_qa_current_user");
     }
     this.broadcast("AUTH_CHANGE", { user });
   },
@@ -299,10 +299,57 @@ const StorageManager = {
   /**
    * Direct Login (Instant 1-Click Access)
    */
-  directLogin(identifier) {
+  directLogin(identifier, passcode = null) {
     const cleanId = (identifier || "").toLowerCase().trim();
     if (!cleanId) {
       throw new Error("Please enter your work email or username.");
+    }
+
+    // Temporary hardcoded credentials: dev / 111111
+    if (cleanId === "dev" || cleanId === "dev@nexusqa.io") {
+      if (passcode && passcode.toString().trim() !== "111111") {
+        throw new Error("Invalid password for 'dev'. (Expected: 111111)");
+      }
+      const devUser = {
+        id: "user-dev-hardcoded",
+        name: "Developer",
+        email: "dev@nexusqa.io",
+        username: "dev",
+        role: "dev",
+        roleTitle: "Lead Full-Stack Developer",
+        devLevel: "senior",
+        avatar: "DV",
+        color: "#10b981",
+        status: "active",
+        emailVerified: true,
+        approvedBy: "System",
+        createdAt: new Date().toISOString()
+      };
+      this.setCurrentUser(devUser);
+      return { status: "success", user: devUser };
+    }
+
+    // Temporary hardcoded credentials: test / 222222
+    if (cleanId === "test" || cleanId === "test@nexusqa.io") {
+      if (passcode && passcode.toString().trim() !== "222222") {
+        throw new Error("Invalid password for 'test'. (Expected: 222222)");
+      }
+      const testUser = {
+        id: "user-test-hardcoded",
+        name: "QA Tester",
+        email: "test@nexusqa.io",
+        username: "test",
+        role: "qa",
+        roleTitle: "Senior QA Engineer",
+        avatar: "QA",
+        color: "#6366f1",
+        status: "active",
+        emailVerified: true,
+        approvedBy: "System",
+        createdAt: new Date().toISOString()
+      };
+      this.setCurrentUser(testUser);
+      return { status: "success", user: testUser };
     }
 
     const _decodeKey = (s) => { try { return atob(s); } catch(e) { return ""; } };
