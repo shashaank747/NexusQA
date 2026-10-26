@@ -1868,8 +1868,16 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     updateDevApprovalsBadge();
 
+    const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+    const isSenior = StorageManager.isSeniorDev(currentUser);
+
+    const pendingApprovalsCard = document.getElementById("pendingApprovalsCard");
+    if (pendingApprovalsCard) {
+      pendingApprovalsCard.style.display = (isSenior && pending.length > 0) ? "block" : "none";
+    }
+
     // Pending Requests Container
-    if (DOM.pendingApprovalsListContainer) {
+    if (DOM.pendingApprovalsListContainer && isSenior) {
       if (pending.length === 0) {
         DOM.pendingApprovalsListContainer.innerHTML = `
           <div class="empty-state p-4 text-center">
@@ -1923,8 +1931,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     // Team Roster & Access Management (All Workspace Members: Developers & Testers)
     if (DOM.authorizedTestersTableBody) {
-      const isSenior = StorageManager.isSeniorDev(state.currentUser);
+      const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+      const isSenior = StorageManager.isSeniorDev(currentUser);
       const managedUsers = allUsers; // Display all registered workspace members
+
+      // Update table headers visibility: only senior devs see OTP Status, Workspace Access, Approved By, Actions
+      const seniorColHeaders = document.querySelectorAll(".senior-dev-col");
+      seniorColHeaders.forEach(th => {
+        th.style.display = isSenior ? "" : "none";
+      });
 
       DOM.authorizedTestersTableBody.innerHTML = managedUsers.map(u => {
         let statusBadge = '<span class="badge badge-passed"><i class="fa-solid fa-check"></i> Active & Authorized</span>';
@@ -1953,7 +1968,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           ? `<span class="badge badge-primary font-mono text-xs" title="${escapeHtml(projectNames)}" style="cursor: help;"><i class="fa-solid fa-folder-tree mr-1"></i> ${projCount} Project${projCount === 1 ? '' : 's'}</span>`
           : `<span class="badge badge-secondary text-xs text-muted">0 Projects</span>`;
 
-        const isSelf = state.currentUser && (state.currentUser.id === u.id || (state.currentUser.email && u.email && state.currentUser.email.toLowerCase() === u.email.toLowerCase()));
+        const isSelf = currentUser && (currentUser.id === u.id || (currentUser.email && u.email && currentUser.email.toLowerCase() === u.email.toLowerCase()));
         
         const actionCell = isSenior
           ? `<div class="d-flex align-center gap-1">
@@ -1976,10 +1991,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             <td><span class="font-mono text-xs text-muted">${escapeHtml(u.email)}</span></td>
             <td>${rolePill}</td>
             <td>${projectBadge}</td>
-            <td><span class="badge badge-passed"><i class="fa-solid fa-check"></i> ${u.emailVerified !== false ? '100% Verified' : 'Pending OTP'}</span></td>
-            <td>${statusBadge}</td>
-            <td><span class="text-xs text-muted">${escapeHtml(u.approvedBy || (u.status === 'active' ? 'Active / Auto' : 'Pending'))}</span></td>
-            <td>${actionCell}</td>
+            ${isSenior ? `
+              <td><span class="badge badge-passed"><i class="fa-solid fa-check"></i> ${u.emailVerified !== false ? '100% Verified' : 'Pending OTP'}</span></td>
+              <td>${statusBadge}</td>
+              <td><span class="text-xs text-muted">${escapeHtml(u.approvedBy || (u.status === 'active' ? 'Active / Auto' : 'Pending'))}</span></td>
+              <td>${actionCell}</td>
+            ` : ''}
           </tr>
         `;
       }).join("");
