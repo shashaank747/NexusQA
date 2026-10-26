@@ -36,7 +36,9 @@ document.addEventListener("DOMContentLoaded", () => {
     conferenceProjectSearch: "",
     createProjectSelectedMemberIds: new Set(),
     memberBarSearchQuery: "",
-    memberBarRoleFilter: "all"
+    memberBarRoleFilter: "all",
+    projectMembersFilter: "all",
+    projectMembersSearch: ""
   };
 
   // Cache DOM Elements
@@ -2779,6 +2781,35 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       iconEl.innerHTML = `<i class="fa-solid ${icon}"></i>`;
     }
 
+    // Update Allotted Project Members count & avatars
+    const allottedMembers = StorageManager.getProjectAllottedUsers(projectId);
+    const chatMemberCountEl = document.getElementById("chatProjectMemberCount");
+    const onlineCountEl = document.getElementById("conferenceOnlineCount");
+    const channelAvatarsEl = document.getElementById("chatChannelAvatarsList");
+
+    if (chatMemberCountEl) chatMemberCountEl.textContent = allottedMembers.length;
+    if (onlineCountEl) onlineCountEl.textContent = allottedMembers.length;
+    if (channelAvatarsEl) {
+      if (allottedMembers.length === 0) {
+        channelAvatarsEl.innerHTML = `
+          <span class="p-avatar qa-avatar" title="QA Lead (Tester)">QA</span>
+          <span class="p-avatar dev-avatar" title="Developer">DV</span>
+        `;
+      } else {
+        const chipsHtml = allottedMembers.slice(0, 4).map(m => {
+          const isDev = m.role === "dev";
+          const cls = isDev ? "dev-avatar" : "qa-avatar";
+          const initials = escapeHtml(m.avatar || (m.name ? m.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "US"));
+          const title = `${escapeHtml(m.name)} (${escapeHtml(m.roleTitle || (isDev ? 'Developer' : 'QA Tester'))})${m.isHead ? ' - 👑 Project Head' : ''}`;
+          return `<span class="p-avatar ${cls}" title="${title}">${initials}</span>`;
+        }).join("");
+        const overflowHtml = allottedMembers.length > 4
+          ? `<span class="p-avatar" style="background:#475569;font-size:10px;color:#fff;" title="+${allottedMembers.length - 4} more team members">+${allottedMembers.length - 4}</span>`
+          : "";
+        channelAvatarsEl.innerHTML = chipsHtml + overflowHtml;
+      }
+    }
+
     const currentUser = StorageManager.getCurrentUser() || state.currentUser || {
       name: state.currentPortal === "dev" ? "Dev Engineer" : "QA Tester",
       role: state.currentPortal === "dev" ? "dev" : "qa",
@@ -2948,6 +2979,179 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         renderConferenceProjects();
       });
     }
+
+    // =========================================================================
+    // ALLOTTED PROJECT MEMBERS MODAL (CONFERENCE ROOM)
+    // =========================================================================
+    window.openProjectMembersModal = function(projectId) {
+      const pId = projectId || state.activeConferenceProjectId;
+      if (!pId) return;
+
+      const project = StorageManager.getConferenceProjectById(pId);
+      if (!project) return;
+
+      state.projectMembersFilter = "all";
+      state.projectMembersSearch = "";
+
+      const modal = document.getElementById("projectMembersModal");
+      const searchInput = document.getElementById("projectMembersSearchInput");
+      const subtitle = document.getElementById("projectMembersModalSubtitle");
+
+      if (searchInput) searchInput.value = "";
+      if (subtitle) {
+        subtitle.innerHTML = `Allotted team members &amp; roles assigned to <strong class="text-primary font-mono">${escapeHtml(project.name)}</strong> (#${escapeHtml(project.slug || project.id)})`;
+      }
+
+      // Reset filter tabs active state
+      const tabs = document.querySelectorAll("#projectMembersFilterTabs .tab-pill");
+      tabs.forEach(t => {
+        if (t.getAttribute("data-filter") === "all") t.classList.add("active");
+        else t.classList.remove("active");
+      });
+
+      renderAllottedMembersList(pId);
+
+      if (modal) modal.style.display = "flex";
+    };
+
+    window.closeProjectMembersModal = function() {
+      const modal = document.getElementById("projectMembersModal");
+      if (modal) modal.style.display = "none";
+    };
+
+    window.renderAllottedMembersList = function(projectId) {
+      const pId = projectId || state.activeConferenceProjectId;
+      if (!pId) return;
+
+      const project = StorageManager.getConferenceProjectById(pId);
+      if (!project) return;
+
+      const allMembers = StorageManager.getProjectAllottedUsers(pId);
+      const listContainer = document.getElementById("projectMembersListContainer");
+      const headSection = document.getElementById("projectHeadHighlightSection");
+
+      // Count stats for tabs
+      const totalCount = allMembers.length;
+      const qaCount = allMembers.filter(m => m.role === "qa").length;
+      const devCount = allMembers.filter(m => m.role === "dev").length;
+
+      const allTabCountEl = document.getElementById("memberTabAllCount");
+      const qaTabCountEl = document.getElementById("memberTabQaCount");
+      const devTabCountEl = document.getElementById("memberTabDevCount");
+      const totalCountTextEl = document.getElementById("projectMembersTotalCountText");
+
+      if (allTabCountEl) allTabCountEl.textContent = totalCount;
+      if (qaTabCountEl) qaTabCountEl.textContent = qaCount;
+      if (devTabCountEl) devTabCountEl.textContent = devCount;
+      if (totalCountTextEl) totalCountTextEl.textContent = `${totalCount} team member${totalCount === 1 ? '' : 's'} allotted to this project room`;
+
+      // Render Project Head Highlight Section
+      if (headSection) {
+        const headMember = allMembers.find(m => m.isHead);
+        if (headMember) {
+          const isDev = headMember.role === "dev";
+          headSection.innerHTML = `
+            <div class="project-head-highlight-card">
+              <div class="head-card-badge">
+                <i class="fa-solid fa-crown text-amber"></i> Designated Project Head
+              </div>
+              <div class="head-card-content">
+                <div class="avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}" style="width: 44px; height: 44px; font-size: 15px; font-weight: 700;">
+                  ${escapeHtml(headMember.avatar || headMember.name.substring(0, 2).toUpperCase())}
+                </div>
+                <div class="head-info">
+                  <div class="d-flex align-center gap-2">
+                    <span class="head-name font-bold text-sm">${escapeHtml(headMember.name)}</span>
+                    <span class="badge ${isDev ? 'badge-primary' : 'badge-untested'} text-2xs">
+                      <i class="fa-solid ${isDev ? 'fa-code' : 'fa-vial-circle-check'} mr-1"></i> ${escapeHtml(headMember.roleTitle || (isDev ? 'Lead Developer' : 'QA Lead'))}
+                    </span>
+                  </div>
+                  <div class="text-xs text-muted mt-1">
+                    <i class="fa-regular fa-envelope mr-1"></i> <a href="mailto:${escapeHtml(headMember.email)}" class="text-muted hover-underline">${escapeHtml(headMember.email)}</a>
+                    <span class="mx-2">•</span>
+                    <i class="fa-solid fa-diagram-project mr-1 text-primary"></i> ${StorageManager.getUserProjectCount(headMember.id)} projects active
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          headSection.innerHTML = `
+            <div class="project-head-empty-card">
+              <div class="d-flex align-center gap-2 text-xs text-muted">
+                <i class="fa-solid fa-circle-info text-amber"></i>
+                <span>No dedicated Project Head designated for this channel. All assigned team members share equal triage responsibility.</span>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      // Filter members for list
+      let filtered = [...allMembers];
+
+      if (state.projectMembersFilter && state.projectMembersFilter !== "all") {
+        filtered = filtered.filter(m => m.role === state.projectMembersFilter);
+      }
+
+      if (state.projectMembersSearch && state.projectMembersSearch.trim()) {
+        const q = state.projectMembersSearch.toLowerCase().trim();
+        filtered = filtered.filter(m =>
+          (m.name && m.name.toLowerCase().includes(q)) ||
+          (m.email && m.email.toLowerCase().includes(q)) ||
+          (m.roleTitle && m.roleTitle.toLowerCase().includes(q)) ||
+          (m.role && m.role.toLowerCase().includes(q))
+        );
+      }
+
+      if (!listContainer) return;
+
+      if (filtered.length === 0) {
+        listContainer.innerHTML = `
+          <div class="empty-members-state text-center py-4">
+            <i class="fa-solid fa-user-slash text-muted mb-2" style="font-size: 28px;"></i>
+            <p class="text-xs text-muted m-0">No allotted members found matching "${escapeHtml(state.projectMembersSearch || state.projectMembersFilter)}".</p>
+          </div>
+        `;
+        return;
+      }
+
+      listContainer.innerHTML = filtered.map(member => {
+        const isDev = member.role === "dev";
+        const isSenior = StorageManager.isSeniorDev(member);
+        const activeProjectsCount = StorageManager.getUserProjectCount(member.id);
+        const roleLabel = member.roleTitle || (isDev ? (isSenior ? 'Senior Developer' : 'Developer') : 'QA Engineer');
+
+        return `
+          <div class="allotted-member-row ${member.isHead ? 'is-head-row' : ''}">
+            <div class="member-row-left">
+              <div class="avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}" style="width: 38px; height: 38px; font-size: 13px; font-weight: 700;">
+                ${escapeHtml(member.avatar || member.name.substring(0, 2).toUpperCase())}
+              </div>
+              <div class="member-row-details">
+                <div class="d-flex align-center gap-2">
+                  <span class="member-row-name font-semibold text-sm">${escapeHtml(member.name)}</span>
+                  ${member.isHead ? `<span class="badge badge-warning text-2xs font-semibold"><i class="fa-solid fa-crown mr-1"></i> Head</span>` : ''}
+                </div>
+                <div class="member-row-meta text-xs text-muted mt-1">
+                  <span class="member-email"><i class="fa-regular fa-envelope mr-1"></i> ${escapeHtml(member.email)}</span>
+                  <span class="meta-separator">•</span>
+                  <span class="member-workload"><i class="fa-solid fa-folder-tree mr-1 text-primary"></i> ${activeProjectsCount} active project${activeProjectsCount === 1 ? '' : 's'}</span>
+                </div>
+              </div>
+            </div>
+            <div class="member-row-right">
+              <span class="badge ${isDev ? 'badge-primary' : 'badge-untested'}">
+                <i class="fa-solid ${isDev ? 'fa-code' : 'fa-vial-circle-check'} mr-1"></i> ${escapeHtml(roleLabel)}
+              </span>
+              <span class="badge badge-passed ml-2" title="Allotted and active on this project">
+                <i class="fa-solid fa-circle status-dot-online mr-1"></i> Allotted
+              </span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    };
 
     // =========================================================================
     // PROJECT CREATION & MEMBER PICKER MODAL (SENIOR DEV ACCESS)
@@ -3258,6 +3462,70 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           renderConference();
           showToast("Channel messages cleared.");
         }
+      });
+    }
+
+    // Allotted Project Team Modal Triggers
+    const btnViewMembers = document.getElementById("btnViewProjectMembers");
+    if (btnViewMembers) {
+      btnViewMembers.addEventListener("click", () => {
+        if (state.activeConferenceProjectId) {
+          window.openProjectMembersModal(state.activeConferenceProjectId);
+        } else {
+          showToast("Please open a project channel first to see allotted members.", "info");
+        }
+      });
+    }
+
+    const participantsBadgeBtn = document.getElementById("chatParticipantsBadgeBtn");
+    if (participantsBadgeBtn) {
+      participantsBadgeBtn.addEventListener("click", () => {
+        if (state.activeConferenceProjectId) {
+          window.openProjectMembersModal(state.activeConferenceProjectId);
+        }
+      });
+    }
+
+    // Modal Close Triggers
+    const closeMembersModalBtn = document.getElementById("closeProjectMembersModalBtn");
+    const closeMembersModalBottomBtn = document.getElementById("closeProjectMembersModalBottomBtn");
+    const projectMembersModal = document.getElementById("projectMembersModal");
+
+    if (closeMembersModalBtn) {
+      closeMembersModalBtn.addEventListener("click", () => {
+        window.closeProjectMembersModal();
+      });
+    }
+    if (closeMembersModalBottomBtn) {
+      closeMembersModalBottomBtn.addEventListener("click", () => {
+        window.closeProjectMembersModal();
+      });
+    }
+    if (projectMembersModal) {
+      projectMembersModal.addEventListener("click", (e) => {
+        if (e.target === projectMembersModal) {
+          window.closeProjectMembersModal();
+        }
+      });
+    }
+
+    // Filter Tabs
+    const memberFilterTabs = document.querySelectorAll("#projectMembersFilterTabs .tab-pill");
+    memberFilterTabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        memberFilterTabs.forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        state.projectMembersFilter = tab.getAttribute("data-filter") || "all";
+        window.renderAllottedMembersList(state.activeConferenceProjectId);
+      });
+    });
+
+    // Search Input
+    const projMembersSearchInput = document.getElementById("projectMembersSearchInput");
+    if (projMembersSearchInput) {
+      projMembersSearchInput.addEventListener("input", (e) => {
+        state.projectMembersSearch = e.target.value;
+        window.renderAllottedMembersList(state.activeConferenceProjectId);
       });
     }
 

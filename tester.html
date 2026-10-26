@@ -1079,6 +1079,9 @@
                 </div>
               </div>
               <div class="view-actions">
+                <button type="button" class="btn btn-outline btn-sm" id="btnViewProjectMembers" title="View all people allotted to this project">
+                  <i class="fa-solid fa-users text-primary"></i> <span>Allotted Team (<strong id="chatProjectMemberCount">0</strong>)</span>
+                </button>
                 <button type="button" class="btn btn-secondary btn-sm" id="conferenceRefreshBtn" title="Refresh messages"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
                 <button type="button" class="btn btn-ghost btn-sm" id="conferenceClearBtn" title="Clear chat history for this project"><i class="fa-solid fa-trash-can"></i> Clear Room</button>
               </div>
@@ -1095,12 +1098,13 @@
                     <div class="conference-channel-topic" id="chatProjectTopic">Collaborative triage, immediate blockers, test verification &amp; hotfix notifications</div>
                   </div>
                 </div>
-                <div class="conference-participants-badge">
-                  <div class="participant-avatars">
+                <div class="conference-participants-badge" id="chatParticipantsBadgeBtn" title="Click to view all allotted team members" style="cursor: pointer;">
+                  <div class="participant-avatars" id="chatChannelAvatarsList">
                     <span class="p-avatar qa-avatar" title="QA Lead (Tester)">QA</span>
                     <span class="p-avatar dev-avatar" title="Developer">DV</span>
                   </div>
-                  <span class="participant-text"><strong id="conferenceOnlineCount">2</strong> portals synced</span>
+                  <span class="participant-text"><strong id="conferenceOnlineCount">0</strong> allotted</span>
+                  <i class="fa-solid fa-chevron-right ml-1 text-2xs" style="opacity: 0.7;"></i>
                 </div>
               </div>
 
@@ -1884,6 +1888,64 @@
         <button type="button" class="btn btn-primary" id="saveNewConferenceProjectBtn">
           <i class="fa-solid fa-rocket mr-1"></i> Create Project Channel
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Allotted Project Members Modal -->
+  <div class="modal-backdrop" id="projectMembersModal" style="display: none;">
+    <div class="modal-dialog modal-dialog-lg project-members-modal-dialog">
+      <div class="modal-header">
+        <div class="d-flex align-center gap-2">
+          <div class="modal-header-icon" style="background: rgba(6, 182, 212, 0.12); color: #06b6d4; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div>
+            <h3 class="modal-title m-0">Allotted Project Team</h3>
+            <p class="modal-subtitle text-xs text-muted m-0" id="projectMembersModalSubtitle">Team members &amp; roles assigned to this project room</p>
+          </div>
+        </div>
+        <button type="button" class="btn-icon modal-close-btn" id="closeProjectMembersModalBtn" aria-label="Close dialog">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+        <!-- Project Head Highlight Banner -->
+        <div id="projectHeadHighlightSection" class="mb-3">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Filter Tabs & Search Bar -->
+        <div class="project-members-controls mb-3">
+          <div class="project-members-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="projectMembersSearchInput" placeholder="Filter allotted members by name, role, email..." />
+          </div>
+          <div class="project-members-filter-tabs" id="projectMembersFilterTabs">
+            <button type="button" class="tab-pill active" data-filter="all">
+              <i class="fa-solid fa-users mr-1"></i> All (<span id="memberTabAllCount">0</span>)
+            </button>
+            <button type="button" class="tab-pill" data-filter="qa">
+              <i class="fa-solid fa-vial-circle-check mr-1"></i> Testers (<span id="memberTabQaCount">0</span>)
+            </button>
+            <button type="button" class="tab-pill" data-filter="dev">
+              <i class="fa-solid fa-code mr-1"></i> Developers (<span id="memberTabDevCount">0</span>)
+            </button>
+          </div>
+        </div>
+
+        <!-- Allotted Members List Container -->
+        <div class="project-members-list" id="projectMembersListContainer">
+          <!-- Dynamically populated via JS -->
+        </div>
+      </div>
+
+      <div class="modal-footer justify-between">
+        <div class="text-xs text-muted" id="projectMembersFooterSummary">
+          <i class="fa-solid fa-circle-info mr-1 text-primary"></i> <span id="projectMembersTotalCountText">0 team members allotted</span>
+        </div>
+        <button type="button" class="btn btn-secondary" id="closeProjectMembersModalBottomBtn">Close</button>
       </div>
     </div>
   </div>

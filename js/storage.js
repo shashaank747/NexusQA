@@ -265,6 +265,74 @@ const StorageManager = {
     return this.getConferenceProjects().find(p => p.id === id);
   },
 
+  getProjectAllottedUsers(projectId) {
+    if (!projectId) return [];
+    const project = typeof projectId === "object" ? projectId : this.getConferenceProjectById(projectId);
+    if (!project) return [];
+
+    const allUsers = this.getUsers();
+    const membersList = Array.isArray(project.members) ? [...project.members] : [];
+
+    // Include designated head if not already present
+    if (project.headId && !membersList.includes(project.headId)) {
+      membersList.unshift(project.headId);
+    } else if (project.headName && !membersList.includes(project.headName)) {
+      membersList.unshift(project.headName);
+    }
+
+    // Fallback for legacy projects without explicit members list
+    if (membersList.length === 0) {
+      if (project.leadDev) membersList.push(project.leadDev);
+      if (project.leadQa) membersList.push(project.leadQa);
+    }
+
+    const matchedUsers = [];
+    const seen = new Set();
+
+    membersList.forEach(m => {
+      if (!m) return;
+      const q = (m + "").toLowerCase().trim();
+      let found = allUsers.find(u =>
+        (u.id && u.id.toLowerCase() === q) ||
+        (u.username && u.username.toLowerCase() === q) ||
+        (u.email && u.email.toLowerCase() === q) ||
+        (u.name && u.name.toLowerCase() === q)
+      );
+
+      if (!found) {
+        // Fallback placeholder object for custom names
+        found = {
+          id: m,
+          username: m,
+          name: m,
+          email: `${m.replace(/\s+/g, ".").toLowerCase()}@nexusqa.io`,
+          role: q.includes("qa") || q.includes("test") ? "qa" : "dev",
+          roleTitle: "Project Collaborator",
+          avatar: m.slice(0, 2).toUpperCase(),
+          status: "active"
+        };
+      }
+
+      const key = (found.id || found.email || found.name).toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        const isHead = (project.headId && (found.id === project.headId || found.username === project.headId)) ||
+                       (project.headName && (found.name || "").toLowerCase() === (project.headName || "").toLowerCase());
+        matchedUsers.push({
+          ...found,
+          isHead: !!isHead
+        });
+      }
+    });
+
+    // Sort: Project Head first, then alphabetically by name
+    return matchedUsers.sort((a, b) => {
+      if (a.isHead && !b.isHead) return -1;
+      if (!a.isHead && b.isHead) return 1;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+  },
+
   getUserProjectCount(userIdOrName) {
     if (!userIdOrName) return 0;
     const projects = this.getConferenceProjects();
