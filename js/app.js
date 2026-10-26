@@ -2222,8 +2222,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (viewName === "test-cases") renderRepository();
     if (viewName === "defects") renderDefects();
     if (viewName === "ai-generator") renderAIGeneratorSuiteDropdown();
-    if (viewName === "suites") renderSuitesView();
-    if (viewName === "conference") renderConference();
+    if (viewName === "conference") {
+      try { localStorage.setItem("nexusqa_conference_has_new", "false"); } catch(e) {}
+      const badge = document.getElementById("conferenceNavBadge") || document.getElementById("devConferenceNavBadge");
+      if (badge) badge.style.display = "none";
+      renderConference();
+    }
     if (viewName === "dev-dashboard") renderDevDashboard();
     if (viewName === "dev-approvals") renderDevApprovals();
     if (viewName === "dev-kanban") renderDevKanban();
@@ -2937,6 +2941,27 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const searchInput = document.getElementById("conferenceProjectSearchInput");
     const categoryPills = document.querySelectorAll("#conferenceCategoryPills .cat-pill");
 
+    // Initialize or update the Conference pill 'New' badge
+    function updateConferenceNavBadge() {
+      const badge = document.getElementById("conferenceNavBadge") || document.getElementById("devConferenceNavBadge");
+      if (!badge) return;
+
+      if (state.currentView === "conference") {
+        badge.style.display = "none";
+        return;
+      }
+
+      const hasNew = localStorage.getItem("nexusqa_conference_has_new");
+      if (hasNew === "false") {
+        badge.style.display = "none";
+      } else {
+        badge.style.display = "inline-flex";
+        badge.textContent = "New";
+        badge.className = "nav-badge badge-new";
+      }
+    }
+    updateConferenceNavBadge();
+
     // Modal elements
     const newProjectBtn = document.getElementById("btnOpenNewProjectModal");
     const newProjectModal = document.getElementById("newConferenceProjectModal");
@@ -3536,15 +3561,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         if (state.currentView === "conference") {
           renderConference();
         } else {
-          // Highlight the sidebar pill badge
+          // Highlight the sidebar pill badge with "New" to represent new message has arrived
+          try { localStorage.setItem("nexusqa_conference_has_new", "true"); } catch(e) {}
           const badge = document.getElementById("conferenceNavBadge") || document.getElementById("devConferenceNavBadge");
           if (badge) {
-            badge.classList.add("pulse-highlight");
+            badge.style.display = "inline-flex";
             badge.textContent = "New";
-            setTimeout(() => {
-              badge.textContent = "Live";
-              badge.classList.remove("pulse-highlight");
-            }, 6000);
+            badge.className = "nav-badge badge-new";
           }
         }
       } else if (msg.type === "CONFERENCE_PROJECT_CREATED") {
