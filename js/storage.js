@@ -13,7 +13,8 @@ const STORAGE_KEYS = {
   ACTIVE_RUN_ID: "nexusqa_active_run_id",
   THEME: "nexusqa_theme",
   CONFERENCE_MESSAGES: "nexusqa_conference_messages",
-  CONFERENCE_PROJECTS: "nexusqa_conference_projects"
+  CONFERENCE_PROJECTS: "nexusqa_conference_projects",
+  NOTIFICATIONS: "nexusqa_user_notifications"
 };
 
 const syncChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("nexusqa_sync_channel") : null;
@@ -144,6 +145,8 @@ const StorageManager = {
   // -------------------------------------------------------------
   // Conference Projects & Channels (Cards & Project Chat)
   // -------------------------------------------------------------
+  // Conference Projects & Channels (Cards & Project Chat)
+  // -------------------------------------------------------------
   getConferenceProjects() {
     const raw = localStorage.getItem(STORAGE_KEYS.CONFERENCE_PROJECTS);
     if (!raw) {
@@ -151,6 +154,7 @@ const StorageManager = {
         {
           id: "proj-1",
           name: "E-Commerce Checkout & Payments",
+          slug: "payments-engine",
           description: "Payment gateway integration, Stripe & 3D secure test validations, cart abandonment recovery",
           category: "Payments",
           icon: "fa-solid fa-credit-card",
@@ -158,25 +162,37 @@ const StorageManager = {
           status: "Active Sprint",
           leadDev: "Marcus Vance",
           leadQa: "Alex Morgan",
+          headId: "usr-dev-1",
+          headName: "Marcus Vance",
+          headRole: "Lead Software Architect",
+          members: ["usr-dev-1", "usr-qa-1", "usr-qa-2", "usr-dev-2"],
           createdAt: "2026-10-20",
-          membersCount: 8
+          participantsCount: 4,
+          lastActivity: "2 mins ago"
         },
         {
           id: "proj-2",
           name: "Auth & Identity Security Service",
+          slug: "auth-security",
           description: "OTP email verification, AES-256 session tokens, RBAC permissions, and SSO provider bridge",
           category: "Security",
           icon: "fa-solid fa-shield-halved",
           color: "#6366f1",
           status: "Regression Pass",
-          leadDev: "Chhotu Monster",
-          leadQa: "Alex Morgan",
+          leadDev: "Marcus Vance",
+          leadQa: "Elena Rostova",
+          headId: "usr-qa-3",
+          headName: "Elena Rostova",
+          headRole: "Security QA",
+          members: ["usr-dev-1", "usr-qa-3", "usr-dev-2"],
           createdAt: "2026-10-21",
-          membersCount: 6
+          participantsCount: 3,
+          lastActivity: "15 mins ago"
         },
         {
           id: "proj-3",
           name: "CampusOS NLP & Test Creator Studio",
+          slug: "campusos-nlp",
           description: "Conversational voice assistant, 22-column Excel tracker generator, and discrepancy auditor",
           category: "AI & NLP",
           icon: "fa-solid fa-wand-magic-sparkles",
@@ -184,12 +200,18 @@ const StorageManager = {
           status: "Release Candidate",
           leadDev: "Marcus Vance",
           leadQa: "Alex Morgan",
+          headId: "usr-qa-1",
+          headName: "Alex Morgan",
+          headRole: "QA Lead",
+          members: ["usr-dev-1", "usr-qa-1", "usr-dev-3", "usr-qa-4"],
           createdAt: "2026-10-22",
-          membersCount: 10
+          participantsCount: 4,
+          lastActivity: "1 hour ago"
         },
         {
           id: "proj-4",
           name: "Mobile Portal & Responsive UI",
+          slug: "mobile-ui",
           description: "Cross-browser testing on WebKit/Blink, touch gesture handling, and low-latency cache sync",
           category: "Frontend",
           icon: "fa-solid fa-mobile-screen-button",
@@ -197,8 +219,13 @@ const StorageManager = {
           status: "In Triage",
           leadDev: "Marcus Vance",
           leadQa: "Alex Morgan",
+          headId: "usr-dev-3",
+          headName: "Liam Patel",
+          headRole: "Frontend Specialist",
+          members: ["usr-dev-3", "usr-qa-1", "usr-qa-2"],
           createdAt: "2026-10-24",
-          membersCount: 5
+          participantsCount: 3,
+          lastActivity: "3 hours ago"
         }
       ];
       localStorage.setItem(STORAGE_KEYS.CONFERENCE_PROJECTS, JSON.stringify(seed));
@@ -206,7 +233,29 @@ const StorageManager = {
     }
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      if (Array.isArray(parsed)) {
+        // Ensure legacy projects have members array and slug
+        let changed = false;
+        parsed.forEach((p, idx) => {
+          if (!p.slug) {
+            p.slug = (p.name || "channel-" + idx).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+            changed = true;
+          }
+          if (!Array.isArray(p.members)) {
+            p.members = ["usr-dev-1", "usr-qa-1"];
+            changed = true;
+          }
+          if (p.participantsCount === undefined) {
+            p.participantsCount = p.members.length;
+            changed = true;
+          }
+        });
+        if (changed) {
+          localStorage.setItem(STORAGE_KEYS.CONFERENCE_PROJECTS, JSON.stringify(parsed));
+        }
+        return parsed;
+      }
+      return [];
     } catch (e) {
       return [];
     }
@@ -216,30 +265,166 @@ const StorageManager = {
     return this.getConferenceProjects().find(p => p.id === id);
   },
 
+  getUserProjectCount(userIdOrName) {
+    if (!userIdOrName) return 0;
+    const projects = this.getConferenceProjects();
+    const query = (userIdOrName + "").toLowerCase().trim();
+    return projects.filter(p => {
+      if (Array.isArray(p.members)) {
+        if (p.members.some(m => (m + "").toLowerCase().trim() === query)) return true;
+      }
+      if (p.headId && (p.headId + "").toLowerCase().trim() === query) return true;
+      if (p.headName && (p.headName + "").toLowerCase().trim() === query) return true;
+      if (p.leadDev && (p.leadDev + "").toLowerCase().trim() === query) return true;
+      if (p.leadQa && (p.leadQa + "").toLowerCase().trim() === query) return true;
+      return false;
+    }).length;
+  },
+
+  getUserProjects(userIdOrName) {
+    if (!userIdOrName) return [];
+    const projects = this.getConferenceProjects();
+    const query = (userIdOrName + "").toLowerCase().trim();
+    return projects.filter(p => {
+      if (Array.isArray(p.members)) {
+        if (p.members.some(m => (m + "").toLowerCase().trim() === query)) return true;
+      }
+      if (p.headId && (p.headId + "").toLowerCase().trim() === query) return true;
+      if (p.headName && (p.headName + "").toLowerCase().trim() === query) return true;
+      return false;
+    });
+  },
+
   addConferenceProject(projData, user) {
+    if (!user) user = this.getCurrentUser();
     if (!this.isSeniorDev(user)) {
       throw new Error("Unauthorized: Project creation is strictly restricted to Senior Developers only.");
     }
 
     const projects = this.getConferenceProjects();
+    const slug = (projData.name || "project")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    const members = Array.isArray(projData.members) && projData.members.length > 0 
+      ? [...projData.members] 
+      : [];
+
+    // Ensure Senior Dev creator is included
+    const creatorId = user ? (user.id || user.username || "usr-dev-1") : "usr-dev-1";
+    if (!members.includes(creatorId)) {
+      members.push(creatorId);
+    }
+
+    // If head is assigned, ensure head is in members list
+    if (projData.headId && !members.includes(projData.headId)) {
+      members.push(projData.headId);
+    }
+
+    const iconMap = {
+      "Payments": "fa-solid fa-credit-card",
+      "Security": "fa-solid fa-shield-halved",
+      "AI & NLP": "fa-solid fa-wand-magic-sparkles",
+      "Frontend": "fa-solid fa-mobile-screen-button",
+      "Backend": "fa-solid fa-server",
+      "DevOps": "fa-solid fa-cubes"
+    };
+
     const newProj = {
       id: "proj-" + Date.now(),
       name: (projData.name || "Untitled Project").trim(),
+      slug: slug || "project-" + Date.now(),
       description: (projData.description || "Active engineering & QA collaboration channel").trim(),
-      category: projData.category || "General",
-      icon: projData.icon || "fa-solid fa-cubes",
+      category: projData.category || "Backend",
+      icon: projData.icon || iconMap[projData.category] || "fa-solid fa-diagram-project",
       color: projData.color || "#6366f1",
       status: projData.status || "Active Sprint",
+      members: members,
+      headId: projData.headId || "",
+      headName: projData.headName || "",
+      headRole: projData.headRole || "",
       leadDev: user ? (user.name || "Senior Developer") : "Senior Developer",
-      leadQa: "QA Team",
+      createdBy: user ? (user.name || "Senior Developer") : "Senior Developer",
       createdAt: new Date().toISOString().split("T")[0],
-      membersCount: 2
+      participantsCount: members.length,
+      lastActivity: "Just now"
     };
 
     projects.unshift(newProj);
     localStorage.setItem(STORAGE_KEYS.CONFERENCE_PROJECTS, JSON.stringify(projects));
+
+    // Notify assigned members in real-time
+    this.notifyProjectMembers(newProj, user);
+
     this.broadcast("CONFERENCE_PROJECT_CREATED", { project: newProj });
     return newProj;
+  },
+
+  notifyProjectMembers(project, creator) {
+    if (!project || !Array.isArray(project.members)) return;
+    const allUsers = this.getUsers();
+    const creatorName = creator ? (creator.name || "Senior Developer") : "Senior Developer";
+
+    const notifs = this.getNotifications();
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    project.members.forEach(memberId => {
+      const user = allUsers.find(u => u.id === memberId || u.username === memberId || u.email === memberId);
+      const isHead = project.headId === memberId;
+      const notifItem = {
+        id: "notif-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6),
+        userId: memberId,
+        userName: user ? user.name : memberId,
+        userEmail: user ? user.email : "",
+        projectId: project.id,
+        projectName: project.name,
+        type: isHead ? "project_head_assigned" : "project_assigned",
+        title: isHead ? `Appointed as Project Head: ${project.name}` : `Added to Project: ${project.name}`,
+        message: isHead 
+          ? `You have been appointed as Project Head for "${project.name}" by Senior Developer ${creatorName}.`
+          : `You have been added to project "${project.name}" by Senior Developer ${creatorName}. Access the channel in Conference.`,
+        creatorName: creatorName,
+        time: timeStr,
+        timestamp: Date.now(),
+        read: false
+      };
+      notifs.unshift(notifItem);
+    });
+
+    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifs));
+    this.broadcast("PROJECT_MEMBERS_NOTIFIED", {
+      projectId: project.id,
+      projectName: project.name,
+      memberIds: project.members,
+      headId: project.headId,
+      creatorName: creatorName
+    });
+  },
+
+  getNotifications(userId = null) {
+    const raw = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+    let notifs = [];
+    try {
+      notifs = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(notifs)) notifs = [];
+    } catch(e) { notifs = []; }
+    if (userId) {
+      const q = (userId + "").toLowerCase().trim();
+      return notifs.filter(n => (n.userId && (n.userId + "").toLowerCase() === q) || (n.userName && (n.userName + "").toLowerCase() === q));
+    }
+    return notifs;
+  },
+
+  markNotificationsRead(userId = null) {
+    const notifs = this.getNotifications();
+    notifs.forEach(n => {
+      if (!userId || n.userId === userId) {
+        n.read = true;
+      }
+    });
+    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifs));
   },
 
   // -------------------------------------------------------------
@@ -373,6 +558,124 @@ const StorageManager = {
         uniqueUsers.push(u);
       }
     }
+
+    // Ensure full team roster of testers & devs is present for Employee Directory & Project Assignment
+    const defaultTeam = [
+      {
+        id: "usr-dev-1",
+        username: "dev",
+        name: "Marcus Vance",
+        email: "marcus@nexusqa.io",
+        role: "dev",
+        devLevel: "lead",
+        roleTitle: "Lead Software Architect",
+        avatar: "MV",
+        emailVerified: true,
+        status: "active",
+        approvedBy: "System Administrator"
+      },
+      {
+        id: "usr-qa-1",
+        username: "test",
+        name: "Alex Morgan",
+        email: "alex@nexusqa.io",
+        role: "qa",
+        devLevel: "",
+        roleTitle: "Senior QA Lead",
+        avatar: "AM",
+        emailVerified: true,
+        status: "active",
+        approvedBy: "Marcus Vance (Lead Architect)"
+      },
+      {
+        id: "usr-qa-2",
+        username: "sarah",
+        name: "Sarah Jenkins",
+        email: "sarah.j@nexusqa.io",
+        role: "qa",
+        devLevel: "",
+        roleTitle: "Senior Automation Tester",
+        avatar: "SJ",
+        emailVerified: true,
+        status: "active",
+        approvedBy: "Marcus Vance"
+      },
+      {
+        id: "usr-dev-2",
+        username: "david",
+        name: "David Chen",
+        email: "david.c@nexusqa.io",
+        role: "dev",
+        devLevel: "senior",
+        roleTitle: "Senior Backend Engineer",
+        avatar: "DC",
+        emailVerified: true,
+        status: "active",
+        approvedBy: "Marcus Vance"
+      },
+      {
+        id: "usr-qa-3",
+        username: "elena",
+        name: "Elena Rostova",
+        email: "elena.r@nexusqa.io",
+        role: "qa",
+        devLevel: "",
+        roleTitle: "Security & Penetration QA",
+        avatar: "ER",
+        emailVerified: true,
+        status: "active",
+        approvedBy: "Marcus Vance"
+      },
+      {
+        id: "usr-dev-3",
+        username: "liam",
+        name: "Liam Patel",
+        email: "liam.p@nexusqa.io",
+        role: "dev",
+        devLevel: "mid",
+        roleTitle: "Frontend & Mobile Specialist",
+        avatar: "LP",
+        emailVerified: true,
+        status: "active",
+        approvedBy: "Marcus Vance"
+      },
+      {
+        id: "usr-qa-4",
+        username: "rachel",
+        name: "Rachel Green",
+        email: "rachel.g@nexusqa.io",
+        role: "qa",
+        devLevel: "",
+        roleTitle: "Exploratory QA Analyst",
+        avatar: "RG",
+        emailVerified: true,
+        status: "active",
+        approvedBy: "Marcus Vance"
+      },
+      {
+        id: "usr-dev-4",
+        username: "maya",
+        name: "Maya Lin",
+        email: "maya.l@nexusqa.io",
+        role: "dev",
+        devLevel: "senior",
+        roleTitle: "Cloud DevOps & SRE Engineer",
+        avatar: "ML",
+        emailVerified: true,
+        status: "active",
+        approvedBy: "Marcus Vance"
+      }
+    ];
+
+    defaultTeam.forEach(member => {
+      const emailKey = (member.email || "").toLowerCase().trim();
+      const userKey = (member.username || "").toLowerCase().trim();
+      const idKey = (member.id || "").toLowerCase().trim();
+      if (!seen.has(emailKey) && !seen.has(userKey) && !seen.has(idKey)) {
+        seen.add(emailKey);
+        uniqueUsers.push(member);
+      }
+    });
 
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(uniqueUsers));
     return uniqueUsers;

@@ -167,6 +167,9 @@
               <li class="rail-nav-item" data-view="conference" title="Dev &amp; Tester Conference">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-comments text-cyan"></i></button>
               </li>
+              <li class="rail-nav-item" data-view="dev-approvals" title="Employee Directory">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-users text-emerald"></i></button>
+              </li>
             </ul>
           </div>
           <div class="rail-bottom">
@@ -233,6 +236,12 @@
                   <span class="nav-badge badge-active" id="conferenceNavBadge">Live</span>
                 </a>
               </li>
+              <li class="nav-item" data-view="dev-approvals">
+                <a href="javascript:void(0)" class="nav-link">
+                  <i class="fa-solid fa-users text-emerald"></i>
+                  <span>Employees</span>
+                </a>
+              </li>
               <li class="nav-item" data-view="settings">
                 <a href="javascript:void(0)" class="nav-link">
                   <i class="fa-solid fa-user-gear"></i>
@@ -265,6 +274,9 @@
               </button>
               <button class="btn btn-primary btn-sm" id="dashboardNewTestCaseBtn">
                 <i class="fa-solid fa-plus"></i> Create Test Case
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnDashboardCreateProject" title="Create a new Project (Senior Dev Access)">
+                <i class="fa-solid fa-folder-plus"></i> Create Project
               </button>
               <button class="auto-input-pill" id="dashboardAutoInputBtn" title="Open Auto Input AI card">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Input
@@ -745,6 +757,98 @@
             </div>
           </div>
           <div class="suites-grid-cards" id="suitesGridCards"></div>
+        </section>
+
+        <!-- QA VIEW: EMPLOYEE DIRECTORY -->
+        <section class="view-panel" id="view-dev-approvals">
+          <div class="view-header">
+            <div>
+              <div class="dev-header-badge"><i class="fa-solid fa-users"></i> Employees &amp; Access Control</div>
+              <h1 class="view-title">Employee Directory &amp; Workspace Team</h1>
+              <p class="view-subtitle">Explore team roster, view assigned project distribution across testers &amp; developers, and review workspace permissions.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-secondary btn-sm" id="refreshApprovalsBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Roster</button>
+            </div>
+          </div>
+
+          <!-- Approvals KPI summary -->
+          <div class="kpi-grid mb-4">
+            <div class="kpi-card card-glow-emerald">
+              <div class="kpi-header">
+                <span class="kpi-title">Active Workspace Members</span>
+                <span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-user-check"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-emerald" id="kpiActiveTestersCount">8</span>
+                <span class="kpi-trend trend-up">Authorized Team</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-cyan">
+              <div class="kpi-header">
+                <span class="kpi-title">Active Projects</span>
+                <span class="kpi-icon-badge icon-cyan"><i class="fa-solid fa-folder-tree"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-cyan" id="kpiActiveProjectsCount">4</span>
+                <span class="kpi-trend trend-up">In Flight</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-amber">
+              <div class="kpi-header">
+                <span class="kpi-title">Pending Approvals</span>
+                <span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-clock-rotate-left"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-amber" id="kpiPendingApprovalsCount">0</span>
+                <span class="kpi-trend trend-neutral">Awaiting Dev Signoff</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Requests Container -->
+          <div class="dashboard-card mb-4" id="pendingApprovalsCard" style="display: none;">
+            <div class="card-header">
+              <div class="card-title-group">
+                <h3><i class="fa-solid fa-user-clock text-amber"></i> Pending Workspace Authorization Requests</h3>
+                <p class="card-subtitle">Members who completed email OTP verification and require Administrator authorization</p>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div id="pendingApprovalsListContainer"></div>
+            </div>
+          </div>
+
+          <!-- Authorized Team Roster -->
+          <div class="dashboard-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <h3><i class="fa-solid fa-users text-primary"></i> Team Roster &amp; Assigned Projects</h3>
+                <p class="card-subtitle">Manage workspace authorization, roles, and view project workload for all active developers and QA testers</p>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="nexus-table">
+                  <thead>
+                    <tr>
+                      <th>Team Member</th>
+                      <th>Email</th>
+                      <th>Specialty / Role</th>
+                      <th>Assigned Projects</th>
+                      <th>OTP Status</th>
+                      <th>Workspace Access</th>
+                      <th>Approved By</th>
+                      <th width="160">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="authorizedTestersTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- VIEW: USER PROFILE & ACCOUNT SETTINGS -->
@@ -1669,61 +1773,116 @@
     </div>
   </div>
 
-  <!-- MODAL: CREATE CONFERENCE PROJECT (SENIOR DEV ACCESS ONLY) -->
+  <!-- MODAL: CREATE CONFERENCE PROJECT (SENIOR DEV ONLY) -->
   <div class="modal-backdrop" id="newConferenceProjectModal" style="display: none;">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
       <div class="modal-header d-flex justify-between align-center">
         <div class="modal-title-group d-flex align-center gap-2">
-          <i class="fa-solid fa-folder-plus text-primary modal-icon"></i>
+          <div class="modal-icon-badge">
+            <i class="fa-solid fa-folder-plus text-primary"></i>
+          </div>
           <div>
-            <h2 id="newProjectModalTitle">Create Conference Project</h2>
+            <h2 id="newProjectModalTitle">Create Project &amp; Assign Team</h2>
             <div class="d-flex align-center gap-2 mt-1">
-              <span class="badge badge-passed"><i class="fa-solid fa-shield-halved"></i> Senior Dev Access Required</span>
+              <span class="badge badge-passed"><i class="fa-solid fa-shield-halved"></i> Senior Dev Access Verified</span>
+              <span class="text-xs text-muted">Syncs to Conference &amp; Employee Directory</span>
             </div>
           </div>
         </div>
         <button class="icon-btn close-modal-btn" id="closeNewConferenceProjectModalBtn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
-        <form id="newConferenceProjectForm">
+        <form id="newConferenceProjectForm" onsubmit="return false;">
+          <!-- 1. Project Name -->
           <div class="form-group mb-3">
-            <label for="confProjName" class="font-semibold">Project Name <span class="text-rose">*</span></label>
-            <input type="text" id="confProjName" class="nexus-input" placeholder="e.g. Payment Gateway v2" required>
+            <label for="confProjName" class="font-semibold d-flex justify-between">
+              <span>Project Name <span class="text-rose">*</span></span>
+              <span class="text-2xs text-muted">Unique Project Channel</span>
+            </label>
+            <input type="text" id="confProjName" class="nexus-input" placeholder="e.g. Payment Gateway v2 / Biometric Auth / API Core" required>
+          </div>
+
+          <!-- Category and Status Row -->
+          <div class="form-row-2 mb-3">
+            <div class="form-group">
+              <label for="confProjCategory" class="font-semibold">Category Domain</label>
+              <select id="confProjCategory" class="nexus-select w-100">
+                <option value="Payments">Payments &amp; Billing</option>
+                <option value="Security">Security &amp; Auth</option>
+                <option value="AI & NLP">AI &amp; NLP Studio</option>
+                <option value="Frontend">Frontend &amp; Mobile</option>
+                <option value="Backend" selected>Backend &amp; Microservices</option>
+                <option value="DevOps">DevOps &amp; Infrastructure</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="confProjStatus" class="font-semibold">Initial Status</label>
+              <select id="confProjStatus" class="nexus-select w-100">
+                <option value="Active Sprint">Active Sprint</option>
+                <option value="Regression Pass">Regression Pass</option>
+                <option value="Release Candidate">Release Candidate</option>
+                <option value="In Triage">In Triage</option>
+                <option value="Hotfix Validation">Hotfix Validation</option>
+              </select>
+            </div>
           </div>
 
           <div class="form-group mb-3">
-            <label for="confProjCategory" class="font-semibold">Category <span class="text-rose">*</span></label>
-            <select id="confProjCategory" class="nexus-select w-100">
-              <option value="Payments">Payments &amp; Billing</option>
-              <option value="Security">Security &amp; Auth</option>
-              <option value="AI & NLP">AI &amp; NLP Studio</option>
-              <option value="Frontend">Frontend &amp; Mobile</option>
-              <option value="Backend">Backend &amp; Microservices</option>
-              <option value="DevOps">DevOps &amp; Infrastructure</option>
+            <label for="confProjDescription" class="font-semibold">Description / Scope <span class="text-2xs text-muted">(Optional)</span></label>
+            <textarea id="confProjDescription" class="nexus-textarea" rows="2" placeholder="Define the testing objectives, active sprint features, or defect triage focus..."></textarea>
+          </div>
+
+          <!-- 2. Horizontal Bar for Adding Testers and Devs -->
+          <div class="project-member-picker-section mb-3">
+            <div class="d-flex justify-between align-center mb-2">
+              <label class="font-semibold m-0">
+                <i class="fa-solid fa-users-gear text-primary mr-1"></i> Add Testers &amp; Developers to Project
+              </label>
+              <span class="badge badge-primary font-mono" id="memberPickerSelectedBadge">
+                <span id="memberPickerSelectedCount">0</span> Selected
+              </span>
+            </div>
+
+            <!-- Horizontal Bar Search and Filter Pills -->
+            <div class="member-bar-controls">
+              <div class="member-bar-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="memberBarSearchInput" placeholder="Search person by name or role..." />
+              </div>
+              <div class="member-bar-filter-pills" id="memberBarFilterPills">
+                <button type="button" class="bar-pill active" data-filter="all">All</button>
+                <button type="button" class="bar-pill" data-filter="qa">Testers (QA)</button>
+                <button type="button" class="bar-pill" data-filter="dev">Developers</button>
+              </div>
+            </div>
+
+            <!-- Scrollable Track of Person Cards -->
+            <div class="member-scroll-track" id="memberScrollTrack">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <!-- 3. Head of the Project (Optional) -->
+          <div class="form-group mb-2">
+            <div class="d-flex justify-between align-center mb-1">
+              <label for="confProjHeadSelect" class="font-semibold m-0">
+                <i class="fa-solid fa-crown text-amber mr-1"></i> Head of the Project
+              </label>
+              <span class="badge badge-version text-2xs">Optional — Not Compulsory</span>
+            </div>
+            <select id="confProjHeadSelect" class="nexus-select w-100">
+              <option value="">-- None / No Project Head (Optional) --</option>
+              <!-- Populated via JS -->
             </select>
-          </div>
-
-          <div class="form-group mb-3">
-            <label for="confProjDescription" class="font-semibold">Description / Scope <span class="text-rose">*</span></label>
-            <textarea id="confProjDescription" class="nexus-textarea" rows="3" placeholder="Define the testing objectives, active sprint features, or defect triage focus..." required></textarea>
-          </div>
-
-          <div class="form-group mb-3">
-            <label for="confProjStatus" class="font-semibold">Initial Status</label>
-            <select id="confProjStatus" class="nexus-select w-100">
-              <option value="Active Sprint">Active Sprint</option>
-              <option value="Regression Pass">Regression Pass</option>
-              <option value="Release Candidate">Release Candidate</option>
-              <option value="In Triage">In Triage</option>
-              <option value="Hotfix Validation">Hotfix Validation</option>
-            </select>
+            <p class="text-2xs text-muted mt-1">Designate an optional lead to spearhead project triage. Can be selected from assigned team members.</p>
           </div>
         </form>
       </div>
       <div class="modal-footer justify-between">
         <button type="button" class="btn btn-ghost" id="cancelNewConferenceProjectModalBtn">Cancel</button>
         <button type="button" class="btn btn-primary" id="saveNewConferenceProjectBtn">
-          <i class="fa-solid fa-plus mr-1"></i> Create Project Channel
+          <i class="fa-solid fa-rocket mr-1"></i> Create Project Channel
         </button>
       </div>
     </div>

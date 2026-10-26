@@ -33,7 +33,10 @@ document.addEventListener("DOMContentLoaded", () => {
     otpTimerInterval: null,
     activeConferenceProjectId: null,
     conferenceProjectFilter: "all",
-    conferenceProjectSearch: ""
+    conferenceProjectSearch: "",
+    createProjectSelectedMemberIds: new Set(),
+    memberBarSearchQuery: "",
+    memberBarRoleFilter: "all"
   };
 
   // Cache DOM Elements
@@ -1940,6 +1943,14 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           rolePill = `<span class="badge badge-untested" style="background: rgba(99, 102, 241, 0.15) !important; color: #818cf8 !important; border: 1px solid rgba(99, 102, 241, 0.3) !important;"><i class="fa-solid fa-vial-circle-check"></i> ${escapeHtml(u.roleTitle || 'QA Tester')}</span>`;
         }
 
+        // Assigned Projects calculation
+        const userProjects = StorageManager.getUserProjects(u.id);
+        const projCount = userProjects.length;
+        const projectNames = userProjects.map(p => p.name).join(" • ");
+        const projectBadge = projCount > 0
+          ? `<span class="badge badge-primary font-mono text-xs" title="${escapeHtml(projectNames)}" style="cursor: help;"><i class="fa-solid fa-folder-tree mr-1"></i> ${projCount} Project${projCount === 1 ? '' : 's'}</span>`
+          : `<span class="badge badge-secondary text-xs text-muted">0 Projects</span>`;
+
         const isSelf = state.currentUser && (state.currentUser.id === u.id || (state.currentUser.email && u.email && state.currentUser.email.toLowerCase() === u.email.toLowerCase()));
         
         const actionCell = isSenior
@@ -1962,6 +1973,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             </td>
             <td><span class="font-mono text-xs text-muted">${escapeHtml(u.email)}</span></td>
             <td>${rolePill}</td>
+            <td>${projectBadge}</td>
             <td><span class="badge badge-passed"><i class="fa-solid fa-check"></i> ${u.emailVerified !== false ? '100% Verified' : 'Pending OTP'}</span></td>
             <td>${statusBadge}</td>
             <td><span class="text-xs text-muted">${escapeHtml(u.approvedBy || (u.status === 'active' ? 'Active / Auto' : 'Pending'))}</span></td>
@@ -2722,6 +2734,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           </div>
           <div class="project-card-body">
             <h3 class="project-card-title">${escapeHtml(proj.name)}</h3>
+            ${proj.headName ? `<div class="project-head-tag text-xs mb-1" style="color: #f59e0b; font-weight:600;"><i class="fa-solid fa-crown mr-1"></i> Head: <span>${escapeHtml(proj.headName)}</span></div>` : ''}
             <p class="project-card-desc">${escapeHtml(proj.description)}</p>
             <div class="project-channel-slug">
               <i class="fa-solid fa-hashtag text-primary"></i> ${escapeHtml(proj.slug || proj.id)}
@@ -2730,7 +2743,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           <div class="project-card-footer">
             <div class="project-meta-stats">
               <span title="Messages count"><i class="fa-solid fa-comments"></i> <strong>${msgCount}</strong> msgs</span>
-              <span title="Synced portals"><i class="fa-solid fa-users"></i> ${proj.participantsCount || 4}</span>
+              <span title="Assigned Team Members"><i class="fa-solid fa-users"></i> ${proj.members ? proj.members.length : (proj.participantsCount || 4)} members</span>
               <span title="Last updated"><i class="fa-regular fa-clock"></i> ${escapeHtml(proj.lastActivity || 'Live')}</span>
             </div>
             <button type="button" class="btn btn-secondary btn-xs btn-open-project-chat" onclick="event.stopPropagation(); window.openConferenceProject('${escapeHtml(proj.id)}')">
@@ -2936,18 +2949,178 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       });
     }
 
-    // + New Project button clicked -> Check Senior Dev Authorization!
+    // =========================================================================
+    // PROJECT CREATION & MEMBER PICKER MODAL (SENIOR DEV ACCESS)
+    // =========================================================================
+    window.openCreateProjectModal = function() {
+      const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+      if (!StorageManager.isSeniorDev(currentUser)) {
+        showToast("Access Denied: Project creation is strictly restricted to Senior Developers only.", "error");
+        return;
+      }
+
+      const modal = document.getElementById("newConferenceProjectModal");
+      const form = document.getElementById("newConferenceProjectForm");
+      if (form) form.reset();
+
+      // Reset member selection
+      state.createProjectSelectedMemberIds = new Set();
+      // Pre-select current senior dev if found
+      if (currentUser && currentUser.id) {
+        state.createProjectSelectedMemberIds.add(currentUser.id);
+      }
+      state.memberBarSearchQuery = "";
+      state.memberBarRoleFilter = "all";
+
+      const searchInput = document.getElementById("memberBarSearchInput");
+      if (searchInput) searchInput.value = "";
+
+      const pills = document.querySelectorAll("#memberBarFilterPills .bar-pill");
+      pills.forEach(p => {
+        if (p.getAttribute("data-filter") === "all") p.classList.add("active");
+        else p.classList.remove("active");
+      });
+
+      renderMemberScrollTrack();
+      populateProjectHeadSelect();
+
+      if (modal) modal.style.display = "flex";
+    };
+
+    window.renderMemberScrollTrack = function() {
+      const track = document.getElementById("memberScrollTrack");
+      if (!track) return;
+
+      let users = StorageManager.getUsers();
+
+      // Role filter
+      if (state.memberBarRoleFilter && state.memberBarRoleFilter !== "all") {
+        users = users.filter(u => u.role === state.memberBarRoleFilter);
+      }
+
+      // Search query
+      if (state.memberBarSearchQuery && state.memberBarSearchQuery.trim()) {
+        const q = state.memberBarSearchQuery.toLowerCase().trim();
+        users = users.filter(u => 
+          (u.name && u.name.toLowerCase().includes(q)) ||
+          (u.roleTitle && u.roleTitle.toLowerCase().includes(q)) ||
+          (u.role && u.role.toLowerCase().includes(q)) ||
+          (u.email && u.email.toLowerCase().includes(q))
+        );
+      }
+
+      // Update count indicator
+      const countBadge = document.getElementById("memberPickerSelectedCount");
+      if (countBadge) countBadge.textContent = state.createProjectSelectedMemberIds.size;
+
+      if (users.length === 0) {
+        track.innerHTML = `
+          <div class="member-track-empty text-xs text-muted p-3">
+            <i class="fa-solid fa-user-slash mr-1"></i> No team members found matching "${escapeHtml(state.memberBarSearchQuery || state.memberBarRoleFilter)}"
+          </div>
+        `;
+        return;
+      }
+
+      track.innerHTML = users.map(u => {
+        const isSelected = state.createProjectSelectedMemberIds.has(u.id);
+        const isDev = u.role === "dev";
+        const isSenior = StorageManager.isSeniorDev(u);
+        const projCount = StorageManager.getUserProjectCount(u.id);
+
+        const roleBadge = isDev
+          ? `<span class="badge badge-ai" style="font-size:10px;"><i class="fa-solid fa-code"></i> ${escapeHtml(u.roleTitle || (isSenior ? 'Senior Dev' : 'Developer'))}</span>`
+          : `<span class="badge badge-untested" style="font-size:10px;"><i class="fa-solid fa-vial-circle-check"></i> ${escapeHtml(u.roleTitle || 'QA Tester')}</span>`;
+
+        return `
+          <div class="member-picker-card ${isSelected ? 'is-selected' : ''}" onclick="window.toggleMemberSelection('${escapeHtml(u.id)}')" title="Click to ${isSelected ? 'remove' : 'add'} ${escapeHtml(u.name)}">
+            <div class="member-card-top">
+              <div class="avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}" style="width:34px; height:34px; font-size:12px; font-weight:700;">
+                ${escapeHtml(u.avatar || u.name.substring(0, 2).toUpperCase())}
+              </div>
+              <div class="member-tick-indicator ${isSelected ? 'checked' : ''}">
+                <i class="fa-solid fa-check"></i>
+              </div>
+            </div>
+            <div class="member-card-body">
+              <div class="member-name font-semibold text-sm">${escapeHtml(u.name)}</div>
+              <div class="member-role-badge mt-1">${roleBadge}</div>
+            </div>
+            <div class="member-card-footer">
+              <span class="member-projects-stat text-xs">
+                <i class="fa-solid fa-folder-tree text-muted mr-1"></i>
+                <strong>${projCount}</strong> project${projCount === 1 ? '' : 's'}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    };
+
+    window.toggleMemberSelection = function(userId) {
+      if (!userId) return;
+      if (state.createProjectSelectedMemberIds.has(userId)) {
+        state.createProjectSelectedMemberIds.delete(userId);
+      } else {
+        state.createProjectSelectedMemberIds.add(userId);
+      }
+      renderMemberScrollTrack();
+      populateProjectHeadSelect();
+    };
+
+    window.populateProjectHeadSelect = function() {
+      const headSelect = document.getElementById("confProjHeadSelect");
+      if (!headSelect) return;
+
+      const currentHeadVal = headSelect.value;
+      const users = StorageManager.getUsers();
+
+      let html = `<option value="">-- None / No Project Head (Optional) --</option>`;
+      users.forEach(u => {
+        const isSelected = state.createProjectSelectedMemberIds.has(u.id);
+        const star = isSelected ? "★ " : "";
+        const isDev = u.role === "dev";
+        const tag = isSelected ? " [Assigned Member]" : "";
+        html += `<option value="${escapeHtml(u.id)}">${star}${escapeHtml(u.name)} (${escapeHtml(u.roleTitle || (isDev ? 'Developer' : 'QA Tester'))})${tag}</option>`;
+      });
+
+      headSelect.innerHTML = html;
+      if (currentHeadVal) {
+        headSelect.value = currentHeadVal;
+      }
+    };
+
+    // Horizontal Member Picker Search and Role Filter events
+    const memberSearchInput = document.getElementById("memberBarSearchInput");
+    if (memberSearchInput) {
+      memberSearchInput.addEventListener("input", (e) => {
+        state.memberBarSearchQuery = e.target.value;
+        renderMemberScrollTrack();
+      });
+    }
+
+    const memberRolePills = document.querySelectorAll("#memberBarFilterPills .bar-pill");
+    memberRolePills.forEach(pill => {
+      pill.addEventListener("click", () => {
+        const role = pill.getAttribute("data-filter") || "all";
+        state.memberBarRoleFilter = role;
+        memberRolePills.forEach(p => p.classList.remove("active"));
+        pill.classList.add("active");
+        renderMemberScrollTrack();
+      });
+    });
+
+    // Wire Dashboard Header "+ Create Project" button
+    document.querySelectorAll("#btnDashboardCreateProject").forEach(btn => {
+      btn.addEventListener("click", () => {
+        openCreateProjectModal();
+      });
+    });
+
+    // Wire Conference "+ New Project" button
     if (newProjectBtn) {
       newProjectBtn.addEventListener("click", () => {
-        const currentUser = StorageManager.getCurrentUser() || state.currentUser;
-        if (!StorageManager.isSeniorDev(currentUser)) {
-          showToast("Access Denied: Project creation is strictly restricted to Senior Developers only.", "error");
-          return;
-        }
-
-        // Senior Dev verified: Open modal
-        if (newProjectForm) newProjectForm.reset();
-        if (newProjectModal) newProjectModal.style.display = "flex";
+        openCreateProjectModal();
       });
     }
 
@@ -2977,32 +3150,51 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         const catInput = document.getElementById("confProjCategory");
         const descInput = document.getElementById("confProjDescription");
         const statusInput = document.getElementById("confProjStatus");
+        const headSelect = document.getElementById("confProjHeadSelect");
 
         const name = nameInput ? nameInput.value.trim() : "";
         const category = catInput ? catInput.value : "Backend";
         const description = descInput ? descInput.value.trim() : "";
         const status = statusInput ? statusInput.value : "Active Sprint";
+        const headId = headSelect ? headSelect.value : "";
 
-        if (!name || !description) {
-          showToast("Please provide both a project name and description.", "warning");
+        if (!name) {
+          showToast("Please provide a project name.", "warning");
+          if (nameInput) nameInput.focus();
           return;
         }
 
         const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+        const allUsers = StorageManager.getUsers();
+        const headUser = headId ? allUsers.find(u => u.id === headId) : null;
+
+        const members = Array.from(state.createProjectSelectedMemberIds);
+
         try {
           const newProject = StorageManager.addConferenceProject({
             name,
             category,
-            description,
-            status
+            description: description || "Active engineering & QA collaboration channel",
+            status,
+            members,
+            headId: headUser ? headUser.id : "",
+            headName: headUser ? headUser.name : "",
+            headRole: headUser ? (headUser.roleTitle || headUser.role) : ""
           }, currentUser);
 
           if (newProjectModal) newProjectModal.style.display = "none";
-          showToast(`Project channel "${newProject.name}" created successfully!`, "success");
+          showToast(`Project "${newProject.name}" created! ${newProject.members.length} team members assigned & notified.`, "success");
 
-          // Open the new project channel directly
+          // Automatically navigate into the new project's chat room in Conference!
           state.activeConferenceProjectId = newProject.id;
-          renderConference();
+          if (state.currentView !== "conference") {
+            switchView("conference");
+          } else {
+            renderConference();
+          }
+
+          // If Employee Directory is visible, re-render to update member project counts
+          renderApprovalsView();
         } catch (err) {
           showToast(err.message || "Failed to create project channel.", "error");
         }
@@ -3091,6 +3283,25 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         if (state.currentView === "conference") {
           renderConference();
           showToast(`New conference project channel created: "${msg.project ? msg.project.name : 'Project'}"`, "info");
+        }
+        if (state.currentView === "dev-approvals") {
+          renderApprovalsView();
+        }
+      } else if (msg.type === "PROJECT_MEMBERS_NOTIFIED") {
+        const currentUsr = StorageManager.getCurrentUser() || state.currentUser;
+        const curId = currentUsr ? (currentUsr.id || currentUsr.username || "") : "";
+        if (msg.memberIds && (msg.memberIds.includes(curId) || (currentUsr && currentUsr.name && msg.memberIds.includes(currentUsr.name)))) {
+          const isHead = msg.headId === curId;
+          const noteText = isHead
+            ? `👑 You have been appointed Head of Project "${msg.projectName}" by ${msg.creatorName || 'Senior Dev'}!`
+            : `🎉 You have been added to project "${msg.projectName}" by ${msg.creatorName || 'Senior Dev'}!`;
+          showToast(noteText, "info");
+        }
+        if (state.currentView === "dev-approvals") {
+          renderApprovalsView();
+        }
+        if (state.currentView === "conference") {
+          renderConference();
         }
       } else if (msg.type === "CONFERENCE_CLEARED") {
         if (state.currentView === "conference") {
