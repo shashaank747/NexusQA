@@ -1531,9 +1531,33 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       if (codeSlotsState.status === "success") return;
       const k = e.key;
 
-      if (k === "Backspace") {
+      // Extract digit from key or numpad (NumLock ON or OFF)
+      let digit = null;
+      if (k && /^[0-9]$/.test(k)) {
+        digit = k;
+      } else if (e.code && /^Numpad[0-9]$/.test(e.code)) {
+        digit = e.code.replace("Numpad", "");
+      } else if (typeof e.keyCode === 'number' && e.keyCode >= 96 && e.keyCode <= 105) {
+        digit = String(e.keyCode - 96);
+      }
+
+      if (digit !== null) {
         e.preventDefault();
-        let cur = codeSlotsState.value;
+        let cur = codeSlotsState.value || "";
+        if (codeSlotsState.status === "error" || cur.length >= codeSlotsState.length) {
+          cur = "";
+        }
+        if (cur.length < codeSlotsState.length) {
+          cur += digit;
+          codeSlotsState.status = "idle";
+          setCodeSlotsValue(cur, true);
+        }
+        return;
+      }
+
+      if (k === "Backspace" || e.code === "Backspace" || k === "Delete" || e.code === "Delete") {
+        e.preventDefault();
+        let cur = codeSlotsState.value || "";
         if (cur.length > 0) {
           cur = cur.slice(0, -1);
           setCodeSlotsValue(cur, false);

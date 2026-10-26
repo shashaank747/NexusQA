@@ -464,6 +464,44 @@
       white-space: nowrap;
       border: 0;
     }
+
+    /* On-Screen Number Pad Styles */
+    .numpad-btn {
+      height: 38px;
+      border-radius: 8px;
+      background: #171717;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #f1f5f9;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+      box-shadow: inset 1px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+    .numpad-btn:hover {
+      background: #262626;
+      border-color: rgba(99, 102, 241, 0.5);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+    .numpad-btn:active {
+      transform: translateY(1px);
+      background: #1e1b4b;
+    }
+    .numpad-btn.numpad-action {
+      background: #121212;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .numpad-btn.numpad-action:hover {
+      background: #1f2937;
+      color: #e2e8f0;
+    }
   </style>
 </head>
 <body>
@@ -546,7 +584,13 @@
               <i class="fa-solid fa-shield-halved text-indigo-400 text-[11px]"></i>
               <span>6-Digit Security Passcode</span>
             </span>
-            <span class="text-[10px] text-neutral-500 font-mono tracking-wider">AUTO-VERIFIED</span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="btnToggleNumpad" class="text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20" title="Toggle On-Screen Number Pad">
+                <i class="fa-solid fa-calculator"></i>
+                <span id="toggleNumpadText">Keypad</span>
+              </button>
+              <span class="text-[10px] text-neutral-500 font-mono tracking-wider">AUTO-VERIFIED</span>
+            </div>
           </div>
 
           <!-- CodeSlots Row Container -->
@@ -604,6 +648,25 @@
               <span id="codeSlotsSrCount" class="code-slots__sr" aria-live="polite">0 of 6 digits entered</span>
             </div>
           </div>
+
+          <!-- On-Screen Number Pad (Virtual Keypad) -->
+          <div id="virtualNumpad" style="display: none; margin: 8px auto 4px auto; max-width: 270px; width: 100%;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+              <button type="button" class="numpad-btn" data-key="1">1</button>
+              <button type="button" class="numpad-btn" data-key="2">2</button>
+              <button type="button" class="numpad-btn" data-key="3">3</button>
+              <button type="button" class="numpad-btn" data-key="4">4</button>
+              <button type="button" class="numpad-btn" data-key="5">5</button>
+              <button type="button" class="numpad-btn" data-key="6">6</button>
+              <button type="button" class="numpad-btn" data-key="7">7</button>
+              <button type="button" class="numpad-btn" data-key="8">8</button>
+              <button type="button" class="numpad-btn" data-key="9">9</button>
+              <button type="button" class="numpad-btn numpad-action" data-action="clear" title="Clear All">C</button>
+              <button type="button" class="numpad-btn" data-key="0">0</button>
+              <button type="button" class="numpad-btn numpad-action" data-action="backspace" title="Delete Digit"><i class="fa-solid fa-delete-left"></i></button>
+            </div>
+          </div>
+
           <span id="otpError" class="text-[11px] text-red-400 px-3 hidden text-center"></span>
         </div>
 
@@ -753,43 +816,130 @@
         codeSlotsState.status = "idle";
         codeSlotsState.value = "";
         codeSlotsInput.value = "";
-        renderCodeSlots();
       }
+      codeSlotsState.focused = true;
       codeSlotsInput.focus();
-      const len = codeSlotsInput.value.length;
+      const len = (codeSlotsState.value || "").length;
       try {
         codeSlotsInput.setSelectionRange(len, len);
       } catch (err) {}
+      renderCodeSlots();
+    }
+
+    function extractDigitFromEvent(e) {
+      if (!e) return null;
+      // 1. Direct standard digit (from main keyboard or numpad with NumLock ON)
+      if (e.key && /^[0-9]$/.test(e.key)) return e.key;
+
+      // 2. Physical Numpad with NumLock ON or OFF (e.code is always Numpad0-Numpad9)
+      if (e.code && /^Numpad[0-9]$/.test(e.code)) {
+        return e.code.replace("Numpad", "");
+      }
+
+      // 3. Numpad keyCode / which fallback (96=0, 97=1, ..., 105=9)
+      const kc = typeof e.keyCode === 'number' ? e.keyCode : e.which;
+      if (typeof kc === 'number' && kc >= 96 && kc <= 105) {
+        return String(kc - 96);
+      }
+
+      // 4. Standard digit keyCode / which fallback (48=0, 49=1, ..., 57=9)
+      if (typeof kc === 'number' && kc >= 48 && kc <= 57 && !e.shiftKey) {
+        return String(kc - 48);
+      }
+
+      return null;
+    }
+
+    function handlePasscodeDigit(digit) {
+      if (!digit || !/^[0-9]$/.test(digit)) return;
+
+      // If in error state or full length reached, reset to start typing freshly
+      if (codeSlotsState.status === "error" || (codeSlotsState.value && codeSlotsState.value.length >= codeSlotsState.length)) {
+        codeSlotsState.value = "";
+        if (codeSlotsInput) codeSlotsInput.value = "";
+        codeSlotsState.status = "idle";
+      }
+
+      if (codeSlotsState.value.length < codeSlotsState.length) {
+        codeSlotsState.value += digit;
+        if (codeSlotsInput) codeSlotsInput.value = codeSlotsState.value;
+        codeSlotsState.active = Math.min(codeSlotsState.value.length, codeSlotsState.length - 1);
+        codeSlotsState.status = "idle";
+        renderCodeSlots();
+        if (authInlineAlert) authInlineAlert.classList.add("hidden");
+
+        if (codeSlotsState.value.length === codeSlotsState.length) {
+          // Auto submit when 6 digits are complete and username is present
+          if (userInput && userInput.value.trim()) {
+            handleFormSubmit(new Event("submit"));
+          }
+        }
+      }
+    }
+
+    function handlePasscodeBackspace() {
+      if (codeSlotsState.status === "error") {
+        codeSlotsState.value = "";
+        if (codeSlotsInput) codeSlotsInput.value = "";
+        codeSlotsState.status = "idle";
+        codeSlotsState.active = 0;
+      } else if (codeSlotsState.value.length > 0) {
+        codeSlotsState.value = codeSlotsState.value.slice(0, -1);
+        if (codeSlotsInput) codeSlotsInput.value = codeSlotsState.value;
+        codeSlotsState.active = Math.max(0, codeSlotsState.value.length);
+        codeSlotsState.status = "idle";
+      }
+      renderCodeSlots();
     }
 
     if (codeSlotsInput) {
-      // Keydown handler: ensures pressing numbers always works even if previously at 6 digits or after error
+      // Keydown handler: unconditionally captures physical numpad, top row numbers, backspace, and navigation
       codeSlotsInput.addEventListener("keydown", (e) => {
-        // If typing a digit (0-9)
-        if (/^[0-9]$/.test(e.key)) {
-          // If in error state or input is already full (6 digits), reset so the new digit starts fresh
-          if (codeSlotsState.status === "error" || (codeSlotsInput.value.length >= codeSlotsState.length && codeSlotsInput.selectionStart === codeSlotsInput.selectionEnd)) {
-            codeSlotsInput.value = "";
-            codeSlotsState.value = "";
-            codeSlotsState.status = "idle";
-            renderCodeSlots();
-          }
-          if (authInlineAlert) authInlineAlert.classList.add("hidden");
+        const digit = extractDigitFromEvent(e);
+        if (digit !== null) {
+          e.preventDefault();
+          e.stopPropagation();
+          handlePasscodeDigit(digit);
+          return;
         }
 
-        // If Backspace
-        if (e.key === "Backspace") {
-          if (codeSlotsState.status === "error") {
-            e.preventDefault();
-            codeSlotsInput.value = "";
-            codeSlotsState.value = "";
-            codeSlotsState.status = "idle";
-            renderCodeSlots();
-            return;
-          }
+        // Backspace, Delete or Numpad Decimal (Delete)
+        if (e.key === "Backspace" || e.code === "Backspace" || e.key === "Delete" || e.code === "Delete" || (e.code === "NumpadDecimal" && e.key === "Delete")) {
+          e.preventDefault();
+          e.stopPropagation();
+          handlePasscodeBackspace();
+          return;
+        }
+
+        // Enter or NumpadEnter
+        if (e.key === "Enter" || e.code === "Enter" || e.code === "NumpadEnter") {
+          e.preventDefault();
+          e.stopPropagation();
+          handleFormSubmit(new Event("submit"));
+          return;
+        }
+
+        // Arrow navigation
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          codeSlotsState.active = Math.max(0, codeSlotsState.active - 1);
+          renderCodeSlots();
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          codeSlotsState.active = Math.min(codeSlotsState.length - 1, codeSlotsState.value.length);
+          renderCodeSlots();
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          codeSlotsState.active = 0;
+          renderCodeSlots();
+        } else if (e.key === "End") {
+          e.preventDefault();
+          codeSlotsState.active = Math.min(codeSlotsState.length - 1, codeSlotsState.value.length);
+          renderCodeSlots();
         }
       });
 
+      // Input event backup for autofill, mobile paste, etc.
       codeSlotsInput.addEventListener("input", (e) => {
         const clean = (e.target.value || "").replace(/\D/g, "").slice(0, codeSlotsState.length);
         codeSlotsState.value = clean;
@@ -799,7 +949,6 @@
         renderCodeSlots();
 
         if (clean.length === codeSlotsState.length) {
-          // Auto submit when 6 digits are complete and username is present
           if (userInput && userInput.value.trim()) {
             handleFormSubmit(new Event("submit"));
           }
@@ -837,10 +986,7 @@
       });
 
       codeSlotsInput.addEventListener("click", () => {
-        const len = codeSlotsInput.value.length;
-        try {
-          codeSlotsInput.setSelectionRange(len, len);
-        } catch (err) {}
+        focusPasscodeInput();
       });
 
       // Click on any slot or wrapper reliably focuses input
@@ -853,7 +999,7 @@
       clickTargets.forEach(target => {
         if (target) {
           target.addEventListener("click", (e) => {
-            if (e.target !== codeSlotsInput) {
+            if (e.target !== codeSlotsInput && !e.target.closest("#virtualNumpad") && !e.target.closest("#btnToggleNumpad")) {
               focusPasscodeInput();
             }
           });
@@ -869,14 +1015,80 @@
       }
     }
 
+    // On-Screen Keypad Toggle & Button Click handlers
+    const btnToggleNumpad = document.getElementById("btnToggleNumpad");
+    const virtualNumpad = document.getElementById("virtualNumpad");
+    const toggleNumpadText = document.getElementById("toggleNumpadText");
+
+    if (btnToggleNumpad && virtualNumpad) {
+      btnToggleNumpad.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isHidden = virtualNumpad.style.display === "none";
+        virtualNumpad.style.display = isHidden ? "block" : "none";
+        if (toggleNumpadText) toggleNumpadText.textContent = isHidden ? "Hide Pad" : "Keypad";
+        btnToggleNumpad.classList.toggle("bg-indigo-500/20", isHidden);
+        focusPasscodeInput();
+      });
+
+      virtualNumpad.querySelectorAll(".numpad-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const key = btn.getAttribute("data-key");
+          const action = btn.getAttribute("data-action");
+
+          if (key !== null) {
+            handlePasscodeDigit(key);
+          } else if (action === "backspace") {
+            handlePasscodeBackspace();
+          } else if (action === "clear") {
+            codeSlotsState.value = "";
+            if (codeSlotsInput) codeSlotsInput.value = "";
+            codeSlotsState.status = "idle";
+            codeSlotsState.active = 0;
+            renderCodeSlots();
+          }
+          focusPasscodeInput();
+        });
+      });
+    }
+
     if (userInput) {
       userInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
+        if (e.key === "Enter" || e.code === "NumpadEnter") {
           e.preventDefault();
           focusPasscodeInput();
         }
       });
     }
+
+    // Global Keydown Fallback: if user types numbers on the physical Number Pad anywhere on the login form
+    window.addEventListener("keydown", (e) => {
+      const activeEl = document.activeElement;
+      // If typing in another real input like username or full name
+      if (activeEl && (activeEl.id === "userInput" || activeEl.id === "fullNameInput" || activeEl.tagName === "SELECT")) {
+        if ((e.key === "Enter" || e.code === "NumpadEnter" || e.key === "ArrowDown") && activeEl.id === "userInput") {
+          e.preventDefault();
+          focusPasscodeInput();
+        }
+        return;
+      }
+
+      // If activeEl is codeSlotsInput, its own keydown handler processes it
+      if (activeEl === codeSlotsInput) return;
+
+      // If focus is anywhere else on the card or window, route digits to passcode
+      const digit = extractDigitFromEvent(e);
+      if (digit !== null) {
+        e.preventDefault();
+        focusPasscodeInput();
+        handlePasscodeDigit(digit);
+      } else if (e.key === "Backspace" || e.code === "Backspace") {
+        focusPasscodeInput();
+        handlePasscodeBackspace();
+      }
+    });
 
     /**
      * Switch UI between Login, Sign Up, and Forgot Password modes
