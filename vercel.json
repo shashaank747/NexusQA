@@ -2,6 +2,14 @@
   "version": 2,
   "name": "nexus-qa-platform",
   "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/tester", "destination": "/tester.html" },
     { "source": "/qa", "destination": "/tester.html" },

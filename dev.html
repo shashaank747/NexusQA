@@ -18,7 +18,146 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.4">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.5">
+
+  <style>
+    /* Direct Private Chat Modal Fixes */
+    .private-chat-dialog {
+      max-width: 660px !important;
+      width: 95% !important;
+      border-radius: var(--radius-xl, 18px) !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      background: var(--bg-modal, #11192d) !important;
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5), 0 0 30px rgba(99, 102, 241, 0.12) !important;
+    }
+    body.light-theme .private-chat-dialog {
+      background: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.18), 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+    }
+    .private-chat-dialog .modal-header {
+      padding: 1rem 1.4rem !important;
+      border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08)) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      background: var(--bg-card, #0f172a) !important;
+      flex-shrink: 0 !important;
+    }
+    body.light-theme .private-chat-dialog .modal-header {
+      background: #ffffff !important;
+      border-color: #e2e8f0 !important;
+    }
+    .private-chat-dialog .modal-body {
+      padding: 0 !important;
+      margin: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      height: 520px !important;
+      max-height: 75vh !important;
+      overflow: hidden !important;
+      background: var(--bg-card-subtle, #0a0f1d) !important;
+      position: relative !important;
+    }
+    body.light-theme .private-chat-dialog .modal-body {
+      background: #f8fafc !important;
+    }
+    .private-chat-security-banner {
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.65rem !important;
+      padding: 0.65rem 1.25rem !important;
+      background: rgba(16, 185, 129, 0.08) !important;
+      border-bottom: 1px solid rgba(16, 185, 129, 0.2) !important;
+      font-size: 0.74rem !important;
+      color: #a7f3d0 !important;
+      line-height: 1.4 !important;
+      flex-shrink: 0 !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    body.light-theme .private-chat-security-banner {
+      background: #ecfdf5 !important;
+      border-bottom: 1px solid #a7f3d0 !important;
+      color: #065f46 !important;
+    }
+    .private-chat-stream {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      padding: 1.25rem !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 1rem !important;
+      background: transparent !important;
+      scrollbar-width: thin !important;
+    }
+    .private-chat-quick-chips {
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.45rem !important;
+      padding: 0.55rem 1.25rem !important;
+      background: rgba(0, 0, 0, 0.2) !important;
+      border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.07)) !important;
+      overflow-x: auto !important;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
+      scrollbar-width: none !important;
+    }
+    body.light-theme .private-chat-quick-chips {
+      background: #f8fafc !important;
+      border-color: #e2e8f0 !important;
+    }
+    .private-chat-input-area {
+      padding: 0.8rem 1.25rem !important;
+      background: var(--bg-card, #0f172a) !important;
+      border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.08)) !important;
+      flex-shrink: 0 !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    body.light-theme .private-chat-input-area {
+      background: #ffffff !important;
+      border-color: #e2e8f0 !important;
+    }
+    .private-chat-input {
+      width: 100% !important;
+      min-width: 0 !important;
+      padding: 0.68rem 1.15rem !important;
+      border-radius: var(--radius-full, 9999px) !important;
+      background: var(--bg-input, #090d16) !important;
+      border: 1px solid var(--border-color, #334155) !important;
+      color: #f8fafc !important;
+      font-size: 0.85rem !important;
+      box-sizing: border-box !important;
+    }
+    body.light-theme .private-chat-input {
+      background: #f8fafc !important;
+      border-color: #cbd5e1 !important;
+      color: #0f172a !important;
+    }
+    .modal-close-btn, .btn-icon {
+      width: 32px !important;
+      height: 32px !important;
+      border-radius: var(--radius-md, 8px) !important;
+      border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+      background: transparent !important;
+      color: var(--text-muted, #94a3b8) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+    }
+    body.light-theme .modal-close-btn, body.light-theme .btn-icon {
+      background: transparent !important;
+      border-color: #e2e8f0 !important;
+      color: #64748b !important;
+    }
+  </style>
 
   <!-- Instant Strict Auth & Developer Role Guard -->
   <script>
@@ -1360,9 +1499,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <!-- Scripts -->
-  <script src="js/data.js?v=1.0.4"></script>
-  <script src="js/supabase.js?v=1.0.4"></script>
-  <script src="js/storage.js?v=1.0.4"></script>
-  <script src="js/app.js?v=1.0.4"></script>
+  <script src="js/data.js?v=1.0.5"></script>
+  <script src="js/supabase.js?v=1.0.5"></script>
+  <script src="js/storage.js?v=1.0.5"></script>
+  <script src="js/app.js?v=1.0.5"></script>
 </body>
 </html>
