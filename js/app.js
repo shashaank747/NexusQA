@@ -2370,6 +2370,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     if (DOM.currentCrumb) DOM.currentCrumb.textContent = titles[viewName] || "Error 404";
     if (DOM.sidebar) DOM.sidebar.classList.remove("mobile-open");
+    const bDrop = document.getElementById("sidebarBackdrop");
+    if (bDrop) bDrop.classList.remove("active");
 
     const vp = document.getElementById("viewViewport");
     if (vp) vp.scrollTop = 0;
@@ -2424,10 +2426,20 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   const secondaryClose = document.getElementById("secondaryCollapseBtn");
   if (secondaryClose) secondaryClose.addEventListener("click", toggleSidebarCollapse);
 
+  const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+  if (sidebarBackdrop) {
+    sidebarBackdrop.addEventListener("click", () => {
+      if (DOM.sidebar) DOM.sidebar.classList.remove("mobile-open");
+      sidebarBackdrop.classList.remove("active");
+    });
+  }
+
   on(DOM.menuToggleBtn, "click", () => {
     if (DOM.sidebar) {
       if (window.innerWidth <= 768) {
-        DOM.sidebar.classList.toggle("mobile-open");
+        const isOpen = DOM.sidebar.classList.toggle("mobile-open");
+        const backdrop = document.getElementById("sidebarBackdrop");
+        if (backdrop) backdrop.classList.toggle("active", isOpen);
       } else {
         const isNowCollapsed = DOM.sidebar.classList.toggle("collapsed");
         document.body.classList.toggle("sidebar-collapsed", isNowCollapsed);

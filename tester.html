@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.7">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.8">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -203,6 +203,10 @@
     <!-- Top Workspace Bar (Fixed permanently at top with Logo on Top-Left) -->
     <header class="topbar">
       <div class="topbar-left">
+        <!-- Mobile Navigation Menu Toggle Button -->
+        <button type="button" class="icon-btn mobile-menu-toggle" id="menuToggleBtn" title="Toggle Navigation Menu" aria-label="Toggle navigation">
+          <i class="fa-solid fa-bars"></i>
+        </button>
         <!-- Fixed Logo on Top-Left (Outside and Above Sidebar) -->
         <div class="brand-logo fixed-top-logo">
           <div class="logo-icon">
@@ -272,6 +276,8 @@
 
     <!-- Workspace Body: Horizontal Flex Container for Dual Sidebar & Main Content -->
     <div class="workspace-body">
+      <!-- Mobile Sidebar Backdrop Overlay -->
+      <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
       <!-- Dual Sidebar (App Sidebar 4 Pattern: Primary Icon Rail + Contextual Secondary Panel) -->
       <aside class="dual-sidebar" id="sidebar">
@@ -2277,6 +2283,6 @@
   <script src="js/supabase.js?v=1.0.7"></script>
   <script src="js/storage.js?v=1.0.7"></script>
   <script src="js/qa-assistant.js?v=1.0.5"></script>
-  <script src="js/app.js?v=1.0.7"></script>
+  <script src="js/app.js?v=1.0.8"></script>
 </body>
 </html>

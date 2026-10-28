@@ -10177,3 +10177,528 @@ body.light-theme .private-chat-input {
 
 
 
+
+
+/* ==========================================================================
+   COMPREHENSIVE RESPONSIVE MOBILE OPTIMIZATION (PHONES & TABLETS)
+   ========================================================================== */
+
+/* Universal Mobile Overflow Prevention */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Sidebar Backdrop Overlay */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 990;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.sidebar-backdrop.active {
+  display: block;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Breakpoint: Tablets & Mobile (<= 768px) */
+@media (max-width: 768px) {
+  /* Topbar Header */
+  .topbar {
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: 0 0.75rem !important;
+    gap: 0.5rem !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  .topbar-left {
+    gap: 0.5rem !important;
+    flex-shrink: 0 !important;
+    align-items: center !important;
+  }
+
+  .mobile-menu-toggle {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--border-color) !important;
+    background: var(--bg-card-subtle) !important;
+    color: var(--text-normal) !important;
+    font-size: 1rem !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    transition: background 0.15s ease;
+  }
+
+  .mobile-menu-toggle:hover,
+  .mobile-menu-toggle:active {
+    background: rgba(99, 102, 241, 0.15) !important;
+    color: #6366f1 !important;
+  }
+
+  .fixed-top-logo {
+    width: auto !important;
+    min-width: 0 !important;
+    gap: 0.4rem !important;
+  }
+
+  .fixed-top-logo .logo-icon {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .fixed-top-logo .brand-text h2 {
+    font-size: 1.05rem !important;
+    margin: 0 !important;
+  }
+
+  .fixed-top-logo .badge-version {
+    display: none !important;
+  }
+
+  .topbar-center {
+    display: none !important;
+  }
+
+  .topbar-right {
+    gap: 0.4rem !important;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
+    align-items: center !important;
+  }
+
+  #createQuickBtn {
+    height: 34px !important;
+    padding: 0.35rem 0.65rem !important;
+    font-size: 0.75rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  #createQuickBtnLabel {
+    display: none !important;
+  }
+
+  .theme-toggle-wrapper {
+    transform: scale(0.75) !important;
+    transform-origin: center right !important;
+    margin: 0 !important;
+  }
+
+  .topbar-divider,
+  .topbar-divider-v {
+    display: none !important;
+  }
+
+  .topbar-user-profile {
+    padding: 0.2rem !important;
+    gap: 0.3rem !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .topbar-user-profile .user-details {
+    display: none !important;
+  }
+
+  .topbar-user-profile #logoutBtn {
+    margin: 0 !important;
+    padding: 4px !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Dual Sidebar as Off-Canvas Drawer */
+  .dual-sidebar,
+  .sidebar,
+  #sidebar {
+    position: fixed !important;
+    top: 56px !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: calc(100vh - 56px) !important;
+    max-height: calc(100vh - 56px) !important;
+    width: 290px !important;
+    max-width: 85vw !important;
+    z-index: 1000 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+    background: var(--bg-sidebar) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    overflow: hidden !important;
+  }
+
+  .dual-sidebar.mobile-open,
+  .sidebar.mobile-open,
+  #sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
+
+  /* Workspace Body & Main Content */
+  .workspace-body {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: calc(100vh - 56px) !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  .main-content {
+    width: 100% !important;
+    max-width: 100vw !important;
+    padding: 1rem 0.75rem 3rem 0.75rem !important;
+    overflow-x: hidden !important;
+    flex: 1 !important;
+  }
+
+  /* View Header & Action Controls */
+  .view-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .view-title {
+    font-size: 1.35rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .view-subtitle {
+    font-size: 0.8rem !important;
+  }
+
+  .view-actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  .view-actions .btn {
+    flex: 1 1 auto !important;
+    min-width: 110px !important;
+    justify-content: center !important;
+    font-size: 0.8rem !important;
+    padding: 0.45rem 0.75rem !important;
+  }
+
+  .filter-bar,
+  .controls-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.6rem !important;
+  }
+
+  .filter-bar .search-box,
+  .filter-bar input,
+  .controls-bar input,
+  .controls-bar select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* KPI Summary Grids */
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+
+  .kpi-card {
+    padding: 0.85rem 1rem !important;
+  }
+
+  .kpi-title {
+    font-size: 0.75rem !important;
+  }
+
+  .kpi-value {
+    font-size: 1.5rem !important;
+  }
+
+  /* 2-Column Responsive Collapse */
+  .dashboard-grid-2col,
+  .ai-workspace-grid,
+  .profile-settings-grid,
+  .settings-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Responsive Tables */
+  .table-responsive {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    display: block !important;
+    margin-bottom: 0.5rem !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .nexus-table {
+    min-width: 620px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .nexus-table th,
+  .nexus-table td {
+    padding: 0.6rem 0.75rem !important;
+    white-space: nowrap !important;
+  }
+
+  .nexus-table td div {
+    white-space: normal !important;
+  }
+
+  /* Bug Triage Kanban Board */
+  .kanban-board {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.25rem !important;
+    overflow-x: visible !important;
+  }
+
+  .kanban-column {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .kanban-card {
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* Conference Channels & Live Chat Layout */
+  .conference-projects-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  .conference-project-card {
+    padding: 1rem !important;
+  }
+
+  .conference-chat-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: calc(100vh - 160px) !important;
+  }
+
+  .conference-room-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+    padding: 0.85rem !important;
+  }
+
+  .conference-room-header .view-actions {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+  }
+
+  .conference-room-header .view-actions .btn {
+    font-size: 0.75rem !important;
+    padding: 0.35rem 0.6rem !important;
+    flex: 1 1 auto !important;
+    min-width: 90px !important;
+  }
+
+  .conference-messages-container {
+    padding: 0.75rem 0.5rem !important;
+    max-height: 52vh !important;
+    overflow-y: auto !important;
+  }
+
+  .conference-msg-bubble {
+    max-width: 88% !important;
+    padding: 0.65rem 0.85rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  .conference-input-area {
+    padding: 0.65rem 0.5rem !important;
+  }
+
+  .conference-input-row {
+    display: flex !important;
+    gap: 0.4rem !important;
+  }
+
+  .conference-quick-prompts {
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    padding-bottom: 0.35rem !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .quick-prompt-pill {
+    font-size: 0.72rem !important;
+    padding: 0.25rem 0.55rem !important;
+  }
+
+  .meeting-room-view {
+    padding: 0.75rem 0.5rem !important;
+  }
+
+  .meeting-video-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  .meeting-controls-bar,
+  .dock-bar {
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+    justify-content: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Test Repository & Suites (in tester.html) */
+  .repository-layout {
+    flex-direction: column !important;
+    height: auto !important;
+    gap: 1rem !important;
+  }
+
+  .suites-sidebar {
+    display: block !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-height: 220px !important;
+    overflow-y: auto !important;
+  }
+
+  .test-cases-main {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .test-cases-grid,
+  .suites-grid-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Modals & Dialogs (Bottom Sheet on Mobile) */
+  .modal-overlay,
+  .nexus-modal-overlay {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+
+  .modal-dialog,
+  .modal-card,
+  .private-chat-dialog {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0 !important;
+    margin: 0 !important;
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+    padding: 1.25rem 1rem !important;
+  }
+
+  .form-row-2,
+  .form-grid-2,
+  .grid-2col {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse !important;
+    gap: 0.5rem !important;
+  }
+
+  .modal-footer .btn {
+    width: 100% !important;
+  }
+
+  /* Pending Approvals Card in Mobile */
+  .pending-approval-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .pending-approval-actions {
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+
+  .pending-approval-actions .btn {
+    flex: 1 1 auto !important;
+  }
+}
+
+/* Breakpoint: Small Mobile Phones (<= 480px) */
+@media (max-width: 480px) {
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .auth-portal-container {
+    padding: 0.75rem !important;
+  }
+
+  .auth-card {
+    padding: 1.5rem 1rem !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  .auth-nav-tabs {
+    gap: 0.2rem !important;
+    padding: 0.2rem !important;
+  }
+
+  .auth-tab-btn {
+    font-size: 0.75rem !important;
+    padding: 0.5rem 0.35rem !important;
+  }
+
+  .code-slots__row {
+    gap: 0.35rem !important;
+    justify-content: center !important;
+  }
+
+  .code-slots__slot {
+    width: 40px !important;
+    height: 46px !important;
+    font-size: 1.2rem !important;
+  }
+
+  .meeting-video-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
