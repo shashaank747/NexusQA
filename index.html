@@ -709,9 +709,9 @@
 
   <!-- Supabase & Storage SDKs -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/data.js?v=1.0.11"></script>
-  <script src="js/supabase.js?v=1.0.11"></script>
-  <script src="js/storage.js?v=1.0.11"></script>
+  <script src="js/data.js?v=1.0.12"></script>
+  <script src="js/supabase.js?v=1.0.12"></script>
+  <script src="js/storage.js?v=1.0.12"></script>
 
   <script>
     // State machine
@@ -1300,16 +1300,8 @@
             users.push(newUser);
             StorageManager.saveUsers(users);
             StorageManager.broadcast("TESTER_APPROVAL_REQUESTED", { user: newUser });
-            if (typeof SupabaseManager !== "undefined") {
-              try {
-                if (!SupabaseManager.isConnected && SupabaseManager.init) {
-                  SupabaseManager.init().then(() => {
-                    SupabaseManager.syncUserUpsert(newUser);
-                  }).catch(() => {});
-                } else if (SupabaseManager.syncUserUpsert) {
-                  SupabaseManager.syncUserUpsert(newUser).catch(() => {});
-                }
-              } catch (e) {}
+            if (typeof SupabaseManager !== "undefined" && SupabaseManager.syncUserUpsert) {
+              SupabaseManager.syncUserUpsert(newUser);
             }
 
             codeSlotsState.status = "idle";

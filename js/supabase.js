@@ -34,26 +34,37 @@ const SupabaseManager = {
   },
 
   /**
+   * Get or create Supabase client synchronously
+   */
+  getClient() {
+    if (this.client) return this.client;
+    if (typeof window !== "undefined" && typeof window.supabase !== "undefined") {
+      const config = this.getConfig();
+      if (config.url && config.anonKey) {
+        try {
+          this.client = window.supabase.createClient(config.url, config.anonKey);
+          this.isConnected = true;
+        } catch(e) {
+          console.warn("Error creating Supabase client:", e);
+        }
+      }
+    }
+    return this.client;
+  },
+
+  /**
    * Initialize Supabase Client
    */
   async init() {
-    const config = this.getConfig();
-    if (!config.url || !config.anonKey) {
+    const client = this.getClient();
+    if (!client) {
       this.isConnected = false;
-      this.client = null;
-      return false;
-    }
-
-    if (typeof window.supabase === "undefined") {
-      console.warn("Supabase SDK not loaded in window.");
       return false;
     }
 
     try {
-      this.client = window.supabase.createClient(config.url, config.anonKey);
-      
       // Test basic connection by querying suites table
-      const { data, error } = await this.client.from("nexus_suites").select("id").limit(1);
+      const { data, error } = await client.from("nexus_suites").select("id").limit(1);
       if (error && error.code !== "PGRST116") {
         console.warn("Supabase connection check warning:", error.message);
         this.isConnected = false;
@@ -165,14 +176,22 @@ const SupabaseManager = {
     if (payload.eventType === "INSERT") {
       const exists = users.some(u => u.id === payload.new.id || (u.email && u.email.toLowerCase() === (payload.new.email || "").toLowerCase()));
       if (!exists) {
-        users.push(this.mapUserFromDB(payload.new));
+        const mapped = this.mapUserFromDB(payload.new);
+        users.push(mapped);
         StorageManager.saveUsers(users, true);
+        if (mapped.status === "pending_approval") {
+          StorageManager.broadcast("TESTER_APPROVAL_REQUESTED", { user: mapped });
+        }
       }
     } else if (payload.eventType === "UPDATE") {
       const idx = users.findIndex(u => u.id === payload.new.id || (u.email && u.email.toLowerCase() === (payload.new.email || "").toLowerCase()));
       if (idx !== -1) {
-        users[idx] = this.mapUserFromDB(payload.new);
+        const mapped = this.mapUserFromDB(payload.new);
+        users[idx] = mapped;
         StorageManager.saveUsers(users, true);
+        if (mapped.status === "pending_approval") {
+          StorageManager.broadcast("TESTER_APPROVAL_REQUESTED", { user: mapped });
+        }
       }
     } else if (payload.eventType === "DELETE") {
       const filtered = users.filter(u => u.id !== payload.old.id);
@@ -470,10 +489,11 @@ const SupabaseManager = {
   },
 
   async pushUsersToSupabase(usersList) {
-    if (!this.client || !this.isConnected || !usersList || usersList.length === 0) return;
+    const client = this.getClient();
+    if (!client || !usersList || usersList.length === 0) return;
     try {
       const payload = usersList.map(u => this.mapUserToDB(u));
-      await this.client.from("nexus_users").upsert(payload);
+      await client.from("nexus_users").upsert(payload);
     } catch(e) {
       console.warn("Error syncing users to Supabase:", e);
     }
@@ -483,9 +503,12 @@ const SupabaseManager = {
   // Async Mutations with Supabase Sync
   // -------------------------------------------------------------
   async syncUserUpsert(user) {
-    if (this.client && this.isConnected) {
+    const client = this.getClient();
+    if (client && user) {
       try {
-        await this.client.from("nexus_users").upsert(this.mapUserToDB(user));
+        const payload = this.mapUserToDB(user);
+        const { error } = await client.from("nexus_users").upsert(payload);
+        if (error) console.warn("Supabase user upsert error:", error);
       } catch(e) { console.warn("Supabase user upsert error:", e); }
     }
   },

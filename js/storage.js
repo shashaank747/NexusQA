@@ -914,24 +914,13 @@ const StorageManager = {
       return true;
     }
 
-    // Strict reject of junior developers
-    if (level === "junior" || title.includes("junior")) {
-      return false;
-    }
-
     // Dedicated hardcoded dev account or senior titles
     if ((user.username && user.username.toLowerCase() === "dev") || email === "dev@nexusqa.io") {
       return true;
     }
 
-    return (
-      level === "senior" || 
-      level === "lead" || 
-      title.includes("lead") || 
-      title.includes("senior") || 
-      title.includes("principal") ||
-      title.includes("architect")
-    );
+    // All developers in Developer Command Center have management approval rights
+    return true;
   },
 
   updateUser(userId, updatedFields) {
@@ -1357,6 +1346,9 @@ const StorageManager = {
       user.approvedBy = approverName || "Senior Developer";
       user.approvedAt = new Date().toISOString().replace("T", " ").substring(0, 16);
       this.saveUsers(users);
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.syncUserUpsert) {
+        SupabaseManager.syncUserUpsert(user);
+      }
       this.broadcast("TESTER_APPROVED", { user });
       return user;
     }
@@ -1375,6 +1367,9 @@ const StorageManager = {
     if (user) {
       user.status = "rejected";
       this.saveUsers(users);
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.syncUserUpsert) {
+        SupabaseManager.syncUserUpsert(user);
+      }
       this.broadcast("TESTER_REJECTED", { user });
       return user;
     }

@@ -1966,7 +1966,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.devApprovalAlertBanner) {
       DOM.devApprovalAlertBanner.style.display = pending.length > 0 ? "flex" : "none";
       if (DOM.devApprovalAlertCount) {
-        DOM.devApprovalAlertCount.textContent = `${pending.length} Tester${pending.length > 1 ? 's' : ''}`;
+        DOM.devApprovalAlertCount.textContent = `${pending.length} Member${pending.length > 1 ? 's' : ''}`;
       }
     }
   }
@@ -1998,11 +1998,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     const pendingApprovalsCard = document.getElementById("pendingApprovalsCard");
     if (pendingApprovalsCard) {
-      pendingApprovalsCard.style.display = (isSenior && pending.length > 0) ? "block" : "none";
+      pendingApprovalsCard.style.display = "block";
     }
 
     // Pending Requests Container
-    if (DOM.pendingApprovalsListContainer && isSenior) {
+    if (DOM.pendingApprovalsListContainer) {
       if (pending.length === 0) {
         DOM.pendingApprovalsListContainer.innerHTML = `
           <div class="empty-state p-4 text-center">
@@ -2579,6 +2579,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   // DEVELOPER PORTAL LOGIC
   // =========================================================================
   function renderDevDashboard() {
+    updateDevApprovalsBadge();
     const defects = StorageManager.getDefects();
     const currentUser = state.currentUser || { name: "Marcus Vance" };
 
