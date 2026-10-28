@@ -3689,7 +3689,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         headerRole.className = `badge ${isDev ? 'badge-primary' : 'badge-untested'} text-2xs`;
         headerRole.innerHTML = `<i class="fa-solid ${isDev ? 'fa-code' : 'fa-vial-circle-check'} mr-1"></i> ${escapeHtml(targetUser.roleTitle || (isDev ? 'Lead Developer' : 'QA Lead'))}`;
       }
-      if (projectName) projectName.textContent = `#${project.slug || project.id} (${project.name})`;
+      if (projectName) {
+        projectName.innerHTML = `<span class="font-mono text-primary font-bold">#${escapeHtml(project.slug || project.id)}</span> <span class="text-muted font-normal">(${escapeHtml(project.name)})</span>`;
+      }
       if (bannerTargetName) bannerTargetName.textContent = targetUser.name;
       if (typingIndicator) typingIndicator.style.display = "none";
       if (typingText) typingText.textContent = `${targetUser.name} is typing...`;
@@ -3724,11 +3726,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       const messages = StorageManager.getPrivateMessages(pId, curUserId, targetUserId);
 
       if (messages.length === 0) {
+        const tUser = StorageManager.getUsers().find(u => u.id === targetUserId) ||
+                      StorageManager.getProjectAllottedUsers(pId).find(u => u.id === targetUserId);
+        const tName = tUser ? tUser.name : "your teammate";
         container.innerHTML = `
-          <div class="empty-private-chat text-center py-5">
-            <i class="fa-solid fa-lock text-emerald mb-2" style="font-size: 32px; opacity: 0.85;"></i>
+          <div class="empty-private-chat text-center">
+            <div class="empty-private-chat-icon-wrap">
+              <i class="fa-solid fa-lock text-emerald" style="font-size: 24px;"></i>
+            </div>
             <h4 class="font-bold text-sm text-heading m-0">Confidential Direct Message</h4>
-            <p class="text-xs text-muted mt-1">This thread is completely private between you and your teammate for this project.</p>
+            <p class="text-xs text-muted mt-2 mb-0">This thread is completely private between you and <strong class="text-heading">${escapeHtml(tName)}</strong> within this project scope.</p>
+            <p class="text-2xs text-muted mt-1 mb-0">Select a quick suggestion chip below or type a message to start communicating.</p>
           </div>
         `;
         return;
