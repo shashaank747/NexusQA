@@ -430,6 +430,47 @@ const StorageManager = {
     return newProj;
   },
 
+  deleteConferenceProject(projectId, user) {
+    if (!user) user = this.getCurrentUser();
+    if (!this.isSeniorDev(user)) {
+      throw new Error("Unauthorized: Project deletion is strictly restricted to Senior Developers only.");
+    }
+
+    const projects = this.getConferenceProjects();
+    const targetProj = projects.find(p => p.id === projectId);
+    if (!targetProj) {
+      throw new Error("Project not found.");
+    }
+
+    const filtered = projects.filter(p => p.id !== projectId);
+    localStorage.setItem(STORAGE_KEYS.CONFERENCE_PROJECTS, JSON.stringify(filtered));
+
+    // Clean up associated conference messages
+    try {
+      const allMsgs = this.getConferenceMessages();
+      const keptMsgs = allMsgs.filter(m => (m.projectId || "proj-1") !== projectId);
+      localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify(keptMsgs));
+    } catch (e) {}
+
+    // Clean up associated private messages
+    try {
+      const privRaw = localStorage.getItem(STORAGE_KEYS.PRIVATE_MESSAGES);
+      if (privRaw) {
+        const privMsgs = JSON.parse(privRaw);
+        if (Array.isArray(privMsgs)) {
+          const keptPriv = privMsgs.filter(m => m.projectId !== projectId);
+          localStorage.setItem(STORAGE_KEYS.PRIVATE_MESSAGES, JSON.stringify(keptPriv));
+        }
+      }
+    } catch (e) {}
+
+    // Clean up legacy key if any
+    localStorage.removeItem(STORAGE_KEYS.CONFERENCE_MESSAGES + "_" + projectId);
+
+    this.broadcast("CONFERENCE_PROJECT_DELETED", { projectId, project: targetProj });
+    return targetProj;
+  },
+
   notifyProjectMembers(project, creator) {
     if (!project || !Array.isArray(project.members)) return;
     const allUsers = this.getUsers();

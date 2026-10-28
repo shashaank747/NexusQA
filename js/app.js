@@ -1114,23 +1114,60 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     updateUserProfileUI();
   }
 
+  function getUserPhoto(user) {
+    if (!user) return "";
+    if (user.photo && typeof user.photo === "string" && user.photo.trim() !== "") {
+      return user.photo.trim();
+    }
+    if (user.avatar && typeof user.avatar === "string" && (user.avatar.startsWith("data:") || user.avatar.startsWith("http") || user.avatar.startsWith("/"))) {
+      return user.avatar.trim();
+    }
+    return "";
+  }
+  window.getUserPhoto = getUserPhoto;
+
+  function renderUserAvatar(user, options = {}) {
+    if (!user) return "";
+    const size = options.size || 28;
+    const fontSize = options.fontSize || (size <= 28 ? 11 : (size <= 34 ? 12 : (size <= 38 ? 13 : 15)));
+    const fontWeight = options.fontWeight || 700;
+    const extraClasses = options.extraClasses || "";
+    const isDev = user.role === "dev" || (user.devLevel && user.devLevel !== "");
+    const defaultClass = isDev ? "avatar-dev" : "avatar-qa";
+    const name = user.name || "User";
+    const initials = escapeHtml(
+      user.avatar && typeof user.avatar === "string" && !user.avatar.startsWith("data:") && !user.avatar.startsWith("http") && !user.avatar.startsWith("/")
+        ? user.avatar
+        : (name ? name.split(/\s+/).filter(Boolean).map(n => n[0]).join("").substring(0, 2).toUpperCase() : (isDev ? "DV" : "QA"))
+    );
+    const photo = getUserPhoto(user);
+
+    if (photo) {
+      return `<div class="avatar-ring ${defaultClass} has-photo ${extraClasses}" style="width:${size}px; height:${size}px; min-width:${size}px; min-height:${size}px; max-width:${size}px; max-height:${size}px; flex-shrink:0; aspect-ratio:1/1; border-radius:50%; overflow:hidden; padding:0; display:flex; align-items:center; justify-content:center;" title="${escapeHtml(name)}"><img src="${escapeHtml(photo)}" alt="${escapeHtml(name)}" class="avatar-img" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;" onerror="this.style.display='none'; this.parentElement.textContent='${initials}';"></div>`;
+    }
+
+    return `<div class="avatar-ring ${defaultClass} ${extraClasses}" style="width:${size}px; height:${size}px; min-width:${size}px; min-height:${size}px; max-width:${size}px; max-height:${size}px; flex-shrink:0; aspect-ratio:1/1; border-radius:50%; font-size:${fontSize}px; font-weight:${fontWeight};" title="${escapeHtml(name)}">${initials}</div>`;
+  }
+  window.renderUserAvatar = renderUserAvatar;
+
   function updateUserProfileUI() {
     const user = state.currentUser;
     if (!user) return;
 
-    if (user.photo) {
+    const photo = getUserPhoto(user);
+    if (photo) {
       if (DOM.userAvatarRing) {
-        DOM.userAvatarRing.style.backgroundImage = `url("${user.photo}")`;
-        DOM.userAvatarRing.style.backgroundSize = "cover";
-        DOM.userAvatarRing.style.backgroundPosition = "center";
+        DOM.userAvatarRing.innerHTML = `<img src="${escapeHtml(photo)}" alt="${escapeHtml(user.name || '')}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;">`;
+        DOM.userAvatarRing.style.backgroundImage = "";
+        DOM.userAvatarRing.style.padding = "0";
+        DOM.userAvatarRing.style.overflow = "hidden";
       }
-      if (DOM.userAvatarInitials) DOM.userAvatarInitials.textContent = "";
     } else {
       if (DOM.userAvatarRing) {
+        DOM.userAvatarRing.innerHTML = `<span class="avatar-initials" id="userAvatarInitials">${escapeHtml(user.avatar || (user.name ? user.name.split(/\s+/).filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'QA'))}</span>`;
         DOM.userAvatarRing.style.backgroundImage = "";
         DOM.userAvatarRing.style.background = user.color || (user.role === 'dev' ? '#10b981' : '#6366f1');
       }
-      if (DOM.userAvatarInitials) DOM.userAvatarInitials.textContent = user.avatar || user.name.substring(0, 2).toUpperCase();
     }
 
     if (DOM.userNameLabel) DOM.userNameLabel.textContent = user.name;
@@ -1933,7 +1970,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
               return `
                 <div class="pending-approval-card">
                   <div class="pending-req-header">
-                    <div class="avatar-ring ${avatarClass}" style="width:38px; height:38px; font-size:13px; font-weight:700;">${escapeHtml(user.avatar || user.name.substring(0, 2).toUpperCase())}</div>
+                    ${renderUserAvatar(user, { size: 38, fontSize: 13 })}
                     <div class="pending-req-meta">
                       <h4>${escapeHtml(user.name)}</h4>
                       <span class="req-email">${escapeHtml(user.email)}</span>
@@ -2014,7 +2051,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           <tr>
             <td>
               <div class="d-flex align-center gap-2">
-                <div class="avatar-ring ${avatarClass}" style="width:28px; height:28px; font-size:11px;">${escapeHtml(u.avatar || u.name.substring(0, 2).toUpperCase())}</div>
+                ${renderUserAvatar(u, { size: 28, fontSize: 11 })}
                 <div>
                   <strong>${escapeHtml(u.name)}</strong>
                   ${isSelf ? '<span class="badge badge-version" style="font-size:9px; margin-left:4px; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981;">You</span>' : ''}
@@ -2061,6 +2098,26 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.editMemberIdBadge) DOM.editMemberIdBadge.textContent = "ID: " + user.id;
     if (DOM.editMemberAuthBadge) {
       DOM.editMemberAuthBadge.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Senior Dev (${escapeHtml(state.currentUser ? state.currentUser.name : "Lead Dev")})`;
+    }
+
+    state.tempEditMemberPhoto = user.photo || "";
+    const previewImg = document.getElementById("editMemberAvatarImg");
+    const previewInitials = document.getElementById("editMemberAvatarInitials");
+    const removePhotoBtn = document.getElementById("editMemberRemovePhotoBtn");
+    const photoInput = document.getElementById("editMemberPhotoInput");
+    if (photoInput) photoInput.value = "";
+
+    if (state.tempEditMemberPhoto) {
+      if (previewImg) { previewImg.src = state.tempEditMemberPhoto; previewImg.style.display = "block"; }
+      if (previewInitials) previewInitials.style.display = "none";
+      if (removePhotoBtn) removePhotoBtn.style.display = "inline-flex";
+    } else {
+      if (previewImg) { previewImg.src = ""; previewImg.style.display = "none"; }
+      if (previewInitials) {
+        previewInitials.style.display = "inline";
+        previewInitials.textContent = user.avatar || (user.name ? user.name.substring(0, 2).toUpperCase() : "QA");
+      }
+      if (removePhotoBtn) removePhotoBtn.style.display = "none";
     }
 
     const isSelf = state.currentUser && state.currentUser.id === user.id;
@@ -2150,15 +2207,58 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       devLevel: isJuniorDev ? "junior" : "",
       roleTitle: roleTitle || (isJuniorDev ? "Junior Developer" : "QA Tester"),
       status,
-      approvedBy
+      approvedBy,
+      photo: state.tempEditMemberPhoto !== undefined ? state.tempEditMemberPhoto : (user.photo || "")
     });
 
     if (updated) {
       if (DOM.editMemberModal) DOM.editMemberModal.style.display = "none";
+      if (state.currentUser && state.currentUser.id === updated.id) {
+        state.currentUser = updated;
+        updateUserProfileUI();
+      }
       showToast(`Updated details for ${updated.name}!`, "success");
       renderDevApprovals();
     }
   });
+
+  // Edit Team Member Photo Upload
+  const editMemberPhotoInput = document.getElementById("editMemberPhotoInput");
+  if (editMemberPhotoInput) {
+    editMemberPhotoInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        showToast("Image size exceeds 2MB limit. Please upload a smaller photo.", "error");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        state.tempEditMemberPhoto = event.target.result;
+        const previewImg = document.getElementById("editMemberAvatarImg");
+        const previewInitials = document.getElementById("editMemberAvatarInitials");
+        const removePhotoBtn = document.getElementById("editMemberRemovePhotoBtn");
+        if (previewImg) { previewImg.src = state.tempEditMemberPhoto; previewImg.style.display = "block"; }
+        if (previewInitials) previewInitials.style.display = "none";
+        if (removePhotoBtn) removePhotoBtn.style.display = "inline-flex";
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const editMemberRemovePhotoBtn = document.getElementById("editMemberRemovePhotoBtn");
+  if (editMemberRemovePhotoBtn) {
+    editMemberRemovePhotoBtn.addEventListener("click", () => {
+      state.tempEditMemberPhoto = "";
+      const editInput = document.getElementById("editMemberPhotoInput");
+      if (editInput) editInput.value = "";
+      const previewImg = document.getElementById("editMemberAvatarImg");
+      const previewInitials = document.getElementById("editMemberAvatarInitials");
+      if (previewImg) { previewImg.src = ""; previewImg.style.display = "none"; }
+      if (previewInitials) previewInitials.style.display = "inline";
+      editMemberRemovePhotoBtn.style.display = "none";
+    });
+  }
 
   window.approveTester = function(userId) {
     const user = StorageManager.approveTesterRequest(userId, (state.currentUser && state.currentUser.name) || "Chhotu Monster");
@@ -2177,6 +2277,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }
     }
   };
+
+  const renderApprovalsView = function() {
+    if (typeof renderDevApprovals === "function") renderDevApprovals();
+  };
+  window.renderDevApprovals = renderDevApprovals;
+  window.renderApprovalsView = renderApprovalsView;
+
 
   function renderActiveView() {
     if (state.currentPortal === "dev") {
@@ -2674,6 +2781,36 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     renderConference();
   };
 
+  window.deleteProjectPrompt = function(projectId) {
+    const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+    if (!StorageManager.isSeniorDev(currentUser)) {
+      showToast("Access Denied: Project deletion is strictly restricted to Senior Developers only.", "error");
+      return;
+    }
+
+    const project = StorageManager.getConferenceProjectById(projectId);
+    if (!project) {
+      showToast("Project not found.", "error");
+      return;
+    }
+
+    const confirmMsg = `Are you sure you want to permanently delete project "${project.name}" (#${project.slug || project.id})?\n\nThis will remove the channel, its allotted members mapping, and all chat history for everyone.`;
+    if (confirm(confirmMsg)) {
+      try {
+        StorageManager.deleteConferenceProject(projectId, currentUser);
+        showToast(`Project "${project.name}" deleted successfully!`, "info");
+        
+        if (state.activeConferenceProjectId === projectId) {
+          window.closeConferenceProject();
+        } else {
+          renderConferenceProjects();
+        }
+      } catch (err) {
+        showToast(err.message || "Failed to delete project.", "error");
+      }
+    }
+  };
+
   function renderConference() {
     const viewConference = document.getElementById("view-conference");
     if (!viewConference) return;
@@ -2802,9 +2939,16 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
               <span title="Assigned Team Members"><i class="fa-solid fa-users"></i> ${proj.members ? proj.members.length : (proj.participantsCount || 4)} members</span>
               <span title="Last updated"><i class="fa-regular fa-clock"></i> ${escapeHtml(proj.lastActivity || 'Live')}</span>
             </div>
-            <button type="button" class="btn btn-secondary btn-xs btn-open-project-chat" onclick="event.stopPropagation(); window.openConferenceProject('${escapeHtml(proj.id)}')">
-              <span>Open Chat</span> <i class="fa-solid fa-arrow-right ml-1"></i>
-            </button>
+            <div class="d-flex align-center gap-1">
+              ${isSenior ? `
+                <button type="button" class="btn btn-outline-danger btn-xs btn-delete-project" onclick="event.stopPropagation(); window.deleteProjectPrompt('${escapeHtml(proj.id)}')" title="Delete Project (Senior Developer Only)">
+                  <i class="fa-solid fa-trash-can mr-1"></i> Delete
+                </button>
+              ` : ''}
+              <button type="button" class="btn btn-secondary btn-xs btn-open-project-chat" onclick="event.stopPropagation(); window.openConferenceProject('${escapeHtml(proj.id)}')">
+                <span>Open Chat</span> <i class="fa-solid fa-arrow-right ml-1"></i>
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -2855,6 +2999,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           const cls = isDev ? "dev-avatar" : "qa-avatar";
           const initials = escapeHtml(m.avatar || (m.name ? m.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "US"));
           const title = `${escapeHtml(m.name)} (${escapeHtml(m.roleTitle || (isDev ? 'Developer' : 'QA Tester'))})${m.isHead ? ' - 👑 Project Head' : ''}`;
+          const photo = getUserPhoto(m);
+          if (photo) {
+            return `<span class="p-avatar ${cls}" title="${title}" style="padding:0; overflow:hidden;"><img src="${escapeHtml(photo)}" alt="${escapeHtml(m.name)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;"></span>`;
+          }
           return `<span class="p-avatar ${cls}" title="${title}">${initials}</span>`;
         }).join("");
         const overflowHtml = allottedMembers.length > 4
@@ -2876,18 +3024,34 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const nameEl = document.getElementById("conferenceUserName");
     const roleBadgeEl = document.getElementById("conferenceUserRoleBadge");
 
-    if (avatarEl) avatarEl.textContent = currentUser.avatar || (currentUser.role === "dev" ? "DV" : "QA");
+    const curPhoto = getUserPhoto(currentUser);
+    if (avatarEl) {
+      if (curPhoto) {
+        avatarEl.innerHTML = `<img src="${escapeHtml(curPhoto)}" alt="You" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;">`;
+        avatarEl.style.padding = "0";
+        avatarEl.style.overflow = "hidden";
+      } else {
+        avatarEl.innerHTML = "";
+        avatarEl.textContent = currentUser.avatar || (currentUser.role === "dev" ? "DV" : "QA");
+      }
+    }
     if (nameEl) nameEl.textContent = `Posting as ${currentUser.name || (currentUser.role === "dev" ? "Developer" : "QA Tester")}`;
     if (roleBadgeEl) {
       roleBadgeEl.textContent = currentUser.roleTitle || (currentUser.role === "dev" ? "Developer" : "QA Tester");
       roleBadgeEl.className = `badge ${currentUser.role === "dev" ? "badge-dev" : "badge-qa"}`;
     }
 
-    // Senior Developer restriction for Clear Room button
+    // Senior Developer restrictions for Clear Room & Delete Project buttons
     const isSenior = StorageManager.isSeniorDev(currentUser);
     const clearBtnEl = document.getElementById("conferenceClearBtn");
     if (clearBtnEl) {
       clearBtnEl.style.display = isSenior ? "inline-flex" : "none";
+    }
+
+    const deleteBtnEl = document.getElementById("conferenceDeleteProjectBtn");
+    if (deleteBtnEl) {
+      deleteBtnEl.style.display = isSenior ? "inline-flex" : "none";
+      deleteBtnEl.onclick = () => window.deleteProjectPrompt(projectId);
     }
 
     const messages = StorageManager.getConferenceMessages(projectId);
@@ -2903,6 +3067,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       return;
     }
 
+    const allRosterUsers = StorageManager.getUsers();
+
     container.innerHTML = messages.map(msg => {
       const isDev = msg.senderRole === "dev" || (msg.roleTitle && msg.roleTitle.toLowerCase().includes("dev"));
       const isMe = (currentUser && currentUser.id && msg.senderId === currentUser.id) ||
@@ -2913,6 +3079,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       const roleBadgeText = msg.roleTitle || (isDev ? "Developer" : "QA Tester");
       const avatarLetters = msg.senderAvatar || (isDev ? "DV" : "QA");
 
+      const senderUser = allRosterUsers.find(u => u.id === msg.senderId || (u.name && u.name.toLowerCase() === (msg.senderName || "").toLowerCase()) || (u.email && u.email === msg.senderId));
+      const senderPhoto = getUserPhoto(senderUser) || msg.senderPhoto;
+      const avatarContent = senderPhoto
+        ? `<img src="${escapeHtml(senderPhoto)}" alt="${escapeHtml(msg.senderName)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;" onerror="this.style.display='none'; this.parentElement.innerHTML='<span>${escapeHtml(avatarLetters)}</span>';">`
+        : `<span>${escapeHtml(avatarLetters)}</span>`;
+
       // Format text: convert #BUG-xxx or #TC-xxx to interactive pill tags
       let formattedText = escapeHtml(msg.text);
       formattedText = formattedText.replace(/#?(BUG-\d+)/gi, '<span class="conference-tag-pill conference-bug-pill" onclick="window.handleConferenceTagClick(\'$1\')" title="View Defect $1"><i class="fa-solid fa-bug"></i> $1</span>');
@@ -2920,8 +3092,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
       return `
         <div class="conference-msg-row ${roleClass} ${isMe ? 'is-me' : ''}" data-msg-id="${msg.id}">
-          <div class="conference-msg-avatar ${roleClass}">
-            <span>${escapeHtml(avatarLetters)}</span>
+          <div class="conference-msg-avatar ${roleClass}" style="overflow:hidden; padding:0; display:flex; align-items:center; justify-content:center;">
+            ${avatarContent}
           </div>
           <div class="conference-msg-content">
             <div class="conference-msg-header">
@@ -3143,9 +3315,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                 <i class="fa-solid fa-crown text-amber"></i> Designated Project Head
               </div>
               <div class="head-card-content">
-                <div class="avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}" style="width: 44px; height: 44px; font-size: 15px; font-weight: 700;">
-                  ${escapeHtml(headMember.avatar || headMember.name.substring(0, 2).toUpperCase())}
-                </div>
+                ${renderUserAvatar(headMember, { size: 44, fontSize: 15 })}
                 <div class="head-info flex-1">
                   <div class="d-flex align-center gap-2">
                     <span class="head-name font-bold text-sm">${escapeHtml(headMember.name)}</span>
@@ -3222,9 +3392,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         return `
           <div class="allotted-member-row ${member.isHead ? 'is-head-row' : ''}">
             <div class="member-row-left">
-              <div class="avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}" style="width: 38px; height: 38px; font-size: 13px; font-weight: 700;">
-                ${escapeHtml(member.avatar || member.name.substring(0, 2).toUpperCase())}
-              </div>
+              ${renderUserAvatar(member, { size: 38, fontSize: 13 })}
               <div class="member-row-details">
                 <div class="d-flex align-center gap-2">
                   <span class="member-row-name font-semibold text-sm">${escapeHtml(member.name)}</span>
@@ -3343,9 +3511,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         return `
           <div class="member-picker-card ${isSelected ? 'is-selected' : ''}" onclick="window.toggleMemberSelection('${escapeHtml(u.id)}')" title="Click to ${isSelected ? 'remove' : 'add'} ${escapeHtml(u.name)}">
             <div class="member-card-top">
-              <div class="avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}" style="width:34px; height:34px; font-size:12px; font-weight:700;">
-                ${escapeHtml(u.avatar || u.name.substring(0, 2).toUpperCase())}
-              </div>
+              ${renderUserAvatar(u, { size: 34, fontSize: 12 })}
               <div class="member-tick-indicator ${isSelected ? 'checked' : ''}">
                 <i class="fa-solid fa-check"></i>
               </div>
@@ -3682,7 +3848,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       const isDev = targetUser.role === "dev";
       if (headerAvatar) {
         headerAvatar.className = `avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}`;
-        headerAvatar.textContent = targetUser.avatar || targetUser.name.substring(0, 2).toUpperCase();
+        const photo = getUserPhoto(targetUser);
+        if (photo) {
+          headerAvatar.innerHTML = `<img src="${escapeHtml(photo)}" alt="${escapeHtml(targetUser.name)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;">`;
+          headerAvatar.style.padding = "0";
+          headerAvatar.style.overflow = "hidden";
+        } else {
+          headerAvatar.innerHTML = "";
+          headerAvatar.textContent = targetUser.avatar || targetUser.name.substring(0, 2).toUpperCase();
+        }
       }
       if (headerName) headerName.textContent = targetUser.name;
       if (headerRole) {
@@ -3742,18 +3916,18 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         return;
       }
 
+      const allPrivateChatUsers = StorageManager.getUsers();
+
       container.innerHTML = messages.map(msg => {
         const isOutbound = msg.senderId === curUserId || (curUser.email && msg.senderId === curUser.email);
         const isDev = msg.senderRole === "dev";
-        const senderInitial = msg.senderAvatar || (msg.senderName ? msg.senderName.substring(0, 2).toUpperCase() : "U");
+        const senderUser = !isOutbound
+          ? (allPrivateChatUsers.find(u => u.id === msg.senderId || (u.email && u.email === msg.senderId) || (u.name && u.name === msg.senderName)) || targetUser)
+          : curUser;
 
         return `
           <div class="private-msg-row ${isOutbound ? 'outbound' : 'inbound'}">
-            ${!isOutbound ? `
-              <div class="avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}" style="width: 32px; height: 32px; font-size: 11px; font-weight: 700; flex-shrink: 0;">
-                ${escapeHtml(senderInitial)}
-              </div>
-            ` : ''}
+            ${!isOutbound ? renderUserAvatar(senderUser || { role: isDev ? 'dev' : 'qa', name: msg.senderName }, { size: 32, fontSize: 11 }) : ''}
             <div class="private-msg-bubble-wrap">
               <div class="private-msg-bubble">
                 ${escapeHtml(msg.text)}
@@ -3765,11 +3939,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                 ${isOutbound ? '<i class="fa-solid fa-check-double text-primary text-2xs ml-1" title="Delivered"></i>' : ''}
               </div>
             </div>
-            ${isOutbound ? `
-              <div class="avatar-ring ${curUser.role === 'dev' ? 'avatar-dev' : 'avatar-qa'}" style="width: 32px; height: 32px; font-size: 11px; font-weight: 700; flex-shrink: 0;">
-                ${escapeHtml(curUser.avatar || curUser.name.substring(0, 2).toUpperCase())}
-              </div>
-            ` : ''}
+            ${isOutbound ? renderUserAvatar(curUser, { size: 32, fontSize: 11 }) : ''}
           </div>
         `;
       }).join("");
@@ -4025,12 +4195,20 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           const grad = avatarGradients[idx % avatarGradients.length];
           const initials = escapeHtml(m.avatar || (m.name ? m.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "US"));
 
+          const photo = getUserPhoto(m);
+
           return `
             <div class="meeting-video-tile ${isSpeaking ? 'is-speaking' : ''} ${isMe ? 'is-me' : ''}" id="tile-member-${m.id || idx}">
               <div class="tile-avatar-wrap">
-                <div class="tile-avatar" style="background: ${grad};">
-                  ${initials}
-                </div>
+                ${photo ? `
+                  <div class="tile-avatar" style="overflow:hidden; padding:0; border-radius:50%;">
+                    <img src="${escapeHtml(photo)}" alt="${escapeHtml(m.name)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;">
+                  </div>
+                ` : `
+                  <div class="tile-avatar" style="background: ${grad};">
+                    ${initials}
+                  </div>
+                `}
                 <div class="tile-audio-wave" style="display: ${isSpeaking ? 'flex' : 'none'};">
                   <span class="wave-bar"></span>
                   <span class="wave-bar"></span>
@@ -4273,6 +4451,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         if (state.currentView === "conference") {
           renderConference();
           showToast(`New conference project channel created: "${msg.project ? msg.project.name : 'Project'}"`, "info");
+        }
+        if (state.currentView === "dev-approvals") {
+          renderApprovalsView();
+        }
+      } else if (msg.type === "CONFERENCE_PROJECT_DELETED") {
+        if (state.currentView === "conference") {
+          if (state.activeConferenceProjectId === msg.payload?.projectId) {
+            window.closeConferenceProject();
+          } else {
+            renderConference();
+          }
         }
         if (state.currentView === "dev-approvals") {
           renderApprovalsView();

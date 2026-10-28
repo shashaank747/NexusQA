@@ -257,6 +257,7 @@ const SupabaseManager = {
   // Data Mappers (DB <-> Client)
   // -------------------------------------------------------------
   mapUserToDB(u) {
+    const photo = u.photo && typeof u.photo === "string" && u.photo.trim() !== "" ? u.photo.trim() : null;
     return {
       id: u.id,
       name: u.name,
@@ -264,7 +265,7 @@ const SupabaseManager = {
       username: u.username || u.email,
       role: u.role || "qa",
       role_title: u.roleTitle || (u.role === "dev" ? "Senior Developer" : "QA Tester"),
-      avatar: u.avatar || (u.name ? u.name.slice(0, 2).toUpperCase() : "QA"),
+      avatar: photo || u.avatar || (u.name ? u.name.slice(0, 2).toUpperCase() : "QA"),
       color: u.color || (u.role === "dev" ? "#10b981" : "#6366f1"),
       status: u.status || "active",
       email_verified: u.emailVerified !== false,
@@ -273,6 +274,8 @@ const SupabaseManager = {
   },
 
   mapUserFromDB(row) {
+    const isPhotoUrl = row.avatar && typeof row.avatar === "string" && (row.avatar.startsWith("data:") || row.avatar.startsWith("http") || row.avatar.startsWith("/"));
+    const initials = row.name ? row.name.split(/\s+/).filter(Boolean).map(n => n[0]).join("").slice(0, 2).toUpperCase() : "QA";
     return {
       id: row.id,
       name: row.name,
@@ -280,7 +283,8 @@ const SupabaseManager = {
       username: row.username || row.email,
       role: row.role || "qa",
       roleTitle: row.role_title || (row.role === "dev" ? "Senior Developer" : "QA Tester"),
-      avatar: row.avatar || (row.name ? row.name.slice(0, 2).toUpperCase() : "QA"),
+      avatar: isPhotoUrl ? initials : (row.avatar || initials),
+      photo: isPhotoUrl ? row.avatar : (row.photo || ""),
       color: row.color || (row.role === "dev" ? "#10b981" : "#6366f1"),
       status: row.status || "active",
       emailVerified: row.email_verified !== false,
@@ -413,8 +417,21 @@ const SupabaseManager = {
         StorageManager.saveDefects(mapped, false);
       }
       if (usersRes.data && usersRes.data.length > 0) {
-        const mapped = usersRes.data.map(u => this.mapUserFromDB(u));
-        StorageManager.saveUsers(mapped, true);
+        const localUsers = StorageManager.getUsers();
+        const mappedRemote = usersRes.data.map(u => this.mapUserFromDB(u));
+        // Safe merge: keep local users that have pending status or local photos not yet in remote
+        const merged = [...mappedRemote];
+        localUsers.forEach(lu => {
+          const remoteIdx = merged.findIndex(ru => ru.id === lu.id || (ru.email && lu.email && ru.email.toLowerCase() === lu.email.toLowerCase()));
+          if (remoteIdx === -1) {
+            merged.push(lu);
+          } else {
+            if (lu.photo && !merged[remoteIdx].photo) {
+              merged[remoteIdx].photo = lu.photo;
+            }
+          }
+        });
+        StorageManager.saveUsers(merged, true);
       }
 
       return true;

@@ -1456,6 +1456,9 @@
         sessionStorage.removeItem("nexus_auth_error");
         showInlineError(notice);
       }
+      if (typeof StorageManager !== "undefined" && StorageManager.init) {
+        StorageManager.init();
+      }
     });
   </script>
 </body>

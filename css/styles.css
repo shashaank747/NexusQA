@@ -1311,7 +1311,12 @@ body.light-theme .badge-new {
 .avatar-ring {
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-full);
+  min-width: 28px;
+  min-height: 28px;
+  flex-shrink: 0;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  box-sizing: border-box;
   background: linear-gradient(135deg, #6366f1, #a855f7);
   display: flex;
   align-items: center;
@@ -1319,6 +1324,34 @@ body.light-theme .badge-new {
   font-weight: 700;
   font-size: 0.7rem;
   color: #fff;
+  overflow: hidden;
+  position: relative;
+}
+
+.avatar-ring img,
+.avatar-ring .avatar-img {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+  display: block !important;
+}
+
+#teamRosterTable .avatar-ring,
+.nexus-table .avatar-ring {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  flex-shrink: 0 !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  padding: 0 !important;
 }
 
 .user-details {

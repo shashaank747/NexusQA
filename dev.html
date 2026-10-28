@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.5">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.7">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -853,7 +853,8 @@
                   <i class="fa-solid fa-users text-primary"></i> <span>Allotted Team (<strong id="chatProjectMemberCount">0</strong>)</span>
                 </button>
                 <button type="button" class="btn btn-secondary btn-sm" id="conferenceRefreshBtn" title="Refresh messages"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
-                <button type="button" class="btn btn-ghost btn-sm" id="conferenceClearBtn" title="Clear chat history for this project (Senior Developers only)" style="display: none;"><i class="fa-solid fa-trash-can"></i> Clear Room</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="conferenceClearBtn" title="Clear chat history for this project (Senior Developers only)" style="display: none;"><i class="fa-solid fa-broom"></i> Clear Room</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="conferenceDeleteProjectBtn" title="Permanently Delete this Project Channel (Senior Developers only)" style="display: none;"><i class="fa-solid fa-trash-can mr-1"></i> Delete Project</button>
               </div>
             </div>
 
@@ -948,6 +949,26 @@
         <form id="editMemberForm">
           <input type="hidden" id="editMemberId">
           
+          <!-- Member Profile Photo -->
+          <div class="form-group mb-3">
+            <label class="form-label font-semibold">Profile Photo</label>
+            <div class="d-flex align-center gap-3 mt-1">
+              <div id="editMemberAvatarPreview" class="avatar-ring avatar-dev" style="width: 52px; height: 52px; min-width: 52px; min-height: 52px; border-radius: 50%; font-size: 16px; font-weight: 700; overflow: hidden; position: relative; padding: 0;">
+                <span id="editMemberAvatarInitials">MV</span>
+                <img id="editMemberAvatarImg" src="" alt="Avatar" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+              </div>
+              <div class="d-flex flex-column align-start gap-1">
+                <label class="btn btn-secondary btn-xs" style="cursor: pointer; margin:0;" for="editMemberPhotoInput">
+                  <i class="fa-solid fa-camera mr-1"></i> Upload Photo
+                </label>
+                <input type="file" id="editMemberPhotoInput" accept="image/*" style="display: none;">
+                <button type="button" class="btn btn-ghost btn-xs text-rose" id="editMemberRemovePhotoBtn" style="display: none; padding: 2px 6px;">
+                  <i class="fa-solid fa-trash mr-1"></i> Remove Photo
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="form-group">
             <label for="editMemberName">Full Name <span class="text-rose">*</span></label>
             <input type="text" id="editMemberName" class="nexus-input" required placeholder="e.g. Alex Morgan">
@@ -1500,8 +1521,8 @@
   
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.5"></script>
-  <script src="js/supabase.js?v=1.0.5"></script>
-  <script src="js/storage.js?v=1.0.5"></script>
-  <script src="js/app.js?v=1.0.5"></script>
+  <script src="js/supabase.js?v=1.0.7"></script>
+  <script src="js/storage.js?v=1.0.7"></script>
+  <script src="js/app.js?v=1.0.7"></script>
 </body>
 </html>
