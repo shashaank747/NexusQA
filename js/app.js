@@ -3127,11 +3127,16 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       if (devTabCountEl) devTabCountEl.textContent = devCount;
       if (totalCountTextEl) totalCountTextEl.textContent = `${totalCount} team member${totalCount === 1 ? '' : 's'} allotted to this project room`;
 
+      // Current user for self check
+      const curUser = StorageManager.getCurrentUser() || state.currentUser;
+      const curUserId = curUser ? (curUser.id || curUser.email) : null;
+
       // Render Project Head Highlight Section
       if (headSection) {
         const headMember = allMembers.find(m => m.isHead);
         if (headMember) {
           const isDev = headMember.role === "dev";
+          const isSelf = curUser && (headMember.id === curUserId || (curUser.email && headMember.email && curUser.email.toLowerCase() === headMember.email.toLowerCase()));
           headSection.innerHTML = `
             <div class="project-head-highlight-card">
               <div class="head-card-badge">
@@ -3141,7 +3146,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                 <div class="avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}" style="width: 44px; height: 44px; font-size: 15px; font-weight: 700;">
                   ${escapeHtml(headMember.avatar || headMember.name.substring(0, 2).toUpperCase())}
                 </div>
-                <div class="head-info">
+                <div class="head-info flex-1">
                   <div class="d-flex align-center gap-2">
                     <span class="head-name font-bold text-sm">${escapeHtml(headMember.name)}</span>
                     <span class="badge ${isDev ? 'badge-primary' : 'badge-untested'} text-2xs">
@@ -3153,6 +3158,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                     <span class="mx-2">•</span>
                     <i class="fa-solid fa-diagram-project mr-1 text-primary"></i> ${StorageManager.getUserProjectCount(headMember.id)} projects active
                   </div>
+                </div>
+                <div class="head-actions ml-auto">
+                  ${isSelf ? `
+                    <span class="badge badge-subtle text-xs"><i class="fa-solid fa-user mr-1"></i> You</span>
+                  ` : `
+                    <button type="button" class="btn-private-chat-action head-chat-btn" data-member-id="${escapeHtml(headMember.id)}" data-project-id="${escapeHtml(pId)}" title="Start 1-on-1 private chat with Project Head">
+                      <i class="fa-solid fa-comment-dots"></i> <span>Private Chat</span>
+                    </button>
+                  `}
                 </div>
               </div>
             </div>
@@ -3203,6 +3217,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         const isSenior = StorageManager.isSeniorDev(member);
         const activeProjectsCount = StorageManager.getUserProjectCount(member.id);
         const roleLabel = member.roleTitle || (isDev ? (isSenior ? 'Senior Developer' : 'Developer') : 'QA Engineer');
+        const isSelf = curUser && (member.id === curUserId || (curUser.email && member.email && curUser.email.toLowerCase() === member.email.toLowerCase()));
 
         return `
           <div class="allotted-member-row ${member.isHead ? 'is-head-row' : ''}">
@@ -3229,6 +3244,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
               <span class="badge badge-passed ml-2" title="Allotted and active on this project">
                 <i class="fa-solid fa-circle status-dot-online mr-1"></i> Allotted
               </span>
+              ${isSelf ? `
+                <span class="badge badge-subtle text-xs ml-2"><i class="fa-solid fa-user mr-1"></i> You</span>
+              ` : `
+                <button type="button" class="btn-private-chat-action ml-2" data-member-id="${escapeHtml(member.id)}" data-project-id="${escapeHtml(pId)}" title="Start 1-on-1 private chat with ${escapeHtml(member.name)}">
+                  <i class="fa-solid fa-comment-dots"></i> <span>Private Chat</span>
+                </button>
+              `}
             </div>
           </div>
         `;
@@ -3621,6 +3643,287 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
 
     // =========================================================================
+    // PRIVATE 1-ON-1 PROJECT CHAT MODAL LOGIC & CONTROLS
+    // =========================================================================
+    state.activePrivateChatProjectId = null;
+    state.activePrivateChatTargetUserId = null;
+    let privateChatTypingTimeout = null;
+
+    window.openPrivateChatModal = function(projectId, targetUserId) {
+      const pId = projectId || state.activeConferenceProjectId || "proj-1";
+      const project = StorageManager.getConferenceProjectById(pId);
+      if (!project) return;
+
+      const allUsers = StorageManager.getUsers();
+      const targetUser = allUsers.find(u => u.id === targetUserId) ||
+                         StorageManager.getProjectAllottedUsers(pId).find(u => u.id === targetUserId);
+      if (!targetUser) {
+        showToast("Team member profile not found.", "error");
+        return;
+      }
+
+      state.activePrivateChatProjectId = pId;
+      state.activePrivateChatTargetUserId = targetUserId;
+
+      // Close allotted members modal while private chat is active
+      const membersModal = document.getElementById("projectMembersModal");
+      if (membersModal) membersModal.style.display = "none";
+
+      const modal = document.getElementById("privateChatModal");
+      const headerAvatar = document.getElementById("privateChatHeaderAvatar");
+      const headerName = document.getElementById("privateChatHeaderName");
+      const headerRole = document.getElementById("privateChatHeaderRole");
+      const projectName = document.getElementById("privateChatProjectName");
+      const bannerTargetName = document.getElementById("privateChatBannerTargetName");
+      const typingIndicator = document.getElementById("privateChatTypingIndicator");
+      const typingText = document.getElementById("privateChatTypingText");
+      const input = document.getElementById("privateChatInput");
+
+      const isDev = targetUser.role === "dev";
+      if (headerAvatar) {
+        headerAvatar.className = `avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}`;
+        headerAvatar.textContent = targetUser.avatar || targetUser.name.substring(0, 2).toUpperCase();
+      }
+      if (headerName) headerName.textContent = targetUser.name;
+      if (headerRole) {
+        headerRole.className = `badge ${isDev ? 'badge-primary' : 'badge-untested'} text-2xs`;
+        headerRole.innerHTML = `<i class="fa-solid ${isDev ? 'fa-code' : 'fa-vial-circle-check'} mr-1"></i> ${escapeHtml(targetUser.roleTitle || (isDev ? 'Lead Developer' : 'QA Lead'))}`;
+      }
+      if (projectName) projectName.textContent = `#${project.slug || project.id} (${project.name})`;
+      if (bannerTargetName) bannerTargetName.textContent = targetUser.name;
+      if (typingIndicator) typingIndicator.style.display = "none";
+      if (typingText) typingText.textContent = `${targetUser.name} is typing...`;
+      if (input) {
+        input.value = "";
+        input.placeholder = `Type a private message to ${targetUser.name}... (Press Enter to send)`;
+      }
+
+      window.renderPrivateChatMessages();
+
+      if (modal) modal.style.display = "flex";
+      setTimeout(() => { if (input) input.focus(); }, 150);
+    };
+
+    window.closePrivateChatModal = function() {
+      const modal = document.getElementById("privateChatModal");
+      if (modal) modal.style.display = "none";
+      state.activePrivateChatTargetUserId = null;
+    };
+
+    window.renderPrivateChatMessages = function() {
+      const pId = state.activePrivateChatProjectId;
+      const targetUserId = state.activePrivateChatTargetUserId;
+      if (!pId || !targetUserId) return;
+
+      const container = document.getElementById("privateChatMessagesContainer");
+      if (!container) return;
+
+      const curUser = StorageManager.getCurrentUser() || state.currentUser || { id: "cur-user", name: "You", role: "qa", avatar: "AM" };
+      const curUserId = curUser.id || curUser.email || "cur-user";
+
+      const messages = StorageManager.getPrivateMessages(pId, curUserId, targetUserId);
+
+      if (messages.length === 0) {
+        container.innerHTML = `
+          <div class="empty-private-chat text-center py-5">
+            <i class="fa-solid fa-lock text-emerald mb-2" style="font-size: 32px; opacity: 0.85;"></i>
+            <h4 class="font-bold text-sm text-heading m-0">Confidential Direct Message</h4>
+            <p class="text-xs text-muted mt-1">This thread is completely private between you and your teammate for this project.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = messages.map(msg => {
+        const isOutbound = msg.senderId === curUserId || (curUser.email && msg.senderId === curUser.email);
+        const isDev = msg.senderRole === "dev";
+        const senderInitial = msg.senderAvatar || (msg.senderName ? msg.senderName.substring(0, 2).toUpperCase() : "U");
+
+        return `
+          <div class="private-msg-row ${isOutbound ? 'outbound' : 'inbound'}">
+            ${!isOutbound ? `
+              <div class="avatar-ring ${isDev ? 'avatar-dev' : 'avatar-qa'}" style="width: 32px; height: 32px; font-size: 11px; font-weight: 700; flex-shrink: 0;">
+                ${escapeHtml(senderInitial)}
+              </div>
+            ` : ''}
+            <div class="private-msg-bubble-wrap">
+              <div class="private-msg-bubble">
+                ${escapeHtml(msg.text)}
+              </div>
+              <div class="private-msg-meta">
+                <span class="font-semibold">${isOutbound ? 'You' : escapeHtml(msg.senderName)}</span>
+                <span>•</span>
+                <span>${escapeHtml(msg.time || 'Just now')}</span>
+                ${isOutbound ? '<i class="fa-solid fa-check-double text-primary text-2xs ml-1" title="Delivered"></i>' : ''}
+              </div>
+            </div>
+            ${isOutbound ? `
+              <div class="avatar-ring ${curUser.role === 'dev' ? 'avatar-dev' : 'avatar-qa'}" style="width: 32px; height: 32px; font-size: 11px; font-weight: 700; flex-shrink: 0;">
+                ${escapeHtml(curUser.avatar || curUser.name.substring(0, 2).toUpperCase())}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join("");
+
+      container.scrollTop = container.scrollHeight;
+    };
+
+    window.sendPrivateMessage = function(customText = null) {
+      const pId = state.activePrivateChatProjectId;
+      const targetUserId = state.activePrivateChatTargetUserId;
+      if (!pId || !targetUserId) return;
+
+      const input = document.getElementById("privateChatInput");
+      const text = (customText !== null ? customText : (input ? input.value : "")).trim();
+      if (!text) return;
+
+      if (input && customText === null) input.value = "";
+
+      const curUser = StorageManager.getCurrentUser() || state.currentUser || { id: "cur-user", name: "You", role: "qa", avatar: "AM", roleTitle: "QA Lead" };
+      const curUserId = curUser.id || curUser.email || "cur-user";
+
+      const targetUser = StorageManager.getUsers().find(u => u.id === targetUserId) ||
+                         StorageManager.getProjectAllottedUsers(pId).find(u => u.id === targetUserId);
+
+      // Save user message
+      StorageManager.addPrivateMessage({
+        projectId: pId,
+        senderId: curUserId,
+        recipientId: targetUserId,
+        senderName: curUser.name || "Alex Morgan",
+        senderAvatar: curUser.avatar || (curUser.name ? curUser.name.substring(0, 2).toUpperCase() : "AM"),
+        senderRole: curUser.role || "qa",
+        roleTitle: curUser.roleTitle || (curUser.role === "dev" ? "Lead Developer" : "QA Lead"),
+        text
+      });
+
+      window.renderPrivateChatMessages();
+
+      // Trigger realistic auto-reply simulation from target teammate
+      if (targetUser) {
+        const typingIndicator = document.getElementById("privateChatTypingIndicator");
+        const typingText = document.getElementById("privateChatTypingText");
+        const container = document.getElementById("privateChatMessagesContainer");
+
+        if (typingText) typingText.textContent = `${targetUser.name} is typing...`;
+        if (typingIndicator) typingIndicator.style.display = "flex";
+        if (container) container.scrollTop = container.scrollHeight;
+
+        clearTimeout(privateChatTypingTimeout);
+        privateChatTypingTimeout = setTimeout(() => {
+          if (typingIndicator) typingIndicator.style.display = "none";
+
+          let replyText = "";
+          const tName = targetUser.name || "";
+          const project = StorageManager.getConferenceProjectById(pId);
+          const projName = project ? project.name : "this project";
+
+          if (tName.includes("Marcus")) {
+            const replies = [
+              `Thanks for flagging this directly on ${projName}. I'm reviewing the backend logs and latest PR commit now.`,
+              `Acknowledged! I will coordinate with the team to ensure this blocker doesn't impact our release window.`,
+              `Good catch on the payment flow. Checking the webhook idempotency handler on staging now.`,
+              `Thanks for the private update. Patch is in progress and will notify QA as soon as deployment finishes.`
+            ];
+            replyText = replies[Math.floor(Math.random() * replies.length)];
+          } else if (tName.includes("David")) {
+            const replies = [
+              `Got your direct message! Inspecting the database query latency and API response headers for ${projName} now.`,
+              `Thanks for the details! Re-running the service endpoint locally to reproduce with the same test credentials.`,
+              `Understood. The 500 error was caused by a null pointer in session serialization. Pushing hotfix shortly.`
+            ];
+            replyText = replies[Math.floor(Math.random() * replies.length)];
+          } else if (tName.includes("Sarah")) {
+            const replies = [
+              `Received! Adding this assertion directly into our automated Playwright regression pipeline for ${projName}.`,
+              `Thanks for the heads up! I'll run a targeted smoke test on staging cluster once the build settles.`,
+              `Awesome! Test case documented and automated script queued in CI.`
+            ];
+            replyText = replies[Math.floor(Math.random() * replies.length)];
+          } else if (tName.includes("Alex")) {
+            const replies = [
+              `Thanks for the direct ping! I'll update the QA test run matrix and assign blocker priority immediately.`,
+              `Got it. I'm executing the verification checklist on staging right now.`
+            ];
+            replyText = replies[Math.floor(Math.random() * replies.length)];
+          } else {
+            replyText = `Thanks for messaging me on ${projName}! I'm looking into this right now and will update you shortly.`;
+          }
+
+          StorageManager.addPrivateMessage({
+            projectId: pId,
+            senderId: targetUser.id,
+            recipientId: curUserId,
+            senderName: targetUser.name,
+            senderAvatar: targetUser.avatar || targetUser.name.substring(0, 2).toUpperCase(),
+            senderRole: targetUser.role || "dev",
+            roleTitle: targetUser.roleTitle || (targetUser.role === "dev" ? "Developer" : "QA Tester"),
+            text: replyText
+          });
+
+          window.renderPrivateChatMessages();
+        }, 1200 + Math.random() * 500);
+      }
+    };
+
+    // Private Chat Triggers & Event Listeners
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-private-chat-action");
+      if (btn) {
+        const memberId = btn.getAttribute("data-member-id");
+        const projectId = btn.getAttribute("data-project-id") || state.activeConferenceProjectId || "proj-1";
+        if (memberId) {
+          window.openPrivateChatModal(projectId, memberId);
+        }
+      }
+    });
+
+    const closePrivateChatModalBtn = document.getElementById("closePrivateChatModalBtn");
+    if (closePrivateChatModalBtn) {
+      closePrivateChatModalBtn.addEventListener("click", () => {
+        window.closePrivateChatModal();
+      });
+    }
+
+    const btnPrivateChatBackToMembers = document.getElementById("btnPrivateChatBackToMembers");
+    if (btnPrivateChatBackToMembers) {
+      btnPrivateChatBackToMembers.addEventListener("click", () => {
+        const pId = state.activePrivateChatProjectId || state.activeConferenceProjectId || "proj-1";
+        window.closePrivateChatModal();
+        if (pId) {
+          window.openProjectMembersModal(pId);
+        }
+      });
+    }
+
+    const privateChatModal = document.getElementById("privateChatModal");
+    if (privateChatModal) {
+      privateChatModal.addEventListener("click", (e) => {
+        if (e.target === privateChatModal) {
+          window.closePrivateChatModal();
+        }
+      });
+    }
+
+    const privateChatForm = document.getElementById("privateChatForm");
+    if (privateChatForm) {
+      privateChatForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        window.sendPrivateMessage();
+      });
+    }
+
+    document.querySelectorAll(".private-quick-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const text = chip.getAttribute("data-text");
+        if (text) {
+          window.sendPrivateMessage(text);
+        }
+      });
+    });
+
+    // =========================================================================
     // LIVE CONFERENCE MEETING ROOM LOGIC & CONTROLS
     // =========================================================================
     const btnLaunchMeeting = document.getElementById("btnLaunchMeeting");
@@ -3985,6 +4288,16 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       } else if (msg.type === "CONFERENCE_CLEARED") {
         if (state.currentView === "conference") {
           renderConference();
+        }
+      } else if (msg.type === "PRIVATE_MESSAGE") {
+        if (state.activePrivateChatProjectId && state.activePrivateChatTargetUserId) {
+          window.renderPrivateChatMessages();
+        } else {
+          const curUsr = StorageManager.getCurrentUser() || state.currentUser;
+          const curId = curUsr ? (curUsr.id || curUsr.email) : null;
+          if (msg.payload && msg.payload.message && msg.payload.message.recipientId === curId) {
+            showToast(`Private message from ${msg.payload.message.senderName}: "${msg.payload.message.text.substring(0, 32)}..."`, "info");
+          }
         }
       }
     });

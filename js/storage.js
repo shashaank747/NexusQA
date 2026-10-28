@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   THEME: "nexusqa_theme",
   CONFERENCE_MESSAGES: "nexusqa_conference_messages",
   CONFERENCE_PROJECTS: "nexusqa_conference_projects",
+  PRIVATE_MESSAGES: "nexusqa_private_messages",
   NOTIFICATIONS: "nexusqa_user_notifications"
 };
 
@@ -595,6 +596,105 @@ const StorageManager = {
       localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify([]));
     }
     this.broadcast("CONFERENCE_CLEARED", { projectId });
+  },
+
+  // -------------------------------------------------------------
+  // Private 1-on-1 Project Chat Messages
+  // -------------------------------------------------------------
+  getPrivateMessages(projectId, userId1, userId2) {
+    const raw = localStorage.getItem(STORAGE_KEYS.PRIVATE_MESSAGES);
+    let all = [];
+    try {
+      all = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(all)) all = [];
+    } catch(e) { all = []; }
+
+    const threadKey = [userId1, userId2].sort().join("___");
+    let threadMsgs = all.filter(m => (m.projectId || "proj-1") === projectId && m.threadKey === threadKey);
+
+    // If empty, generate a realistic initial welcoming message from the target member
+    if (threadMsgs.length === 0) {
+      const curUser = this.getCurrentUser();
+      const otherId = (curUser && curUser.id === userId1) ? userId2 : ((curUser && curUser.id === userId2) ? userId1 : userId2);
+      const otherUser = this.getUsers().find(u => u.id === otherId) || {
+        id: otherId,
+        name: "Team Member",
+        role: "dev",
+        roleTitle: "Project Collaborator",
+        avatar: "TM"
+      };
+
+      const project = this.getConferenceProjectById(projectId);
+      const projName = project ? project.name : "this project";
+
+      const seed = [
+        {
+          id: "pmsg-seed-" + threadKey + "-" + (projectId || "proj-1"),
+          projectId: projectId || "proj-1",
+          threadKey,
+          senderId: otherUser.id,
+          recipientId: (curUser && curUser.id) || "cur-user",
+          senderName: otherUser.name,
+          senderAvatar: otherUser.avatar || otherUser.name.substring(0, 2).toUpperCase(),
+          senderRole: otherUser.role || "dev",
+          roleTitle: otherUser.roleTitle || (otherUser.role === "dev" ? "Lead Developer" : "QA Engineer"),
+          text: `Hi! This is our dedicated 1-on-1 private channel for ${projName}. Feel free to message me directly regarding urgent defects, blocker triage, or technical questions.`,
+          time: new Date(Date.now() - 3600000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: "Today",
+          timestamp: Date.now() - 3600000
+        }
+      ];
+      all.push(...seed);
+      localStorage.setItem(STORAGE_KEYS.PRIVATE_MESSAGES, JSON.stringify(all));
+      return seed;
+    }
+
+    return threadMsgs;
+  },
+
+  addPrivateMessage(msg) {
+    const raw = localStorage.getItem(STORAGE_KEYS.PRIVATE_MESSAGES);
+    let all = [];
+    try {
+      all = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(all)) all = [];
+    } catch(e) { all = []; }
+
+    const threadKey = [msg.senderId, msg.recipientId].sort().join("___");
+    const now = new Date();
+    const newMsg = {
+      id: "pmsg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6),
+      projectId: msg.projectId || "proj-1",
+      threadKey,
+      senderId: msg.senderId,
+      recipientId: msg.recipientId,
+      senderName: msg.senderName,
+      senderAvatar: msg.senderAvatar || (msg.senderName ? msg.senderName.substring(0, 2).toUpperCase() : "U"),
+      senderRole: msg.senderRole || "qa",
+      roleTitle: msg.roleTitle || "",
+      text: msg.text,
+      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: "Today",
+      timestamp: Date.now()
+    };
+    all.push(newMsg);
+    localStorage.setItem(STORAGE_KEYS.PRIVATE_MESSAGES, JSON.stringify(all));
+    this.broadcast("PRIVATE_MESSAGE", { message: newMsg });
+    return newMsg;
+  },
+
+  clearPrivateMessages(projectId, userId1, userId2) {
+    const raw = localStorage.getItem(STORAGE_KEYS.PRIVATE_MESSAGES);
+    let all = [];
+    try {
+      all = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(all)) all = [];
+    } catch(e) { all = []; }
+
+    const threadKey = [userId1, userId2].sort().join("___");
+    const remaining = all.filter(m => !((m.projectId || "proj-1") === projectId && m.threadKey === threadKey));
+    localStorage.setItem(STORAGE_KEYS.PRIVATE_MESSAGES, JSON.stringify(remaining));
+    this.broadcast("PRIVATE_MESSAGES_CLEARED", { projectId, threadKey });
   },
 
   // -------------------------------------------------------------

@@ -1181,6 +1181,77 @@
     </div>
   </div>
 
+  <!-- MODAL: PRIVATE 1-ON-1 PROJECT CHAT -->
+  <div class="modal-backdrop" id="privateChatModal" style="display: none;">
+    <div class="modal-dialog modal-dialog-md private-chat-dialog">
+      <div class="modal-header d-flex align-center justify-between">
+        <div class="d-flex align-center gap-2">
+          <div class="avatar-ring" id="privateChatHeaderAvatar" style="width: 40px; height: 40px; font-size: 14px; font-weight: 700;">
+            AM
+          </div>
+          <div>
+            <div class="d-flex align-center gap-2">
+              <h3 class="modal-title m-0" id="privateChatHeaderName">Alex Morgan</h3>
+              <span class="badge badge-primary text-2xs" id="privateChatHeaderRole">QA Lead</span>
+              <span class="badge badge-passed text-2xs"><i class="fa-solid fa-circle status-dot-online mr-1"></i> Online</span>
+            </div>
+            <p class="modal-subtitle text-xs text-muted m-0" id="privateChatHeaderSubtitle">
+              <i class="fa-solid fa-lock text-emerald mr-1"></i> Private 1-on-1 • <span id="privateChatProjectName" class="font-mono text-primary">#payments-engine</span>
+            </p>
+          </div>
+        </div>
+        <div class="d-flex align-center gap-2">
+          <button type="button" class="btn btn-ghost btn-sm" id="btnPrivateChatBackToMembers" title="Back to Allotted Team Roster">
+            <i class="fa-solid fa-users mr-1 text-primary"></i> Team List
+          </button>
+          <button type="button" class="btn-icon modal-close-btn" id="closePrivateChatModalBtn" aria-label="Close private chat">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body p-0 d-flex flex-column" style="height: 520px; max-height: 75vh;">
+        <!-- Privacy info banner -->
+        <div class="private-chat-security-banner">
+          <i class="fa-solid fa-shield-halved text-emerald"></i>
+          <span>Confidential Project Thread: Messages are restricted exclusively to you and <strong id="privateChatBannerTargetName">Alex Morgan</strong> within this project scope.</span>
+        </div>
+
+        <!-- Messages Stream -->
+        <div class="private-chat-stream flex-1" id="privateChatMessagesContainer">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="private-chat-typing-indicator" id="privateChatTypingIndicator" style="display: none;">
+          <div class="typing-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="text-xs text-muted" id="privateChatTypingText">Alex is typing...</span>
+        </div>
+
+        <!-- Quick Suggestion Chips -->
+        <div class="private-chat-quick-chips">
+          <span class="text-2xs text-muted font-bold"><i class="fa-solid fa-bolt text-amber mr-1"></i> Quick:</span>
+          <button type="button" class="private-quick-chip" data-text="🚨 Critical blocker identified! Can you check the logs on staging?">🚨 Critical blocker</button>
+          <button type="button" class="private-quick-chip" data-text="🔍 Need clarification on the expected behavior for this scenario.">🔍 Expected behavior</button>
+          <button type="button" class="private-quick-chip" data-text="💻 Fix pushed to branch? Let me know when ready for QA re-test.">💻 Ready for QA?</button>
+          <button type="button" class="private-quick-chip" data-text="✅ Test verified and passed in the latest build! Thank you.">✅ Verified &amp; passed</button>
+        </div>
+
+        <!-- Input Area -->
+        <div class="private-chat-input-area">
+          <form id="privateChatForm" class="d-flex align-center gap-2 w-100">
+            <input type="text" id="privateChatInput" class="private-chat-input flex-1" placeholder="Type a private message... (Press Enter to send)" autocomplete="off" />
+            <button type="submit" class="btn btn-primary private-chat-send-btn" id="privateChatSendBtn" title="Send Private Message (Enter)">
+              <i class="fa-solid fa-paper-plane mr-1"></i> Send
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Live Conference Meeting Modal -->
   <div class="modal-backdrop" id="conferenceMeetingModal" style="display: none;">
     <div class="modal-dialog modal-dialog-xl meeting-room-dialog">
