@@ -338,6 +338,7 @@ document.addEventListener("DOMContentLoaded", () => {
     addStepBtn: document.getElementById("addStepBtn"),
     saveTestCaseBtn: document.getElementById("saveTestCaseBtn"),
     autoInputTestCaseBtn: document.getElementById("autoInputTestCaseBtn"),
+    easyApplyTestCaseBtn: document.getElementById("easyApplyTestCaseBtn"),
     closeTestCaseModalBtn: document.getElementById("closeTestCaseModalBtn"),
     cancelTestCaseModalBtn: document.getElementById("cancelTestCaseModalBtn"),
     tcImageFileInput: document.getElementById("tcImageFileInput"),
@@ -4670,6 +4671,32 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   ];
 
+  let easyApplyScenarioIndex = 0;
+  function applyEasyTestTemplate() {
+    if (!autoInputScenarios || autoInputScenarios.length === 0) return;
+    const scenario = autoInputScenarios[easyApplyScenarioIndex % autoInputScenarios.length];
+    easyApplyScenarioIndex++;
+
+    if (DOM.tcTitle) DOM.tcTitle.value = scenario.title;
+    if (DOM.tcPriority) DOM.tcPriority.value = scenario.priority;
+    if (DOM.tcType) DOM.tcType.value = scenario.type;
+    if (DOM.tcStatus) DOM.tcStatus.value = scenario.status || "Untested";
+    if (DOM.tcPreconditions) DOM.tcPreconditions.value = scenario.preconditions || "";
+    if (DOM.tcTags) DOM.tcTags.value = (scenario.tags || []).join(", ");
+    
+    if (DOM.tcSuite && scenario.suiteId) {
+      if (DOM.tcSuite.querySelector(`option[value="${scenario.suiteId}"]`)) {
+        DOM.tcSuite.value = scenario.suiteId;
+      }
+    }
+
+    if (scenario.steps && typeof renderStepRows === "function") {
+      renderStepRows(scenario.steps);
+    }
+
+    showToast("Easy Apply: Template populated into test case!", "success");
+  }
+
   // ==========================================================================
   // CAMPUSOS CONVERSATIONAL AI QA ASSISTANT CONTROLLER
   // ==========================================================================
@@ -5512,6 +5539,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   });
 
   // Action button triggers
+  on(DOM.easyApplyTestCaseBtn, "click", applyEasyTestTemplate);
   on(DOM.autoInputTestCaseBtn, "click", openAutoInputModal);
   on(DOM.dashboardAutoInputBtn, "click", openAutoInputModal);
   on(DOM.repoAutoInputBtn, "click", openAutoInputModal);
