@@ -709,9 +709,9 @@
 
   <!-- Supabase & Storage SDKs -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/data.js"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/storage.js"></script>
+  <script src="js/data.js?v=1.0.10"></script>
+  <script src="js/supabase.js?v=1.0.10"></script>
+  <script src="js/storage.js?v=1.0.10"></script>
 
   <script>
     // State machine
@@ -1239,7 +1239,7 @@
 
             if (existingUser && !isRootAdmin) {
               if (existingUser.status === 'pending_approval') {
-                throw new Error("This account is already registered and waiting for approval from Administrator (Chhotu Monster).");
+                throw new Error("This account is already registered and waiting for approval from Senior Developer.");
               } else if (existingUser.status === 'active') {
                 throw new Error("An account with this email/username already exists. Please Sign In.");
               } else {
@@ -1300,13 +1300,24 @@
             users.push(newUser);
             StorageManager.saveUsers(users);
             StorageManager.broadcast("TESTER_APPROVAL_REQUESTED", { user: newUser });
+            if (typeof SupabaseManager !== "undefined") {
+              try {
+                if (!SupabaseManager.isConnected && SupabaseManager.init) {
+                  SupabaseManager.init().then(() => {
+                    SupabaseManager.syncUserUpsert(newUser);
+                  }).catch(() => {});
+                } else if (SupabaseManager.syncUserUpsert) {
+                  SupabaseManager.syncUserUpsert(newUser).catch(() => {});
+                }
+              } catch (e) {}
+            }
 
             codeSlotsState.status = "idle";
             renderCodeSlots();
             setLoading(false);
 
-            showInlineSuccess(`✅ Registration Submitted! Your account (${newUser.email}) is pending approval from Administrator (Chhotu Monster). You will be authorized once approved.`);
-            showToast("Registration submitted! Awaiting administrator approval.", "info");
+            showInlineSuccess(`✅ Registration Submitted! Your account (${newUser.email}) is pending approval from Senior Developer. You will be authorized once approved.`);
+            showToast("Registration submitted! Awaiting Senior Developer approval.", "info");
 
             // Reset form fields
             if (fullNameInput) fullNameInput.value = "";
@@ -1455,9 +1466,6 @@
       if (notice) {
         sessionStorage.removeItem("nexus_auth_error");
         showInlineError(notice);
-      }
-      if (typeof StorageManager !== "undefined" && StorageManager.init) {
-        StorageManager.init();
       }
     });
   </script>

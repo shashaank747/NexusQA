@@ -1089,7 +1089,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     if (currentUser.status === "pending_approval") {
       StorageManager.logout();
-      sessionStorage.setItem("nexus_auth_error", "Access Denied: Your account is awaiting approval from Administrator (Chhotu Monster). Please wait for authorization.");
+      sessionStorage.setItem("nexus_auth_error", "Access Denied: Your account is awaiting approval from the Senior Developer. Please wait for authorization.");
       window.location.replace("index.html");
       return;
     }
@@ -2316,7 +2316,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   }
 
   window.approveTester = function(userId) {
-    const user = StorageManager.approveTesterRequest(userId, (state.currentUser && state.currentUser.name) || "Chhotu Monster");
+    const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+    if (!StorageManager.isSeniorDev(currentUser)) {
+      showToast("Access Denied: Only Senior Developers can approve new workspace members.", "error");
+      return;
+    }
+    const user = StorageManager.approveTesterRequest(userId, (currentUser && currentUser.name) || "Senior Developer", currentUser);
     if (user) {
       showToast(`Approved workspace access for ${user.name}!`, "success");
       renderDevApprovals();
@@ -2324,8 +2329,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   };
 
   window.rejectTester = function(userId) {
+    const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+    if (!StorageManager.isSeniorDev(currentUser)) {
+      showToast("Access Denied: Only Senior Developers can reject workspace requests.", "error");
+      return;
+    }
     if (confirm("Reject this member's access request?")) {
-      const user = StorageManager.rejectTesterRequest(userId);
+      const user = StorageManager.rejectTesterRequest(userId, currentUser);
       if (user) {
         showToast(`Rejected access request for ${user.name}`, "error");
         renderDevApprovals();

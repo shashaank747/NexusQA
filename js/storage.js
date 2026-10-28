@@ -1135,7 +1135,7 @@ const StorageManager = {
     }
 
     if (user.status === "pending_approval") {
-      throw new Error("Access Denied: Your account is awaiting approval from the Administrator (Chhotu Monster). Please wait for authorization.");
+      throw new Error("Access Denied: Your account is awaiting approval from the Senior Developer. Please wait for authorization.");
     }
 
     if (user.status === "rejected") {
@@ -1181,11 +1181,11 @@ const StorageManager = {
     }
 
     if (user.status === "pending_approval" && !isRootAdmin) {
-      throw new Error("Access Denied: Your account is awaiting approval from Administrator (Chhotu Monster). Please wait for authorization.");
+      throw new Error("Access Denied: Your account is awaiting approval from the Senior Developer. Please wait for authorization.");
     }
 
     if (user.status === "rejected") {
-      throw new Error("Your access request was rejected by Administrator. Please contact administration.");
+      throw new Error("Your access request was rejected by Senior Developer. Please contact administration.");
     }
 
     const otpCode = String(Math.floor(100000 + Math.random() * 900000));
@@ -1231,7 +1231,7 @@ const StorageManager = {
     }
 
     if (user.status === "pending_approval") {
-      throw new Error("Access Denied: Your account is awaiting approval from Administrator (Chhotu Monster). Please wait for authorization.");
+      throw new Error("Access Denied: Your account is awaiting approval from the Senior Developer. Please wait for authorization.");
     }
 
     const isValidOtp = (user.otpCode && user.otpCode === trimmedOtp) ||
@@ -1346,12 +1346,15 @@ const StorageManager = {
   /**
    * Senior Developer Approves a Tester (Step 3: Dev Approval -> Stored in DB permanently)
    */
-  approveTesterRequest(userId, approverName = "Marcus Vance (Dev Lead)") {
+  approveTesterRequest(userId, approverName = "Senior Developer", currentUser = null) {
+    if (currentUser && !this.isSeniorDev(currentUser)) {
+      throw new Error("Unauthorized: Only Senior Developers can approve access requests.");
+    }
     const users = this.getUsers();
     const user = users.find(u => u.id === userId);
     if (user) {
       user.status = "active";
-      user.approvedBy = approverName;
+      user.approvedBy = approverName || "Senior Developer";
       user.approvedAt = new Date().toISOString().replace("T", " ").substring(0, 16);
       this.saveUsers(users);
       this.broadcast("TESTER_APPROVED", { user });
@@ -1363,7 +1366,10 @@ const StorageManager = {
   /**
    * Developer Rejects a Tester Request
    */
-  rejectTesterRequest(userId) {
+  rejectTesterRequest(userId, currentUser = null) {
+    if (currentUser && !this.isSeniorDev(currentUser)) {
+      throw new Error("Unauthorized: Only Senior Developers can reject access requests.");
+    }
     const users = this.getUsers();
     const user = users.find(u => u.id === userId);
     if (user) {
