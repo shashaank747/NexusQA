@@ -990,6 +990,60 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     localStorage.setItem("nexusqa_theme", theme);
   }
 
+  
+  // Real-Time Topbar Clock
+  function initTopbarClock() {
+    const clockEl = document.getElementById("topbarClock");
+    const timeEl = document.getElementById("topbarClockTime");
+    const dateEl = document.getElementById("topbarClockDate");
+    if (!clockEl || !timeEl) return;
+
+    let is24Hour = localStorage.getItem("nexusqa_clock_24h") === "true";
+
+    function updateClock() {
+      const now = new Date();
+      let timeStr = "";
+      if (is24Hour) {
+        const h = String(now.getHours()).padStart(2, "0");
+        const m = String(now.getMinutes()).padStart(2, "0");
+        const s = String(now.getSeconds()).padStart(2, "0");
+        timeStr = `${h}:${m}:${s}`;
+      } else {
+        let hours = now.getHours();
+        const ampm = hours >= 12 ? "PM" : "AM";
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const h = String(hours).padStart(2, "0");
+        const m = String(now.getMinutes()).padStart(2, "0");
+        const s = String(now.getSeconds()).padStart(2, "0");
+        timeStr = `${h}:${m}:${s} ${ampm}`;
+      }
+
+      timeEl.textContent = timeStr;
+
+      if (dateEl) {
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const dayName = days[now.getDay()];
+        const monthName = months[now.getMonth()];
+        const dayNum = now.getDate();
+        dateEl.textContent = `${dayName}, ${monthName} ${dayNum}`;
+      }
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    clockEl.addEventListener("click", () => {
+      is24Hour = !is24Hour;
+      localStorage.setItem("nexusqa_clock_24h", is24Hour ? "true" : "false");
+      updateClock();
+      if (typeof showToast === "function") {
+        showToast(`Clock switched to ${is24Hour ? "24-Hour" : "12-Hour (AM/PM)"} format.`, "info");
+      }
+    });
+  }
+
   function initSidebarState() {
     const isCollapsed = localStorage.getItem("nexusqa_sidebar_collapsed") === "true";
     if (DOM.sidebar && isCollapsed) {
@@ -1004,6 +1058,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     initTheme();
     initSidebarState();
     initKpiCardMagneticHover();
+    initTopbarClock();
     const pathname = window.location.pathname.toLowerCase();
     const isLandingPage = document.body.classList.contains("page-landing-auth") || pathname.endsWith("index.html") || pathname === "/" || pathname.endsWith("/login") || (!document.body.classList.contains("page-tester") && !document.body.classList.contains("page-dev") && !document.getElementById("viewViewport"));
 

@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.8">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.9">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -218,6 +218,15 @@
           </div>
         </div>
 
+        <!-- Vertical Divider -->
+        <div class="topbar-divider-v clock-divider-v"></div>
+
+        <!-- Real-Time Topbar Clock -->
+        <div class="topbar-clock" id="topbarClock" title="Local System Time (Click to toggle 12h/24h)">
+          <div class="clock-pulse-dot"></div>
+          <span class="clock-time font-mono" id="topbarClockTime">--:--:--</span>
+          <span class="clock-date" id="topbarClockDate">---, --- --</span>
+        </div>
       </div>
 
       <div class="topbar-center">
@@ -2283,6 +2292,6 @@
   <script src="js/supabase.js?v=1.0.7"></script>
   <script src="js/storage.js?v=1.0.7"></script>
   <script src="js/qa-assistant.js?v=1.0.5"></script>
-  <script src="js/app.js?v=1.0.8"></script>
+  <script src="js/app.js?v=1.0.9"></script>
 </body>
 </html>
