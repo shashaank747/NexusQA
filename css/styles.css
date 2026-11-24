@@ -11168,3 +11168,276 @@ body.light-theme .repo-clear-btn:hover {
   flex-wrap: wrap;
   gap: 0.45rem;
 }
+
+/* =========================================================================
+   CONFERENCE GOOGLE MEET INLINE SHARE BANNER & INVITE CARD
+   ========================================================================= */
+.conference-meet-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.9rem 1.25rem;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(6, 182, 212, 0.1));
+  border-bottom: 1px solid rgba(16, 185, 129, 0.35);
+  animation: fadeInMsg 0.2s ease-out;
+}
+
+body.light-theme .conference-meet-banner {
+  background: linear-gradient(135deg, #ecfdf5, #f0fdfa);
+  border-bottom: 1px solid #6ee7b7;
+}
+
+.meet-banner-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.meet-banner-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  font-size: 0.82rem;
+  color: var(--text-main);
+}
+
+.meet-banner-title code {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(15, 23, 42, 0.55);
+  color: #34d399;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+}
+
+body.light-theme .meet-banner-title code {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.meet-banner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+body.light-theme .meet-banner-badge {
+  background: #10b981;
+  border-color: #059669;
+  color: #ffffff;
+}
+
+.meet-banner-close {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.meet-banner-form {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.meet-banner-input-wrap {
+  position: relative;
+  flex: 1 1 280px;
+  display: flex;
+  align-items: center;
+}
+
+.meet-banner-input-wrap i {
+  position: absolute;
+  left: 0.85rem;
+  color: #10b981;
+  font-size: 0.82rem;
+  pointer-events: none;
+}
+
+.meet-banner-input {
+  width: 100%;
+  padding: 0.52rem 0.85rem 0.52rem 2.2rem;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  font-size: 0.83rem;
+  font-family: var(--font-mono);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.meet-banner-input::placeholder {
+  color: #64748b;
+}
+
+.meet-banner-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+
+body.light-theme .meet-banner-input {
+  background: #ffffff;
+  border-color: #a7f3d0;
+  color: #0f172a;
+}
+
+body.light-theme .meet-banner-input::placeholder {
+  color: #64748b;
+}
+
+/* Highlighted Active Google Meet Room Card in Chat Feed */
+.conference-msg-bubble.conference-meet-bubble {
+  padding: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  max-width: 100%;
+}
+
+.conference-meet-room-card {
+  min-width: 310px;
+  max-width: 460px;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(6, 78, 59, 0.55));
+  border: 1.5px solid rgba(16, 185, 129, 0.55);
+  box-shadow: 0 10px 26px rgba(16, 185, 129, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+body.light-theme .conference-meet-room-card {
+  background: linear-gradient(145deg, #ffffff, #ecfdf5);
+  border: 1.5px solid #34d399;
+  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.12);
+}
+
+.meet-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.meet-live-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #34d399;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body.light-theme .meet-live-chip {
+  background: #d1fae5;
+  color: #047857;
+  border-color: #6ee7b7;
+}
+
+.meet-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse 1.6s infinite;
+}
+
+.meet-card-title {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+body.light-theme .meet-card-title {
+  color: #064e3b;
+}
+
+.meet-card-subtitle {
+  margin: 0.18rem 0 0;
+  font-size: 0.77rem;
+  color: #cbd5e1;
+}
+
+body.light-theme .meet-card-subtitle {
+  color: #334155;
+}
+
+.meet-card-url-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+body.light-theme .meet-card-url-row {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.meet-card-url-text {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #38bdf8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.light-theme .meet-card-url-text {
+  color: #0369a1;
+}
+
+.meet-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.btn-join-google-meet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex: 1;
+  padding: 0.55rem 1rem;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.btn-join-google-meet:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+}

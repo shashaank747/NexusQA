@@ -66,11 +66,30 @@ CREATE TABLE IF NOT EXISTS public.nexus_defects (
   updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 5. Conference Channel Messages & Google Meet Invites
+CREATE TABLE IF NOT EXISTS public.nexus_conference_messages (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  project_slug TEXT,
+  sender_id TEXT,
+  sender_name TEXT,
+  sender_role TEXT DEFAULT 'qa',
+  role_title TEXT,
+  sender_avatar TEXT DEFAULT 'QA',
+  message_type TEXT DEFAULT 'text',
+  meet_url TEXT,
+  text TEXT NOT NULL,
+  time_label TEXT,
+  date_label TEXT DEFAULT 'Today',
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Enable Row Level Security (Public Read/Write for Platform Operations)
 ALTER TABLE public.nexus_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nexus_suites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nexus_test_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nexus_defects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.nexus_conference_messages ENABLE ROW LEVEL SECURITY;
 
 -- Allow anonymous read/write access for frontend client
 DO $$
@@ -87,7 +106,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public Access nexus_defects') THEN
     CREATE POLICY "Public Access nexus_defects" ON public.nexus_defects FOR ALL USING (true) WITH CHECK (true);
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public Access nexus_conference_messages') THEN
+    CREATE POLICY "Public Access nexus_conference_messages" ON public.nexus_conference_messages FOR ALL USING (true) WITH CHECK (true);
+  END IF;
 END $$;
 
 -- Enable Realtime publication for nexus tables
-ALTER PUBLICATION supabase_realtime ADD TABLE public.nexus_users, public.nexus_suites, public.nexus_test_cases, public.nexus_defects;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.nexus_users, public.nexus_suites, public.nexus_test_cases, public.nexus_defects, public.nexus_conference_messages;

@@ -162,6 +162,9 @@ const SupabaseManager = {
       .on("postgres_changes", { event: "*", schema: "public", table: "nexus_suites" }, (payload) => {
         this.handleRemoteSuiteChange(payload);
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "nexus_conference_messages" }, (payload) => {
+        this.handleRemoteConferenceMessageChange(payload);
+      })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           console.log("⚡ Supabase Realtime Channel Connected!");
@@ -276,6 +279,61 @@ const SupabaseManager = {
       const filtered = suites.filter(s => s.id !== payload.old.id);
       StorageManager.saveSuites(filtered, true);
     }
+  },
+
+  handleRemoteConferenceMessageChange(payload) {
+    if (typeof StorageManager === "undefined") return;
+    if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
+      const mapped = this.mapConferenceMessageFromDB(payload.new);
+      if (StorageManager.mergeRemoteConferenceMessages) {
+        StorageManager.mergeRemoteConferenceMessages([mapped], mapped.projectId);
+      }
+    } else if (payload.eventType === "DELETE" && payload.old && payload.old.id) {
+      if (StorageManager.removeConferenceMessageLocally) {
+        StorageManager.removeConferenceMessageLocally(payload.old.id);
+      }
+    }
+  },
+
+  mapConferenceMessageToDB(msg) {
+    return {
+      id: msg.id,
+      project_id: msg.projectId || "proj-1",
+      project_slug: msg.projectSlug || "",
+      sender_id: msg.senderId || "",
+      sender_name: msg.senderName || "Team Member",
+      sender_role: msg.senderRole || "qa",
+      role_title: msg.roleTitle || "",
+      sender_avatar: msg.senderAvatar || "QA",
+      message_type: msg.messageType || "text",
+      meet_url: msg.meetUrl || "",
+      text: msg.text || "",
+      time_label: msg.time || "",
+      date_label: msg.date || "Today"
+    };
+  },
+
+  mapConferenceMessageFromDB(row) {
+    const createdMs = row.created_at ? new Date(row.created_at).getTime() : Date.now();
+    const fallbackTime = row.created_at
+      ? new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "";
+    return {
+      id: row.id,
+      projectId: row.project_id || "proj-1",
+      projectSlug: row.project_slug || "",
+      senderId: row.sender_id || "",
+      senderName: row.sender_name || "Team Member",
+      senderRole: row.sender_role || "qa",
+      roleTitle: row.role_title || "",
+      senderAvatar: row.sender_avatar || "QA",
+      messageType: row.message_type || (row.meet_url ? "google_meet_invite" : "text"),
+      meetUrl: row.meet_url || "",
+      text: row.text || "",
+      time: row.time_label || fallbackTime,
+      date: row.date_label || "Today",
+      timestamp: isNaN(createdMs) ? Date.now() : createdMs
+    };
   },
 
   // -------------------------------------------------------------
@@ -475,6 +533,9 @@ const SupabaseManager = {
         // Exclusively save Supabase database users - DO NOT merge, fallback, or seed dummy users
         StorageManager.saveUsers(mapped, true);
       }
+
+      // Also pull conference channel messages if nexus_conference_messages table exists
+      await this.fetchConferenceMessagesFromSupabase().catch(() => []);
 
       return true;
     } catch (err) {
@@ -855,6 +916,75 @@ const SupabaseManager = {
       try {
         await this.client.from("nexus_test_runs").upsert(this.mapTestRunToDB(testRun));
       } catch (e) { console.warn("Supabase test run upsert error:", e); }
+    }
+  },
+
+  async fetchConferenceMessagesFromSupabase(projectId = null) {
+    const client = this.getClient();
+    if (!client) return [];
+    try {
+      let query = client
+        .from("nexus_conference_messages")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (projectId) {
+        query = query.eq("project_id", projectId);
+      }
+      const { data, error } = await query;
+      if (error) {
+        if (error.code === "PGRST205" || String(error.message || "").includes("nexus_conference_messages")) {
+          return [];
+        }
+        console.warn("Supabase fetch conference messages warning:", error.message);
+        return [];
+      }
+      const mapped = (data || []).map(row => this.mapConferenceMessageFromDB(row));
+      if (typeof StorageManager !== "undefined" && StorageManager.mergeRemoteConferenceMessages) {
+        StorageManager.mergeRemoteConferenceMessages(mapped, projectId);
+      }
+      return mapped;
+    } catch (e) {
+      console.warn("Supabase fetch conference messages warning:", e);
+      return [];
+    }
+  },
+
+  async syncConferenceMessageInsert(message) {
+    const client = this.getClient();
+    if (!client || !message) return { ok: false, error: "Supabase client unavailable" };
+    try {
+      const payload = this.mapConferenceMessageToDB(message);
+      const { data, error } = await client
+        .from("nexus_conference_messages")
+        .upsert(payload)
+        .select();
+      if (error) {
+        const missingTable = error.code === "PGRST205" || String(error.message || "").includes("nexus_conference_messages");
+        console.warn("Supabase conference message insert warning:", error.message);
+        return { ok: false, missingTable, error };
+      }
+      return { ok: true, data: data && data[0] ? this.mapConferenceMessageFromDB(data[0]) : message };
+    } catch (e) {
+      console.warn("Supabase conference message insert error:", e);
+      return { ok: false, error: e };
+    }
+  },
+
+  async syncConferenceMessagesClear(projectId) {
+    const client = this.getClient();
+    if (!client || !projectId) return false;
+    try {
+      const { error } = await client
+        .from("nexus_conference_messages")
+        .delete()
+        .eq("project_id", projectId);
+      if (error && error.code !== "PGRST205") {
+        console.warn("Supabase clear conference messages warning:", error.message);
+      }
+      return !error;
+    } catch (e) {
+      console.warn("Supabase clear conference messages warning:", e);
+      return false;
     }
   }
 };

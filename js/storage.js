@@ -627,17 +627,62 @@ const StorageManager = {
 
     const now = new Date();
     const newMsg = {
-      id: "msg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6),
+      id: message.id || ("msg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6)),
       projectId: message.projectId || "proj-1",
-      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      date: "Today",
-      timestamp: Date.now(),
+      messageType: message.messageType || "text",
+      meetUrl: message.meetUrl || "",
+      time: message.time || now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: message.date || "Today",
+      timestamp: message.timestamp || Date.now(),
       ...message
     };
-    messages.push(newMsg);
+    const existingIdx = messages.findIndex(m => m.id === newMsg.id);
+    if (existingIdx !== -1) {
+      messages[existingIdx] = newMsg;
+    } else {
+      messages.push(newMsg);
+    }
     localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify(messages));
     this.broadcast("CONFERENCE_MESSAGE", { message: newMsg });
     return newMsg;
+  },
+
+  mergeRemoteConferenceMessages(remoteMessages = [], projectId = null) {
+    if (!Array.isArray(remoteMessages)) return;
+    const raw = localStorage.getItem(STORAGE_KEYS.CONFERENCE_MESSAGES);
+    let localMsgs = [];
+    try {
+      localMsgs = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(localMsgs)) localMsgs = [];
+    } catch (e) { localMsgs = []; }
+
+    const byId = new Map();
+    localMsgs.forEach(m => { if (m && m.id) byId.set(m.id, m); });
+
+    let changed = false;
+    remoteMessages.forEach(rm => {
+      if (!rm || !rm.id) return;
+      if (projectId && (rm.projectId || "proj-1") !== projectId) return;
+      const prev = byId.get(rm.id);
+      if (!prev || prev.text !== rm.text || prev.meetUrl !== rm.meetUrl) {
+        byId.set(rm.id, rm);
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      const merged = Array.from(byId.values()).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify(merged));
+      this.broadcast("CONFERENCE_MESSAGE", { remote: true, projectId });
+    }
+  },
+
+  removeConferenceMessageLocally(msgId) {
+    if (!msgId) return;
+    const all = this.getConferenceMessages();
+    const filtered = all.filter(m => m.id !== msgId);
+    localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify(filtered));
+    this.broadcast("CONFERENCE_MESSAGE", { remote: true, deletedId: msgId });
   },
 
   clearConferenceMessages(projectId = null, user = null) {

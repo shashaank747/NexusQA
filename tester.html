@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.12">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.13">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -1243,6 +1243,28 @@
                 </div>
               </div>
 
+              <!-- Inline Google Meet Link Share Banner (Shown when Launch Meeting is clicked) -->
+              <div class="conference-meet-banner" id="conferenceMeetShareBanner" style="display: none;">
+                <div class="meet-banner-top">
+                  <div class="meet-banner-title">
+                    <span class="meet-banner-badge"><i class="fa-solid fa-video"></i> Google Meet Tab Opened</span>
+                    <span>Paste the generated Google Meet link (<code>https://meet.google.com/...</code>) and share it with your team:</span>
+                  </div>
+                  <button type="button" class="btn-icon meet-banner-close" id="cancelMeetShareBtn" title="Dismiss">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+                <form class="meet-banner-form" id="conferenceMeetShareForm">
+                  <div class="meet-banner-input-wrap">
+                    <i class="fa-solid fa-link"></i>
+                    <input type="text" id="meetLinkInput" class="meet-banner-input" placeholder="https://meet.google.com/abc-defg-hij" autocomplete="off" />
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm meet-share-submit-btn" id="shareMeetWithTeamBtn">
+                    <i class="fa-solid fa-paper-plane mr-1"></i> Share with Team
+                  </button>
+                </form>
+              </div>
+
               <!-- Messages Stream Container -->
               <div class="conference-messages-stream" id="conferenceMessagesContainer">
                 <!-- Rendered via JS -->
@@ -2304,9 +2326,9 @@
   
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.6"></script>
-  <script src="js/supabase.js?v=1.0.11"></script>
-  <script src="js/storage.js?v=1.0.16"></script>
+  <script src="js/supabase.js?v=1.0.12"></script>
+  <script src="js/storage.js?v=1.0.17"></script>
   <script src="js/qa-assistant.js?v=1.0.5"></script>
-  <script src="js/app.js?v=1.0.17"></script>
+  <script src="js/app.js?v=1.0.18"></script>
 </body>
 </html>

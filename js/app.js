@@ -3083,7 +3083,16 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   window.openConferenceProject = function(projectId) {
     if (!projectId) return;
     state.activeConferenceProjectId = projectId;
+    const banner = document.getElementById("conferenceMeetShareBanner");
+    if (banner) banner.style.display = "none";
     renderConference();
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.fetchConferenceMessagesFromSupabase) {
+      SupabaseManager.fetchConferenceMessagesFromSupabase(projectId).then((rows) => {
+        if (rows && rows.length > 0 && state.activeConferenceProjectId === projectId) {
+          renderConference();
+        }
+      });
+    }
   };
 
   window.closeConferenceProject = function() {
@@ -3395,10 +3404,49 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         ? `<img src="${escapeHtml(senderPhoto)}" alt="${escapeHtml(msg.senderName)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;" onerror="this.style.display='none'; this.parentElement.innerHTML='<span>${escapeHtml(avatarLetters)}</span>';">`
         : `<span>${escapeHtml(avatarLetters)}</span>`;
 
-      // Format text: convert #BUG-xxx or #TC-xxx to interactive pill tags
-      let formattedText = escapeHtml(msg.text);
-      formattedText = formattedText.replace(/#?(BUG-\d+)/gi, '<span class="conference-tag-pill conference-bug-pill" onclick="window.handleConferenceTagClick(\'$1\')" title="View Defect $1"><i class="fa-solid fa-bug"></i> $1</span>');
-      formattedText = formattedText.replace(/#?(TC-\d+)/gi, '<span class="conference-tag-pill conference-tc-pill" onclick="window.handleConferenceTagClick(\'$1\')" title="View Test Case $1"><i class="fa-solid fa-vial"></i> $1</span>');
+      // Format text: convert #BUG-xxx or #TC-xxx to interactive pill tags OR render Active Google Meet Room card
+      const extractedMeetMatch = !msg.meetUrl && typeof msg.text === "string"
+        ? msg.text.match(/https:\/\/meet\.google\.com\/[a-z0-9-]+/i)
+        : null;
+      const resolvedMeetUrl = (msg.meetUrl || (extractedMeetMatch ? extractedMeetMatch[0] : "")).trim();
+      const isMeetInvite = (msg.messageType === "google_meet_invite" || !!resolvedMeetUrl) && /^https?:\/\//i.test(resolvedMeetUrl);
+
+      let bubbleContentHtml = "";
+      if (isMeetInvite) {
+        const safeUrl = escapeHtml(resolvedMeetUrl);
+        const channelSlugLabel = escapeHtml(msg.projectSlug || (project ? (project.slug || project.name || projectId) : projectId));
+        bubbleContentHtml = `
+          <div class="conference-msg-bubble conference-meet-bubble">
+            <div class="conference-meet-room-card">
+              <div class="meet-card-header">
+                <span class="meet-live-chip"><span class="meet-live-dot"></span> Active Google Meet Room</span>
+                <span class="text-2xs text-muted font-mono"># ${channelSlugLabel}</span>
+              </div>
+              <div>
+                <h4 class="meet-card-title"><i class="fa-solid fa-video text-emerald"></i> Team Sync Started</h4>
+                <p class="meet-card-subtitle">${escapeHtml(msg.senderName || "Host")} shared a live Google Meet room for allotted team members.</p>
+              </div>
+              <div class="meet-card-url-row">
+                <span class="meet-card-url-text" title="${safeUrl}">${safeUrl}</span>
+                <button type="button" class="btn btn-ghost btn-xs" data-meet-url="${safeUrl}" onclick="window.copyMeetRoomLink(this.getAttribute('data-meet-url'))" title="Copy Meet link">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+              <div class="meet-card-actions">
+                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="btn-join-google-meet">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                  <span>Join Google Meet</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        let formattedText = escapeHtml(msg.text);
+        formattedText = formattedText.replace(/#?(BUG-\d+)/gi, '<span class="conference-tag-pill conference-bug-pill" onclick="window.handleConferenceTagClick(\'$1\')" title="View Defect $1"><i class="fa-solid fa-bug"></i> $1</span>');
+        formattedText = formattedText.replace(/#?(TC-\d+)/gi, '<span class="conference-tag-pill conference-tc-pill" onclick="window.handleConferenceTagClick(\'$1\')" title="View Test Case $1"><i class="fa-solid fa-vial"></i> $1</span>');
+        bubbleContentHtml = `<div class="conference-msg-bubble">${formattedText}</div>`;
+      }
 
       return `
         <div class="conference-msg-row ${roleClass} ${isMe ? 'is-me' : ''}" data-msg-id="${msg.id}">
@@ -3411,9 +3459,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
               <span class="role-pill ${roleClass}"><i class="fa-solid ${isDev ? 'fa-laptop-code' : 'fa-flask-vial'}"></i> ${escapeHtml(roleBadgeText)}</span>
               <span class="msg-time"><i class="fa-regular fa-clock"></i> ${escapeHtml(msg.time || '')}</span>
             </div>
-            <div class="conference-msg-bubble">
-              ${formattedText}
-            </div>
+            ${bubbleContentHtml}
           </div>
         </div>
       `;
@@ -3452,16 +3498,23 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     };
 
     const targetProjectId = state.activeConferenceProjectId || "proj-payments";
+    const project = StorageManager.getConferenceProjectById(targetProjectId);
 
-    StorageManager.addConferenceMessage({
+    const savedMsg = StorageManager.addConferenceMessage({
       projectId: targetProjectId,
+      projectSlug: project ? (project.slug || project.id) : targetProjectId,
       senderId: currentUser.id || "usr-" + Date.now(),
       senderName: currentUser.name || (currentUser.role === "dev" ? "Developer" : "QA Tester"),
       senderRole: currentUser.role || (state.currentPortal === "dev" ? "dev" : "qa"),
       roleTitle: currentUser.roleTitle || (currentUser.role === "dev" ? "Software Engineer" : "QA Tester"),
       senderAvatar: currentUser.avatar || (currentUser.role === "dev" ? "DV" : "QA"),
+      messageType: "text",
       text: text
     });
+
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.syncConferenceMessageInsert) {
+      SupabaseManager.syncConferenceMessageInsert(savedMsg);
+    }
 
     input.value = "";
     input.style.height = "auto";
@@ -4029,14 +4082,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     });
 
     if (refreshBtn) {
-      refreshBtn.addEventListener("click", () => {
+      refreshBtn.addEventListener("click", async () => {
+        if (typeof SupabaseManager !== "undefined" && SupabaseManager.fetchConferenceMessagesFromSupabase && state.activeConferenceProjectId) {
+          await SupabaseManager.fetchConferenceMessagesFromSupabase(state.activeConferenceProjectId);
+        }
         renderConference();
         showToast("Conference messages updated!");
       });
     }
 
     if (clearBtn) {
-      clearBtn.addEventListener("click", () => {
+      clearBtn.addEventListener("click", async () => {
         const curUser = StorageManager.getCurrentUser() || state.currentUser;
         if (!StorageManager.isSeniorDev(curUser)) {
           showToast("Access Denied: Only Senior Developers can clear conference channels.", "error");
@@ -4045,6 +4101,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         if (confirm("Are you sure you want to clear the messages in this project channel? This action is permanent.")) {
           try {
             StorageManager.clearConferenceMessages(state.activeConferenceProjectId, curUser);
+            if (typeof SupabaseManager !== "undefined" && SupabaseManager.syncConferenceMessagesClear && state.activeConferenceProjectId) {
+              await SupabaseManager.syncConferenceMessagesClear(state.activeConferenceProjectId);
+            }
             renderConference();
             showToast("Channel messages cleared.");
           } catch(err) {
@@ -4412,9 +4471,134 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     });
 
     // =========================================================================
-    // LIVE CONFERENCE MEETING ROOM LOGIC & CONTROLS
+    // GOOGLE MEET LAUNCH & INLINE SHARE BANNER LOGIC
     // =========================================================================
     const btnLaunchMeeting = document.getElementById("btnLaunchMeeting");
+    const meetShareBanner = document.getElementById("conferenceMeetShareBanner");
+    const meetShareForm = document.getElementById("conferenceMeetShareForm");
+    const meetLinkInput = document.getElementById("meetLinkInput");
+    const cancelMeetShareBtn = document.getElementById("cancelMeetShareBtn");
+    const shareMeetWithTeamBtn = document.getElementById("shareMeetWithTeamBtn");
+
+    function normalizeGoogleMeetUrl(raw) {
+      if (!raw) return null;
+      let val = raw.trim();
+      if (!val) return null;
+      if (/^[a-z]{3}-[a-z]{4}-[a-z]{3}$/i.test(val)) {
+        val = `https://meet.google.com/${val.toLowerCase()}`;
+      } else if (/^meet\.google\.com\//i.test(val)) {
+        val = `https://${val}`;
+      }
+      try {
+        const parsed = new URL(val);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+        if (parsed.hostname !== "meet.google.com" && !parsed.hostname.endsWith(".meet.google.com")) return null;
+        return parsed.toString();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    window.copyMeetRoomLink = function(url) {
+      if (!url) return;
+      try {
+        navigator.clipboard.writeText(url);
+        showToast("Google Meet link copied to clipboard!", "success");
+      } catch (e) {
+        showToast("Meet link: " + url);
+      }
+    };
+
+    window.launchGoogleMeetFlow = function() {
+      window.open("https://meet.google.com/new", "_blank", "noopener,noreferrer");
+      if (meetShareBanner) {
+        meetShareBanner.style.display = "flex";
+      }
+      if (meetLinkInput) {
+        meetLinkInput.value = "";
+        setTimeout(() => meetLinkInput.focus(), 60);
+      }
+      showToast("Google Meet opened in a new tab. Paste the Meet link below to share with your team.", "info");
+    };
+
+    if (btnLaunchMeeting) {
+      btnLaunchMeeting.addEventListener("click", () => {
+        window.launchGoogleMeetFlow();
+      });
+    }
+
+    if (cancelMeetShareBtn && meetShareBanner) {
+      cancelMeetShareBtn.addEventListener("click", () => {
+        meetShareBanner.style.display = "none";
+        if (meetLinkInput) meetLinkInput.value = "";
+      });
+    }
+
+    if (meetShareForm) {
+      meetShareForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const rawUrl = meetLinkInput ? meetLinkInput.value : "";
+        const normalizedUrl = normalizeGoogleMeetUrl(rawUrl);
+        if (!normalizedUrl) {
+          showToast("Please paste a valid Google Meet link (e.g. https://meet.google.com/abc-defg-hij).", "warning");
+          if (meetLinkInput) meetLinkInput.focus();
+          return;
+        }
+
+        const currentUser = StorageManager.getCurrentUser() || state.currentUser || {
+          id: state.currentPortal === "dev" ? "dev-usr" : "qa-usr",
+          name: state.currentPortal === "dev" ? "Developer" : "QA Tester",
+          role: state.currentPortal === "dev" ? "dev" : "qa",
+          roleTitle: state.currentPortal === "dev" ? "Software Engineer" : "QA Lead",
+          avatar: state.currentPortal === "dev" ? "DV" : "QA"
+        };
+
+        const targetProjectId = state.activeConferenceProjectId || "proj-1";
+        const project = StorageManager.getConferenceProjectById(targetProjectId);
+        const projectSlug = project ? (project.slug || project.name || targetProjectId) : targetProjectId;
+
+        if (shareMeetWithTeamBtn) {
+          shareMeetWithTeamBtn.disabled = true;
+          shareMeetWithTeamBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sharing...';
+        }
+
+        const savedMsg = StorageManager.addConferenceMessage({
+          projectId: targetProjectId,
+          projectSlug: projectSlug,
+          senderId: currentUser.id || "usr-" + Date.now(),
+          senderName: currentUser.name || (currentUser.role === "dev" ? "Developer" : "QA Tester"),
+          senderRole: currentUser.role || (state.currentPortal === "dev" ? "dev" : "qa"),
+          roleTitle: currentUser.roleTitle || (currentUser.role === "dev" ? "Software Engineer" : "QA Tester"),
+          senderAvatar: currentUser.avatar || (currentUser.role === "dev" ? "DV" : "QA"),
+          messageType: "google_meet_invite",
+          meetUrl: normalizedUrl,
+          text: `Active Google Meet Room: ${normalizedUrl}`
+        });
+
+        let syncRes = { ok: false };
+        if (typeof SupabaseManager !== "undefined" && SupabaseManager.syncConferenceMessageInsert) {
+          syncRes = await SupabaseManager.syncConferenceMessageInsert(savedMsg);
+        }
+
+        if (shareMeetWithTeamBtn) {
+          shareMeetWithTeamBtn.disabled = false;
+          shareMeetWithTeamBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> Share with Team';
+        }
+        if (meetLinkInput) meetLinkInput.value = "";
+        if (meetShareBanner) meetShareBanner.style.display = "none";
+
+        renderConference();
+        if (syncRes && syncRes.ok) {
+          showToast(`Google Meet room shared in #${projectSlug} and synced to Supabase!`, "success");
+        } else if (syncRes && syncRes.missingTable) {
+          showToast(`Google Meet room posted in #${projectSlug} locally (run supabase_schema.sql in Supabase to enable nexus_conference_messages table sync).`, "warning");
+        } else {
+          showToast(`Google Meet room shared in #${projectSlug}!`, "success");
+        }
+      });
+    }
+
+    // Legacy meeting modal controls kept safe if modal DOM exists
     const meetingModal = document.getElementById("conferenceMeetingModal");
     const closeMeetingModalBtn = document.getElementById("closeMeetingModalBtn");
     const meetingLeaveBtn = document.getElementById("meetingLeaveBtn");
@@ -4435,161 +4619,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     ];
 
     window.openConferenceMeeting = function(projectId) {
-      const pId = projectId || state.activeConferenceProjectId || "proj-1";
-      const project = StorageManager.getConferenceProjectById(pId);
-      const currentUser = StorageManager.getCurrentUser() || state.currentUser || {
-        id: "cur-user",
-        name: state.currentPortal === "dev" ? "Dev Engineer" : "QA Lead",
-        role: state.currentPortal === "dev" ? "dev" : "qa",
-        roleTitle: state.currentPortal === "dev" ? "Developer" : "QA Lead",
-        avatar: state.currentPortal === "dev" ? "DV" : "QA"
-      };
-
-      const titleEl = document.getElementById("meetingModalTitle");
-      const subEl = document.getElementById("meetingModalSubtitle");
-      const countEl = document.getElementById("meetingParticipantCount");
-      const videoGrid = document.getElementById("meetingVideoGrid");
-      const timerBadge = document.getElementById("meetingTimerBadge");
-
-      const projName = project ? project.name : "Team Sync";
-      if (titleEl) titleEl.textContent = `${projName} — Live Team Sync`;
-      if (subEl) subEl.textContent = `Live WebRTC room for #${project ? (project.slug || project.id) : 'project-room'}`;
-
-      // Retrieve allotted team members
-      let members = StorageManager.getProjectAllottedUsers(pId);
-      if (!members || members.length === 0) {
-        members = StorageManager.getUsers().slice(0, 4);
-      }
-
-      // Ensure current user is in the list
-      const hasCurrent = members.some(m => m.id === currentUser.id || m.name === currentUser.name);
-      if (!hasCurrent) {
-        members = [currentUser, ...members];
-      }
-
-      if (countEl) countEl.textContent = members.length;
-
-      // Reset meeting states
-      state.meetingActive = true;
-      state.meetingSeconds = 0;
-      state.meetingMicMuted = false;
-      state.meetingCamOff = false;
-      state.meetingScreenSharing = false;
-      state.meetingHandRaised = false;
-
-      if (meetingToggleMicBtn) {
-        meetingToggleMicBtn.className = "dock-btn";
-        meetingToggleMicBtn.innerHTML = '<i class="fa-solid fa-microphone"></i><span>Mic On</span>';
-      }
-      if (meetingToggleCamBtn) {
-        meetingToggleCamBtn.className = "dock-btn";
-        meetingToggleCamBtn.innerHTML = '<i class="fa-solid fa-video"></i><span>Cam On</span>';
-      }
-      if (meetingToggleScreenBtn) {
-        meetingToggleScreenBtn.className = "dock-btn";
-        meetingToggleScreenBtn.innerHTML = '<i class="fa-solid fa-desktop"></i><span>Share</span>';
-      }
-      if (meetingRaiseHandBtn) {
-        meetingRaiseHandBtn.className = "dock-btn";
-        meetingRaiseHandBtn.innerHTML = '<i class="fa-regular fa-hand"></i><span>Raise</span>';
-      }
-
-      const screenStage = document.getElementById("meetingScreenShareStage");
-      if (screenStage) screenStage.style.display = "none";
-
-      // Render Video Tiles
-      if (videoGrid) {
-        videoGrid.innerHTML = members.map((m, idx) => {
-          const isMe = m.id === currentUser.id || m.name === currentUser.name;
-          const isSpeaking = !isMe && idx === 1;
-          const grad = avatarGradients[idx % avatarGradients.length];
-          const initials = escapeHtml(m.avatar || (m.name ? m.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "US"));
-
-          const photo = getUserPhoto(m);
-
-          return `
-            <div class="meeting-video-tile ${isSpeaking ? 'is-speaking' : ''} ${isMe ? 'is-me' : ''}" id="tile-member-${m.id || idx}">
-              <div class="tile-avatar-wrap">
-                ${photo ? `
-                  <div class="tile-avatar" style="overflow:hidden; padding:0; border-radius:50%;">
-                    <img src="${escapeHtml(photo)}" alt="${escapeHtml(m.name)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;">
-                  </div>
-                ` : `
-                  <div class="tile-avatar" style="background: ${grad};">
-                    ${initials}
-                  </div>
-                `}
-                <div class="tile-audio-wave" style="display: ${isSpeaking ? 'flex' : 'none'};">
-                  <span class="wave-bar"></span>
-                  <span class="wave-bar"></span>
-                  <span class="wave-bar"></span>
-                  <span class="wave-bar"></span>
-                </div>
-              </div>
-              <div class="tile-overlay-info">
-                <div class="tile-name-tag">
-                  <span>${escapeHtml(m.name)}${isMe ? ' (You)' : ''}</span>
-                  ${m.isHead ? '<i class="fa-solid fa-crown text-amber text-2xs" title="Project Head"></i>' : ''}
-                </div>
-                <div class="tile-mic-status" id="mic-status-${m.id || idx}">
-                  <i class="fa-solid fa-microphone"></i>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join("");
-      }
-
-      // Start meeting timer
-      if (timerBadge) timerBadge.textContent = "00:00";
-      clearInterval(state.meetingTimerInterval);
-      state.meetingTimerInterval = setInterval(() => {
-        state.meetingSeconds++;
-        const mins = Math.floor(state.meetingSeconds / 60).toString().padStart(2, "0");
-        const secs = (state.meetingSeconds % 60).toString().padStart(2, "0");
-        if (timerBadge) timerBadge.textContent = `${mins}:${secs}`;
-      }, 1000);
-
-      // Dynamic speaking simulation (alternates active speaker wave)
-      clearInterval(state.meetingSpeakerInterval);
-      state.meetingSpeakerInterval = setInterval(() => {
-        if (!state.meetingActive) return;
-        const tiles = document.querySelectorAll(".meeting-video-tile:not(.is-me)");
-        if (tiles.length === 0) return;
-        tiles.forEach(t => {
-          t.classList.remove("is-speaking");
-          const wave = t.querySelector(".tile-audio-wave");
-          if (wave) wave.style.display = "none";
-        });
-        const randIndex = Math.floor(Math.random() * tiles.length);
-        const activeTile = tiles[randIndex];
-        if (activeTile) {
-          activeTile.classList.add("is-speaking");
-          const wave = activeTile.querySelector(".tile-audio-wave");
-          if (wave) wave.style.display = "flex";
-        }
-      }, 4000);
-
-      // Post notification to channel chat
-      try {
-        StorageManager.addConferenceMessage({
-          projectId: pId,
-          senderId: currentUser.id || "usr-" + Date.now(),
-          senderName: currentUser.name,
-          senderRole: currentUser.role,
-          roleTitle: currentUser.roleTitle,
-          senderAvatar: currentUser.avatar,
-          text: `🎥 Started a live team sync meeting for this project.`
-        });
-        if (state.currentView === "conference" && state.activeConferenceProjectId === pId) {
-          renderConference();
-        }
-      } catch (e) {
-        // non-blocking
-      }
-
-      if (meetingModal) meetingModal.style.display = "flex";
-      showToast(`Live meeting started for "${projName}"!`, "success");
+      window.launchGoogleMeetFlow();
     };
 
     window.closeConferenceMeeting = function() {
@@ -4600,14 +4630,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       if (meetingModal) meetingModal.style.display = "none";
       showToast("You left the conference meeting.");
     };
-
-    // Wire up buttons
-    if (btnLaunchMeeting) {
-      btnLaunchMeeting.addEventListener("click", () => {
-        const pId = state.activeConferenceProjectId || "proj-1";
-        window.openConferenceMeeting(pId);
-      });
-    }
 
     if (closeMeetingModalBtn) {
       closeMeetingModalBtn.addEventListener("click", () => {
