@@ -15,7 +15,7 @@ const SupabaseManager = {
   getConfig() {
     const raw = localStorage.getItem(SUPABASE_CONFIG_KEY);
     if (raw) {
-      try { return JSON.parse(raw); } catch(e) {}
+      try { return JSON.parse(raw); } catch (e) { }
     }
     return {
       url: "https://tbwklqcundyvnnrwidmn.supabase.co",
@@ -44,7 +44,7 @@ const SupabaseManager = {
         try {
           this.client = window.supabase.createClient(config.url, config.anonKey);
           this.isConnected = true;
-        } catch(e) {
+        } catch (e) {
           console.warn("Error creating Supabase client:", e);
         }
       }
@@ -311,35 +311,65 @@ const SupabaseManager = {
   },
 
   mapTestCaseToDB(tc) {
+    const stepsArray = Array.isArray(tc.steps) ? tc.steps : [];
+    const hasMeta = Boolean(tc.assignedDev || tc.mediaUrl || tc.image || tc.mediaType || tc.mediaName || tc.explanation || tc.createdAt);
+    const stepsPayload = hasMeta
+      ? {
+          items: stepsArray,
+          _meta: {
+            explanation: tc.explanation || tc.preconditions || "",
+            assignedDev: tc.assignedDev || "",
+            mediaUrl: tc.mediaUrl || tc.image || "",
+            mediaType: tc.mediaType || (tc.image ? "image" : ""),
+            mediaName: tc.mediaName || "",
+            createdAt: tc.createdAt || tc.lastRun || ""
+          }
+        }
+      : stepsArray;
+
     return {
       id: tc.id,
       title: tc.title,
-      suite_id: tc.suiteId,
-      priority: tc.priority,
-      type: tc.type,
-      status: tc.status,
-      author: tc.author,
-      last_run: tc.lastRun,
-      preconditions: tc.preconditions,
+      suite_id: tc.suiteId || null,
+      priority: tc.priority || "P1 - High",
+      type: tc.type || "Manual",
+      status: tc.status || "Untested",
+      author: tc.author || "QA Tester",
+      last_run: tc.lastRun || tc.createdAt || new Date().toISOString().replace("T", " ").substring(0, 16),
+      preconditions: tc.explanation || tc.preconditions || "",
       tags: tc.tags || [],
-      steps: tc.steps || [],
+      steps: stepsPayload,
       updated_at: new Date().toISOString()
     };
   },
 
   mapTestCaseFromDB(row) {
+    const rawSteps = row.steps;
+    const isWrapped = rawSteps && !Array.isArray(rawSteps) && Array.isArray(rawSteps.items);
+    const stepsArr = isWrapped ? rawSteps.items : (Array.isArray(rawSteps) ? rawSteps : []);
+    const meta = (isWrapped && rawSteps._meta) ? rawSteps._meta : {};
+    const mediaUrl = meta.mediaUrl || "";
+    const mediaType = meta.mediaType || "";
+
     return {
       id: row.id,
       title: row.title,
       suiteId: row.suite_id,
       priority: row.priority,
-      type: row.type,
-      status: row.status,
+      type: row.type || "Manual",
+      status: row.status || "Untested",
       author: row.author,
       lastRun: row.last_run,
-      preconditions: row.preconditions,
+      createdAt: meta.createdAt || (row.created_at ? row.created_at.substring(0, 16).replace("T", " ") : ""),
+      preconditions: row.preconditions || meta.explanation || "",
+      explanation: meta.explanation || row.preconditions || "",
+      assignedDev: meta.assignedDev || "",
+      mediaUrl,
+      mediaType,
+      mediaName: meta.mediaName || "",
+      image: mediaType === "video" ? "" : mediaUrl,
       tags: row.tags || [],
-      steps: row.steps || []
+      steps: stepsArr
     };
   },
 
@@ -354,6 +384,7 @@ const SupabaseManager = {
       reporter: d.reportedBy || d.reporter || "QA Tester",
       status: d.status || "Open",
       description: d.description || null,
+      repro_steps: d.reproSteps || d.repro_steps || null,
       notes: d.devNotes || d.notes || null,
       dev_pr: d.prLink || d.dev_pr || null,
       dev_branch: d.gitBranch || d.dev_branch || null,
@@ -373,6 +404,7 @@ const SupabaseManager = {
       reportedBy: row.reporter || row.reported_by,
       status: row.status,
       description: row.description,
+      reproSteps: row.repro_steps || "",
       devNotes: row.notes || row.dev_notes,
       prLink: row.dev_pr || row.pr_link,
       gitBranch: row.dev_branch || row.git_branch,
@@ -490,7 +522,7 @@ const SupabaseManager = {
     try {
       const payload = usersList.map(u => this.mapUserToDB(u));
       await client.from("nexus_users").upsert(payload);
-    } catch(e) {
+    } catch (e) {
       console.warn("Error syncing users to Supabase:", e);
     }
   },
@@ -540,7 +572,7 @@ const SupabaseManager = {
     if (updates.name !== undefined) {
       dbPayload.name = updates.name.trim();
       const parts = updates.name.trim().split(/\s+/);
-      dbPayload.avatar = parts.length > 1 
+      dbPayload.avatar = parts.length > 1
         ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
         : updates.name.trim().substring(0, 2).toUpperCase();
     }
@@ -624,7 +656,7 @@ const SupabaseManager = {
         const payload = this.mapUserToDB(user);
         const { error } = await client.from("nexus_users").upsert(payload);
         if (error) console.warn("Supabase user upsert error:", error);
-      } catch(e) { console.warn("Supabase user upsert error:", e); }
+      } catch (e) { console.warn("Supabase user upsert error:", e); }
     }
   },
 
@@ -632,23 +664,155 @@ const SupabaseManager = {
     if (this.client && this.isConnected) {
       try {
         await this.client.from("nexus_users").delete().eq("id", userId);
-      } catch(e) { console.warn("Supabase user delete error:", e); }
+      } catch (e) { console.warn("Supabase user delete error:", e); }
+    }
+  },
+
+  async generateNextTestCaseId() {
+    let maxNum = 0;
+    if (typeof StorageManager !== "undefined") {
+      StorageManager.getTestCases().forEach(tc => {
+        const m = String(tc.id || "").match(/TC-(\d+)/i);
+        if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+      });
+    }
+    const client = this.getClient();
+    if (client) {
+      try {
+        const { data, error } = await client.from("nexus_test_cases").select("id");
+        if (!error && Array.isArray(data)) {
+          data.forEach(row => {
+            const m = String(row.id || "").match(/TC-(\d+)/i);
+            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+          });
+        }
+      } catch (e) {
+        console.warn("ID generation Supabase lookup warning:", e);
+      }
+    }
+    return `TC-${String(maxNum + 1).padStart(3, "0")}`;
+  },
+
+  async fetchDevelopersFromSupabase() {
+    const client = this.getClient();
+    const users = typeof StorageManager !== "undefined" ? StorageManager.getUsers() : [];
+    if (client) {
+      try {
+        const { data, error } = await client
+          .from("nexus_users")
+          .select("*")
+          .eq("role", "dev")
+          .eq("status", "active")
+          .order("name", { ascending: true });
+        if (!error && Array.isArray(data)) {
+          return data.map(u => this.mapUserFromDB(u));
+        }
+      } catch (e) {
+        console.warn("Supabase fetch developers warning:", e);
+      }
+    }
+    return users.filter(u => u.role === "dev" && u.status === "active");
+  },
+
+  async uploadEvidenceMedia(file, testCaseId = "TC-001") {
+    if (!file) return null;
+    const isVideo = (file.type || "").startsWith("video/");
+    const mediaType = isVideo ? "video" : "image";
+    const fileName = file.name || (isVideo ? `${testCaseId}-recording.webm` : `${testCaseId}-screenshot.png`);
+    const safeName = `${testCaseId}-${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+
+    const client = this.getClient();
+    if (client) {
+      try {
+        const { data: buckets } = await client.storage.listBuckets();
+        if (Array.isArray(buckets) && buckets.length > 0) {
+          const preferred = buckets.find(b => /evidence|media|attach|nexus/i.test(b.name)) || buckets[0];
+          const bucketName = preferred.name;
+          const { data, error } = await client.storage
+            .from(bucketName)
+            .upload(`test-cases/${safeName}`, file, { contentType: file.type || undefined, upsert: true });
+
+          if (!error && data) {
+            const { data: pub } = client.storage.from(bucketName).getPublicUrl(data.path);
+            if (pub && pub.publicUrl) {
+              return { url: pub.publicUrl, storage: "supabase", bucket: bucketName, mediaType, mediaName: fileName };
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Supabase Storage upload fallback:", e);
+      }
+    }
+
+    return new Promise((resolve, reject) => {
+      if (isVideo && file.size > 4 * 1024 * 1024) {
+        resolve({
+          url: URL.createObjectURL(file),
+          storage: "session-preview",
+          mediaType: "video",
+          mediaName: fileName
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        resolve({
+          url: evt.target.result,
+          storage: "embedded",
+          mediaType,
+          mediaName: fileName
+        });
+      };
+      reader.onerror = () => reject(new Error("Failed to read media file"));
+      reader.readAsDataURL(file);
+    });
+  },
+
+  async ensureSuiteInSupabase(suiteId) {
+    const client = this.getClient();
+    if (!client || !suiteId) return;
+    try {
+      const suites = typeof StorageManager !== "undefined" ? StorageManager.getSuites() : [];
+      const suite = suites.find(s => s.id === suiteId);
+      if (suite) {
+        await client.from("nexus_suites").upsert({
+          id: suite.id,
+          name: suite.name,
+          description: suite.description || "",
+          icon: suite.icon || "fa-solid fa-folder"
+        });
+      }
+    } catch (e) {
+      console.warn("Supabase suite ensure warning:", e);
     }
   },
 
   async syncTestCaseUpsert(testCase) {
-    if (this.client && this.isConnected) {
+    const client = this.getClient();
+    if (client) {
       try {
-        await this.client.from("nexus_test_cases").upsert(this.mapTestCaseToDB(testCase));
-      } catch(e) { console.warn("Supabase testcase upsert error:", e); }
+        if (testCase.suiteId) {
+          await this.ensureSuiteInSupabase(testCase.suiteId);
+        }
+        const { error } = await client.from("nexus_test_cases").upsert(this.mapTestCaseToDB(testCase));
+        if (error) {
+          console.warn("Supabase testcase upsert error:", error);
+          return { ok: false, error };
+        }
+        return { ok: true };
+      } catch (e) {
+        console.warn("Supabase testcase upsert error:", e);
+        return { ok: false, error: e };
+      }
     }
+    return { ok: false };
   },
 
   async syncTestCaseDelete(testCaseId) {
     if (this.client && this.isConnected) {
       try {
         await this.client.from("nexus_test_cases").delete().eq("id", testCaseId);
-      } catch(e) { console.warn("Supabase testcase delete error:", e); }
+      } catch (e) { console.warn("Supabase testcase delete error:", e); }
     }
   },
 
@@ -656,7 +820,7 @@ const SupabaseManager = {
     if (this.client && this.isConnected) {
       try {
         await this.client.from("nexus_defects").upsert(this.mapDefectToDB(defect));
-      } catch(e) { console.warn("Supabase defect upsert error:", e); }
+      } catch (e) { console.warn("Supabase defect upsert error:", e); }
     }
   },
 
@@ -664,7 +828,7 @@ const SupabaseManager = {
     if (this.client && this.isConnected) {
       try {
         await this.client.from("nexus_defects").delete().eq("id", defectId);
-      } catch(e) { console.warn("Supabase defect delete error:", e); }
+      } catch (e) { console.warn("Supabase defect delete error:", e); }
     }
   },
 
@@ -672,7 +836,7 @@ const SupabaseManager = {
     if (this.client && this.isConnected) {
       try {
         await this.client.from("nexus_test_runs").upsert(this.mapTestRunToDB(testRun));
-      } catch(e) { console.warn("Supabase test run upsert error:", e); }
+      } catch (e) { console.warn("Supabase test run upsert error:", e); }
     }
   }
 };

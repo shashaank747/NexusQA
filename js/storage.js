@@ -1396,12 +1396,15 @@ const StorageManager = {
     const cases = this.getTestCases();
     if (!testCase.id) {
       const nextNum = cases.reduce((max, tc) => {
-        const num = parseInt(tc.id.replace("TC-", ""), 10) || 0;
+        const match = String(tc.id || "").match(/TC-(\d+)/i);
+        const num = match ? parseInt(match[1], 10) : 0;
         return Math.max(max, num);
-      }, 100) + 1;
-      testCase.id = `TC-${nextNum}`;
+      }, 0) + 1;
+      testCase.id = `TC-${String(nextNum).padStart(3, "0")}`;
     }
-    testCase.lastRun = testCase.lastRun || "Never";
+    const nowStamp = new Date().toISOString().replace("T", " ").substring(0, 16);
+    testCase.createdAt = testCase.createdAt || nowStamp;
+    testCase.lastRun = testCase.lastRun || nowStamp;
     const curUser = this.getCurrentUser();
     testCase.author = testCase.author || (curUser ? curUser.name : "QA Tester");
     cases.unshift(testCase);

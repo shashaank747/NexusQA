@@ -327,13 +327,17 @@ document.addEventListener("DOMContentLoaded", () => {
     testCaseForm: document.getElementById("testCaseForm"),
     testCaseModalTitle: document.getElementById("testCaseModalTitle"),
     editTestCaseId: document.getElementById("editTestCaseId"),
+    tcGeneratedId: document.getElementById("tcGeneratedId"),
+    tcGeneratedTimestamp: document.getElementById("tcGeneratedTimestamp"),
+    tcAutoIdText: document.getElementById("tcAutoIdText"),
+    tcAutoTimestampText: document.getElementById("tcAutoTimestampText"),
+    tcAutoAuthorText: document.getElementById("tcAutoAuthorText"),
     tcTitle: document.getElementById("tcTitle"),
+    tcExplanation: document.getElementById("tcExplanation"),
     tcSuite: document.getElementById("tcSuite"),
     tcPriority: document.getElementById("tcPriority"),
-    tcType: document.getElementById("tcType"),
     tcStatus: document.getElementById("tcStatus"),
-    tcPreconditions: document.getElementById("tcPreconditions"),
-    tcTags: document.getElementById("tcTags"),
+    tcAssignedDev: document.getElementById("tcAssignedDev"),
     stepsBuilderList: document.getElementById("stepsBuilderList"),
     addStepBtn: document.getElementById("addStepBtn"),
     saveTestCaseBtn: document.getElementById("saveTestCaseBtn"),
@@ -344,20 +348,14 @@ document.addEventListener("DOMContentLoaded", () => {
     tcImageDropzone: document.getElementById("tcImageDropzone"),
     tcImagePreviewWrap: document.getElementById("tcImagePreviewWrap"),
     tcImagePreview: document.getElementById("tcImagePreview"),
+    tcVideoPreview: document.getElementById("tcVideoPreview"),
+    tcMediaStorageBadge: document.getElementById("tcMediaStorageBadge"),
     tcRemoveImageBtn: document.getElementById("tcRemoveImageBtn"),
     tcViewImageFullBtn: document.getElementById("tcViewImageFullBtn"),
     tcImageFileName: document.getElementById("tcImageFileName"),
     editTestCaseDeleteWrap: document.getElementById("editTestCaseDeleteWrap"),
     deleteTestCaseModalBtn: document.getElementById("deleteTestCaseModalBtn"),
-
-    // Live Test Session Elements
-    topbarStartSessionBtn: document.getElementById("topbarStartSessionBtn"),
-    dashboardStartSessionBtn: document.getElementById("dashboardStartSessionBtn"),
-    repoStartSessionBtn: document.getElementById("repoStartSessionBtn"),
     dashboardNewTestCaseBtn: document.getElementById("dashboardNewTestCaseBtn"),
-    liveTestSessionModal: document.getElementById("liveTestSessionModal"),
-    closeLiveSessionModalBtn: document.getElementById("closeLiveSessionModalBtn"),
-    endSessionBtn: document.getElementById("endSessionBtn"),
 
     // Conversational AI QA Assistant & Auto Input Studio Modal
     autoInputModal: document.getElementById("autoInputModal"),
@@ -2912,11 +2910,56 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       assignee
     });
 
+    // Also sync linked Test Case status when developer resolves / marks Ready for QA
+    const defect = StorageManager.getDefectById(bugId);
+    if (defect && defect.linkedTestCaseId) {
+      const linkedTc = StorageManager.getTestCaseById(defect.linkedTestCaseId);
+      if (linkedTc) {
+        const mappedTcStatus = status === "Fixed - Ready for QA"
+          ? "Ready for Re-Test"
+          : (status === "Resolved & Verified" || status === "Closed")
+            ? "Pass"
+            : linkedTc.status;
+        StorageManager.updateTestCase({
+          ...linkedTc,
+          status: mappedTcStatus,
+          assignedDev: assignee || linkedTc.assignedDev || "",
+          lastRun: new Date().toISOString().replace("T", " ").substring(0, 16)
+        });
+      }
+    }
+
     if (DOM.devFixModal) DOM.devFixModal.style.display = "none";
     renderDevDashboard();
     if (state.currentView === "dev-kanban") renderDevKanban();
+    if (state.currentView === "dev-failures") renderDevFailures();
     showToast(`Bug ${bugId} updated to '${status}' & synced with QA!`);
   });
+
+  window.updateTestCaseStatusFromDev = async function(tcId, newStatus) {
+    const tc = StorageManager.getTestCaseById(tcId);
+    if (!tc) return;
+    const nowStamp = new Date().toISOString().replace("T", " ").substring(0, 16);
+    const updated = StorageManager.updateTestCase({ ...tc, status: newStatus, lastRun: nowStamp });
+    const linkedDefect = StorageManager.getDefects().find(d => d.linkedTestCaseId === tcId);
+    if (linkedDefect) {
+      const defectStatus = newStatus === "Ready for Re-Test"
+        ? "Fixed - Ready for QA"
+        : (newStatus === "Pass" || newStatus === "Passed")
+          ? "Resolved & Verified"
+          : (newStatus === "Fail" || newStatus === "Failed" || newStatus === "Blocked")
+            ? "Open"
+            : linkedDefect.status;
+      StorageManager.updateDefect({ ...linkedDefect, status: defectStatus });
+    }
+    if (typeof SupabaseManager !== "undefined" && updated) {
+      await SupabaseManager.syncTestCaseUpsert(updated);
+    }
+    renderDevDashboard();
+    if (state.currentView === "dev-kanban") renderDevKanban();
+    if (state.currentView === "dev-failures") renderDevFailures();
+    showToast(`${tcId} status updated to "${newStatus}" & synced with QA!`);
+  };
 
   function renderDevFailures() {
     const runs = StorageManager.getTestRuns();
@@ -2924,9 +2967,25 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const caseMap = new Map(cases.map(c => [c.id, c]));
 
     const failedTests = [];
+    const seenTcIds = new Set();
+
+    // Include live logged test cases in Fail, Blocked, Ready for Re-Test, or assigned to a developer
+    cases.forEach(tc => {
+      const s = tc.status || "Untested";
+      if (s === "Fail" || s === "Failed" || s === "Blocked" || s === "Ready for Re-Test" || tc.assignedDev) {
+        seenTcIds.add(tc.id);
+        failedTests.push({
+          run: { name: tc.createdAt ? `Logged ${tc.createdAt}` : "Manual QA Log", environment: tc.assignedDev ? `Assigned: ${tc.assignedDev}` : "Unassigned" },
+          testCase: tc,
+          status: s,
+          notes: tc.explanation || tc.preconditions || ""
+        });
+      }
+    });
+
     runs.forEach(run => {
       Object.entries(run.results || {}).forEach(([tcId, res]) => {
-        if (res.status === "Failed" || res.status === "Blocked") {
+        if ((res.status === "Failed" || res.status === "Fail" || res.status === "Blocked") && !seenTcIds.has(tcId)) {
           failedTests.push({ run, testCase: caseMap.get(tcId), status: res.status, notes: res.notes });
         }
       });
@@ -2942,24 +3001,41 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
       DOM.devFailuresContainer.innerHTML = failedTests.map(f => {
         const tc = f.testCase || { id: "TC-Unknown", title: "Test Case", steps: [] };
+        const st = f.status || "Untested";
+        const badgeCls = (st === "Pass" || st === "Passed") ? "badge-passed" : st === "Ready for Re-Test" ? "badge-retest" : st === "Blocked" ? "badge-blocked" : "badge-failed";
+        const mediaUrl = tc.mediaUrl || tc.image || "";
+        const mediaHtml = mediaUrl ? (
+          tc.mediaType === "video"
+            ? `<div class="mt-2"><video src="${escapeHtml(mediaUrl)}" controls muted playsinline style="max-height:180px; border-radius:8px; background:#000;"></video></div>`
+            : `<div class="mt-2"><a href="${escapeHtml(mediaUrl)}" target="_blank"><img src="${escapeHtml(mediaUrl)}" alt="Evidence" style="max-height:160px; border-radius:8px; border:1px solid var(--border-color);"></a></div>`
+        ) : "";
+        const statuses = ["Untested", "Pass", "Fail", "Blocked", "Ready for Re-Test"];
+
         return `
           <div class="dev-failure-card">
-            <div class="d-flex justify-between align-center mb-2">
-              <div class="d-flex align-center gap-1">
-                <span class="test-id-pill" style="color:var(--rose); background:rgba(244,63,94,0.1);">${tc.id}</span>
-                <span class="badge badge-failed">${f.status}</span>
-                <span class="text-xs text-muted">in Run: <strong>${escapeHtml(f.run.name)}</strong> (${f.run.environment})</span>
+            <div class="d-flex justify-between align-center mb-2 flex-wrap gap-2">
+              <div class="d-flex align-center gap-1 flex-wrap">
+                <span class="test-id-pill" style="color:var(--rose); background:rgba(244,63,94,0.1);">${escapeHtml(tc.id)}</span>
+                <span class="badge ${badgeCls}">${escapeHtml(st)}</span>
+                ${tc.priority ? `<span class="badge badge-p1">${escapeHtml(tc.priority)}</span>` : ""}
+                <span class="text-xs text-muted"><strong>${escapeHtml(f.run.name)}</strong> • ${escapeHtml(f.run.environment)}</span>
               </div>
-              <button class="btn btn-danger btn-xs" onclick="window.openDevFixModalForTest('${tc.id}')">
-                <i class="fa-solid fa-bug"></i> Link / File Fix
-              </button>
+              <div class="d-flex align-center gap-2">
+                <select class="nexus-select text-xs" style="padding: 0.25rem 0.5rem; width: auto;" onchange="window.updateTestCaseStatusFromDev('${escapeHtml(tc.id)}', this.value)" title="Update QA Test Case Status">
+                  ${statuses.map(opt => `<option value="${opt}" ${st === opt || (opt === 'Pass' && st === 'Passed') || (opt === 'Fail' && st === 'Failed') ? 'selected' : ''}>${opt}</option>`).join("")}
+                </select>
+                <button class="btn btn-danger btn-xs" onclick="window.openDevFixModalForTest('${escapeHtml(tc.id)}')">
+                  <i class="fa-solid fa-bug"></i> Link / File Fix
+                </button>
+              </div>
             </div>
             <h3 class="text-sm font-bold text-heading mb-1">${escapeHtml(tc.title)}</h3>
             <div class="precondition-box text-xs mb-2">
-              <strong>QA Execution Log / Failure Reason:</strong> ${escapeHtml(f.notes || 'Step assertion mismatch')}
+              <strong>Bug Explanation / Log:</strong> ${escapeHtml(f.notes || 'No explanation provided')}
             </div>
-            <div class="text-xs text-muted">
-              <strong>Expected Steps:</strong> ${(tc.steps || []).map(s => `Step ${s.step}: ${escapeHtml(s.action)} → ${escapeHtml(s.expected)}`).join(" | ")}
+            ${mediaHtml}
+            <div class="text-xs text-muted mt-2">
+              <strong>Steps to Reproduce:</strong> ${(tc.steps || []).map(s => `${s.step}. ${escapeHtml(s.action)}${s.expected ? ` → ${escapeHtml(s.expected)}` : ""}`).join(" | ") || "None specified."}
             </div>
           </div>
         `;
@@ -4724,6 +4800,25 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   // =========================================================================
   // QA PORTAL LOGIC (Analytics, Repository, Runner, Defects, AI Generator)
   // =========================================================================
+  function isPassStatus(status) {
+    return status === "Pass" || status === "Passed";
+  }
+
+  function isFailStatus(status) {
+    return status === "Fail" || status === "Failed";
+  }
+
+  function isRetestStatus(status) {
+    return status === "Ready for Re-Test" || status === "Fixed - Ready for QA";
+  }
+
+  function normalizeModalStatus(status) {
+    if (status === "Passed") return "Pass";
+    if (status === "Failed") return "Fail";
+    if (status === "Fixed - Ready for QA") return "Ready for Re-Test";
+    return status || "Untested";
+  }
+
   function renderDashboard() {
     checkRetestBanner();
     const cases = StorageManager.getTestCases();
@@ -4732,16 +4827,16 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const runs = StorageManager.getTestRuns();
 
     const total = cases.length;
-    const passed = cases.filter(c => c.status === "Passed").length;
-    const failed = cases.filter(c => c.status === "Failed").length;
+    const passed = cases.filter(c => isPassStatus(c.status)).length;
+    const failed = cases.filter(c => isFailStatus(c.status)).length;
     const blocked = cases.filter(c => c.status === "Blocked").length;
-    const untested = cases.filter(c => c.status === "Untested").length;
+    const untested = cases.filter(c => !c.status || c.status === "Untested" || isRetestStatus(c.status)).length;
 
     const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
     const untestedPercent = total > 0 ? Math.round((untested / total) * 100) : 0;
 
     const openBugs = defects.filter(d => d.status !== "Closed" && d.status !== "Resolved & Verified");
-    const criticalBugs = openBugs.filter(d => d.severity === "Critical" || d.priority.includes("P0"));
+    const criticalBugs = openBugs.filter(d => d.severity === "Critical" || (d.priority && d.priority.includes("P0")));
 
     if (DOM.kpiTotalTests) DOM.kpiTotalTests.textContent = total;
     if (DOM.kpiPassRate) DOM.kpiPassRate.textContent = `${passRate}%`;
@@ -4830,7 +4925,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     DOM.moduleHealthList.innerHTML = suites.slice(0, 5).map(suite => {
       const suiteCases = cases.filter(c => c.suiteId === suite.id);
       const total = suiteCases.length;
-      const passed = suiteCases.filter(c => c.status === "Passed").length;
+      const passed = suiteCases.filter(c => isPassStatus(c.status)).length;
       const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
       let barColor = rate < 50 ? "bg-rose" : rate < 70 ? "bg-amber" : "bg-emerald";
 
@@ -4999,7 +5094,14 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   function getFilteredTestCases() {
     let cases = StorageManager.getTestCases();
     if (state.selectedSuiteId !== "all") cases = cases.filter(c => c.suiteId === state.selectedSuiteId);
-    if (state.filterStatus !== "all") cases = cases.filter(c => c.status === state.filterStatus);
+    if (state.filterStatus !== "all") {
+      cases = cases.filter(c => {
+        if (isPassStatus(state.filterStatus)) return isPassStatus(c.status);
+        if (isFailStatus(state.filterStatus)) return isFailStatus(c.status);
+        if (isRetestStatus(state.filterStatus)) return isRetestStatus(c.status);
+        return c.status === state.filterStatus;
+      });
+    }
     if (state.filterPriority !== "all") cases = cases.filter(c => c.priority === state.filterPriority);
     if (state.filterType !== "all") cases = cases.filter(c => c.type === state.filterType);
 
@@ -5008,9 +5110,11 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       cases = cases.filter(c => 
         c.id.toLowerCase().includes(q) ||
         c.title.toLowerCase().includes(q) ||
+        (c.assignedDev && c.assignedDev.toLowerCase().includes(q)) ||
+        (c.explanation && c.explanation.toLowerCase().includes(q)) ||
         (c.tags && c.tags.some(t => t.toLowerCase().includes(q))) ||
         (c.preconditions && c.preconditions.toLowerCase().includes(q)) ||
-        (c.steps && c.steps.some(s => s.action.toLowerCase().includes(q) || s.expected.toLowerCase().includes(q)))
+        (c.steps && c.steps.some(s => (s.action || "").toLowerCase().includes(q) || (s.expected || "").toLowerCase().includes(q)))
       );
     }
 
@@ -5018,8 +5122,8 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       let valA = a[state.sortField] || "";
       let valB = b[state.sortField] || "";
       if (state.sortField === "id") {
-        const numA = parseInt(a.id.replace("TC-", ""), 10) || 0;
-        const numB = parseInt(b.id.replace("TC-", ""), 10) || 0;
+        const numA = parseInt(String(a.id || "").replace(/TC-/i, ""), 10) || 0;
+        const numB = parseInt(String(b.id || "").replace(/TC-/i, ""), 10) || 0;
         return state.sortAsc ? numA - numB : numB - numA;
       }
       if (valA < valB) return state.sortAsc ? -1 : 1;
@@ -5039,10 +5143,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.showingCount) DOM.showingCount.textContent = filteredCases.length;
     if (DOM.totalTestsCount) DOM.totalTestsCount.textContent = allCases.length;
 
-    if (DOM.statPassed) DOM.statPassed.textContent = allCases.filter(c => c.status === "Passed").length;
-    if (DOM.statFailed) DOM.statFailed.textContent = allCases.filter(c => c.status === "Failed").length;
-    if (DOM.statBlocked) DOM.statBlocked.textContent = allCases.filter(c => c.status === "Blocked").length;
-    if (DOM.statUntested) DOM.statUntested.textContent = allCases.filter(c => c.status === "Untested").length;
+    if (DOM.statPassed) DOM.statPassed.textContent = `${allCases.filter(c => isPassStatus(c.status)).length} Pass`;
+    if (DOM.statFailed) DOM.statFailed.textContent = `${allCases.filter(c => isFailStatus(c.status)).length} Fail`;
+    if (DOM.statBlocked) DOM.statBlocked.textContent = `${allCases.filter(c => c.status === "Blocked").length} Blocked`;
+    if (DOM.statUntested) DOM.statUntested.textContent = `${allCases.filter(c => !c.status || c.status === "Untested" || isRetestStatus(c.status)).length} Pending`;
 
     if (filteredCases.length === 0) {
       DOM.testCasesTableBody.innerHTML = "";
@@ -5057,9 +5161,24 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       const isChecked = state.selectedTestCaseIds.has(tc.id);
       const suiteName = suiteMap.get(tc.suiteId) || "General Suite";
 
-      let statusClass = tc.status === "Passed" ? "badge-passed" : tc.status === "Failed" ? "badge-failed" : tc.status === "Blocked" ? "badge-blocked" : "badge-untested";
+      let statusClass = isPassStatus(tc.status)
+        ? "badge-passed"
+        : isFailStatus(tc.status)
+          ? "badge-failed"
+          : tc.status === "Blocked"
+            ? "badge-blocked"
+            : isRetestStatus(tc.status)
+              ? "badge-retest"
+              : "badge-untested";
       let prioClass = tc.priority.includes("P0") ? "badge-p0" : tc.priority.includes("P1") ? "badge-p1" : tc.priority.includes("P3") ? "badge-p3" : "badge-p2";
       const tagsHtml = (tc.tags || []).map(t => `<span class="tag-pill">#${t}</span>`).join("");
+      const hasMedia = Boolean(tc.mediaUrl || tc.image);
+      const mediaBadge = hasMedia
+        ? `<span class="badge badge-version" style="font-size:9px; margin-left:6px; vertical-align:middle;" title="Evidence attached"><i class="fa-solid ${tc.mediaType === 'video' ? 'fa-video' : 'fa-image'}"></i> ${tc.mediaType === 'video' ? 'Video' : 'Image'}</span>`
+        : "";
+      const devBadge = tc.assignedDev
+        ? `<span class="tag-pill" title="Assigned Developer"><i class="fa-solid fa-code"></i> ${escapeHtml(tc.assignedDev)}</span>`
+        : "";
 
       return `
         <tr data-tc-id="${tc.id}" class="${isChecked ? 'row-selected' : ''}">
@@ -5072,9 +5191,9 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           <td class="col-title" onclick="window.viewTestCaseDetail('${tc.id}')">
             <div class="test-title-cell">
               ${escapeHtml(tc.title)}
-              ${tc.image ? '<span class="badge badge-version" style="font-size:9px; margin-left:6px; vertical-align:middle;" title="Reference image attached"><i class="fa-solid fa-image"></i> Image</span>' : ''}
+              ${mediaBadge}
             </div>
-            <div class="test-tags-row">${tagsHtml}</div>
+            <div class="test-tags-row">${devBadge}${tagsHtml}</div>
           </td>
           <td class="col-suite" onclick="window.viewTestCaseDetail('${tc.id}')">
             <span class="text-muted text-xs"><i class="fa-solid fa-folder text-dim"></i> ${escapeHtml(suiteName)}</span>
@@ -5083,14 +5202,14 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
             <span class="badge ${prioClass}">${tc.priority}</span>
           </td>
           <td class="col-type" onclick="window.viewTestCaseDetail('${tc.id}')">
-            <span class="badge badge-type">${escapeHtml(tc.type || 'Functional')}</span>
+            <span class="badge badge-type">${escapeHtml(tc.type || 'Manual')}</span>
           </td>
           <td class="col-status" onclick="window.viewTestCaseDetail('${tc.id}')">
-            <span class="badge ${statusClass}"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> ${tc.status}</span>
+            <span class="badge ${statusClass}"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> ${escapeHtml(tc.status || 'Untested')}</span>
           </td>
           <td class="col-actions" onclick="event.stopPropagation()">
             <div class="d-flex justify-end align-center gap-1">
-              <button class="icon-btn-xs" title="Quick Mark as Passed" onclick="window.markTestCaseStatus('${tc.id}', 'Passed')">
+              <button class="icon-btn-xs" title="Quick Mark as Pass" onclick="window.markTestCaseStatus('${tc.id}', 'Pass')">
                 <i class="fa-solid fa-check text-emerald"></i>
               </button>
               <button class="icon-btn-xs" title="Edit Test Case" onclick="window.openEditTestCaseModal('${tc.id}')">
@@ -5210,7 +5329,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (!DOM.stepsBuilderList) return;
     DOM.stepsBuilderList.innerHTML = "";
     if (steps.length === 0) steps = [{ step: 1, action: "", expected: "" }];
-    steps.forEach((s, idx) => addStepRow(s.action, s.expected, idx + 1));
+    steps.forEach((s, idx) => addStepRow(s.action || "", s.expected || "", idx + 1));
   }
 
   function addStepRow(actionVal = "", expectedVal = "", stepNum = null) {
@@ -5221,10 +5340,25 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     row.className = "step-builder-row";
     row.innerHTML = `
       <span class="step-num-badge">${num}</span>
-      <input type="text" class="nexus-input step-input-action" placeholder="Step ${num} Action / Input..." value="${escapeHtml(actionVal)}" required>
-      <input type="text" class="nexus-input step-input-expected" placeholder="Expected Verification Result..." value="${escapeHtml(expectedVal)}" required>
+      <input type="text" class="nexus-input step-input-action" placeholder="Step ${num}: Describe action to trigger / reproduce..." value="${escapeHtml(actionVal)}">
+      <input type="text" class="nexus-input step-input-expected" placeholder="Expected result (optional)..." value="${escapeHtml(expectedVal)}">
       <button type="button" class="icon-btn-xs remove-step-btn" title="Remove Step"><i class="fa-solid fa-xmark text-rose"></i></button>
     `;
+    const actionInput = row.querySelector(".step-input-action");
+    if (actionInput) {
+      actionInput.addEventListener("paste", (e) => {
+        const text = (e.clipboardData || window.clipboardData)?.getData("text") || "";
+        const lines = text.split(/\r?\n/).map(l => l.replace(/^\d+[.)]\s*/, "").trim()).filter(Boolean);
+        if (lines.length > 1) {
+          e.preventDefault();
+          actionInput.value = lines[0];
+          for (let i = 1; i < lines.length; i++) {
+            addStepRow(lines[i], "");
+          }
+          renumberSteps();
+        }
+      });
+    }
     row.querySelector(".remove-step-btn").addEventListener("click", () => {
       row.remove();
       renumberSteps();
@@ -5241,39 +5375,92 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
   on(DOM.addStepBtn, "click", () => addStepRow());
 
-  // Test Case Reference Image Attachment Controller
+  // Media Evidence Attachment Controller (Ctrl+V, Drag & Drop, File Upload -> Supabase Storage)
   state.currentTcImage = "";
+  state.currentTcMedia = { url: "", mediaType: "", mediaName: "", storage: "" };
 
-  function setTestCaseImagePreview(dataUrl, fileName = "reference-screenshot.png") {
-    state.currentTcImage = dataUrl || "";
-    if (dataUrl) {
-      if (DOM.tcImagePreview) DOM.tcImagePreview.src = dataUrl;
-      if (DOM.tcViewImageFullBtn) DOM.tcViewImageFullBtn.href = dataUrl;
+  function setTestCaseMediaPreview(url, mediaType = "image", fileName = "evidence.png", storageSource = "") {
+    state.currentTcImage = mediaType === "video" ? "" : (url || "");
+    state.currentTcMedia = url
+      ? { url, mediaType: mediaType || "image", mediaName: fileName || "evidence", storage: storageSource || "" }
+      : { url: "", mediaType: "", mediaName: "", storage: "" };
+
+    if (url) {
+      if (mediaType === "video") {
+        if (DOM.tcImagePreview) { DOM.tcImagePreview.style.display = "none"; DOM.tcImagePreview.src = ""; }
+        if (DOM.tcVideoPreview) { DOM.tcVideoPreview.style.display = "block"; DOM.tcVideoPreview.src = url; }
+      } else {
+        if (DOM.tcVideoPreview) { DOM.tcVideoPreview.style.display = "none"; DOM.tcVideoPreview.src = ""; }
+        if (DOM.tcImagePreview) { DOM.tcImagePreview.style.display = "block"; DOM.tcImagePreview.src = url; }
+      }
+      if (DOM.tcViewImageFullBtn) DOM.tcViewImageFullBtn.href = url;
       if (DOM.tcImageFileName) DOM.tcImageFileName.textContent = fileName;
+      if (DOM.tcMediaStorageBadge) {
+        DOM.tcMediaStorageBadge.innerHTML = storageSource === "supabase"
+          ? `<i class="fa-solid fa-cloud-check"></i> Uploaded to Supabase Storage`
+          : `<i class="fa-solid fa-check"></i> ${mediaType === "video" ? "Video" : "Screenshot"} Attached`;
+      }
       if (DOM.tcImagePreviewWrap) DOM.tcImagePreviewWrap.style.display = "flex";
       if (DOM.tcImageDropzone) DOM.tcImageDropzone.style.display = "none";
     } else {
-      if (DOM.tcImagePreview) DOM.tcImagePreview.src = "";
+      if (DOM.tcImagePreview) { DOM.tcImagePreview.src = ""; DOM.tcImagePreview.style.display = "none"; }
+      if (DOM.tcVideoPreview) { DOM.tcVideoPreview.src = ""; DOM.tcVideoPreview.style.display = "none"; }
       if (DOM.tcImagePreviewWrap) DOM.tcImagePreviewWrap.style.display = "none";
       if (DOM.tcImageDropzone) DOM.tcImageDropzone.style.display = "flex";
       if (DOM.tcImageFileInput) DOM.tcImageFileInput.value = "";
     }
   }
 
+  async function processTestCaseMediaFile(file) {
+    if (!file) return;
+    const isImage = (file.type || "").startsWith("image/");
+    const isVideo = (file.type || "").startsWith("video/");
+    if (!isImage && !isVideo) {
+      showToast("Please attach an image (PNG/JPG/WEBP) or short video (MP4/WEBM/MOV).", "error");
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      showToast("File size exceeds 15MB limit. Please attach a shorter clip or compressed screenshot.", "error");
+      return;
+    }
+
+    const tcId = (DOM.editTestCaseId && DOM.editTestCaseId.value) || (DOM.tcGeneratedId && DOM.tcGeneratedId.value) || "TC-001";
+    if (DOM.tcMediaStorageBadge) {
+      DOM.tcMediaStorageBadge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Uploading...`;
+    }
+
+    try {
+      let uploaded = null;
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.uploadEvidenceMedia) {
+        uploaded = await SupabaseManager.uploadEvidenceMedia(file, tcId);
+      } else {
+        uploaded = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = ev => resolve({ url: ev.target.result, mediaType: isVideo ? "video" : "image", mediaName: file.name || "evidence", storage: "embedded" });
+          reader.onerror = () => reject(new Error("Read error"));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (uploaded && uploaded.url) {
+        setTestCaseMediaPreview(uploaded.url, uploaded.mediaType, uploaded.mediaName, uploaded.storage);
+        showToast(
+          uploaded.storage === "supabase"
+            ? `${uploaded.mediaType === "video" ? "Video" : "Screenshot"} uploaded to Supabase Storage!`
+            : `${uploaded.mediaType === "video" ? "Video" : "Screenshot"} attached!`,
+          "success"
+        );
+      }
+    } catch (err) {
+      console.error("Media upload error:", err);
+      showToast("Failed to attach media file.", "error");
+    }
+  }
+
   if (DOM.tcImageFileInput) {
     DOM.tcImageFileInput.addEventListener("change", (e) => {
       const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      if (file.size > 5 * 1024 * 1024) {
-        showToast("Image size exceeds 5MB limit. Please choose a smaller file.", "error");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setTestCaseImagePreview(event.target.result, file.name);
-        showToast("Reference image attached to test case!", "success");
-      };
-      reader.readAsDataURL(file);
+      if (file) processTestCaseMediaFile(file);
     });
   }
 
@@ -5289,39 +5476,100 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       e.preventDefault();
       DOM.tcImageUploadBox.classList.remove("drag-over");
       const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      if (file && file.type.startsWith("image/")) {
-        if (file.size > 5 * 1024 * 1024) {
-          showToast("Image size exceeds 5MB limit.", "error");
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          setTestCaseImagePreview(event.target.result, file.name);
-          showToast("Reference image attached!", "success");
-        };
-        reader.readAsDataURL(file);
-      }
+      if (file) processTestCaseMediaFile(file);
     });
   }
 
-  on(DOM.tcRemoveImageBtn, "click", () => {
-    setTestCaseImagePreview("");
-    showToast("Attached image removed", "info");
+  // Global Ctrl+V clipboard image paste while #testCaseModal is open
+  document.addEventListener("paste", (e) => {
+    if (!DOM.testCaseModal || DOM.testCaseModal.style.display === "none") return;
+    const clipboardData = e.clipboardData || window.clipboardData;
+    if (!clipboardData || !clipboardData.items) return;
+    for (let i = 0; i < clipboardData.items.length; i++) {
+      const item = clipboardData.items[i];
+      if (item.type && (item.type.startsWith("image/") || item.type.startsWith("video/"))) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) processTestCaseMediaFile(file);
+        break;
+      }
+    }
   });
 
-  function openCreateTestCaseModal() {
+  on(DOM.tcRemoveImageBtn, "click", () => {
+    setTestCaseMediaPreview("");
+    showToast("Attached media removed", "info");
+  });
+
+  async function populateDeveloperDropdown(selectedDev = "") {
+    if (!DOM.tcAssignedDev) return;
+    const renderOpts = (devs) => {
+      const opts = ['<option value="">Unassigned</option>'];
+      devs.forEach(d => {
+        const label = d.roleTitle ? `${d.name} (${d.roleTitle})` : d.name;
+        opts.push(`<option value="${escapeHtml(d.name)}">${escapeHtml(label)}</option>`);
+      });
+      DOM.tcAssignedDev.innerHTML = opts.join("");
+      if (selectedDev) {
+        if (!Array.from(DOM.tcAssignedDev.options).some(o => o.value === selectedDev)) {
+          DOM.tcAssignedDev.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(selectedDev)}">${escapeHtml(selectedDev)}</option>`);
+        }
+        DOM.tcAssignedDev.value = selectedDev;
+      }
+    };
+
+    const localDevs = StorageManager.getUsers().filter(u => u.role === "dev" && u.status === "active");
+    renderOpts(localDevs);
+
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.fetchDevelopersFromSupabase) {
+      try {
+        const liveDevs = await SupabaseManager.fetchDevelopersFromSupabase();
+        if (Array.isArray(liveDevs) && liveDevs.length > 0) {
+          renderOpts(liveDevs);
+        }
+      } catch (e) {}
+    }
+  }
+
+  async function openCreateTestCaseModal() {
     if (DOM.testCaseForm) DOM.testCaseForm.reset();
     if (DOM.editTestCaseId) DOM.editTestCaseId.value = "";
-    if (DOM.testCaseModalTitle) DOM.testCaseModalTitle.textContent = "Create New Test Case";
-    setTestCaseImagePreview("");
+    if (DOM.testCaseModalTitle) DOM.testCaseModalTitle.textContent = "New Test Case & Bug Log";
+
+    const nowStamp = new Date().toISOString().replace("T", " ").substring(0, 16);
+    if (DOM.tcGeneratedTimestamp) DOM.tcGeneratedTimestamp.value = nowStamp;
+    if (DOM.tcAutoTimestampText) DOM.tcAutoTimestampText.textContent = nowStamp;
+
+    const curUser = StorageManager.getCurrentUser();
+    if (DOM.tcAutoAuthorText) DOM.tcAutoAuthorText.textContent = curUser ? curUser.name : "QA Tester";
+
+    // Immediate local next ID, then refine from live Supabase
+    const localCases = StorageManager.getTestCases();
+    const localMax = localCases.reduce((m, tc) => {
+      const match = String(tc.id || "").match(/TC-(\d+)/i);
+      return Math.max(m, match ? parseInt(match[1], 10) : 0);
+    }, 0);
+    const initialId = `TC-${String(localMax + 1).padStart(3, "0")}`;
+    if (DOM.tcGeneratedId) DOM.tcGeneratedId.value = initialId;
+    if (DOM.tcAutoIdText) DOM.tcAutoIdText.textContent = initialId;
+
+    setTestCaseMediaPreview("");
     populateSuiteDropdowns();
     if (DOM.tcSuite && state.selectedSuiteId !== "all") DOM.tcSuite.value = state.selectedSuiteId;
-    renderStepRows([
-      { step: 1, action: "Navigate to target view or endpoint", expected: "Page/response loads correctly with status 200" },
-      { step: 2, action: "Trigger action with parameters", expected: "State updates properly and confirmation returned" }
-    ]);
+    if (DOM.tcStatus) DOM.tcStatus.value = "Untested";
+    if (DOM.tcPriority) DOM.tcPriority.value = "P1 - High";
+    renderStepRows([{ step: 1, action: "", expected: "" }, { step: 2, action: "", expected: "" }]);
     if (DOM.editTestCaseDeleteWrap) DOM.editTestCaseDeleteWrap.style.display = "none";
     if (DOM.testCaseModal) DOM.testCaseModal.style.display = "flex";
+
+    populateDeveloperDropdown("");
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.generateNextTestCaseId) {
+      const liveId = await SupabaseManager.generateNextTestCaseId();
+      if (DOM.editTestCaseId && !DOM.editTestCaseId.value) {
+        if (DOM.tcGeneratedId) DOM.tcGeneratedId.value = liveId;
+        if (DOM.tcAutoIdText) DOM.tcAutoIdText.textContent = liveId;
+      }
+    }
   }
 
   window.openEditTestCaseModal = function(id) {
@@ -5330,15 +5578,24 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.testCaseForm) DOM.testCaseForm.reset();
     if (DOM.editTestCaseId) DOM.editTestCaseId.value = tc.id;
     if (DOM.testCaseModalTitle) DOM.testCaseModalTitle.textContent = `Edit Test Case: ${tc.id}`;
+
+    if (DOM.tcGeneratedId) DOM.tcGeneratedId.value = tc.id;
+    if (DOM.tcAutoIdText) DOM.tcAutoIdText.textContent = tc.id;
+    const stamp = tc.createdAt || tc.lastRun || new Date().toISOString().replace("T", " ").substring(0, 16);
+    if (DOM.tcGeneratedTimestamp) DOM.tcGeneratedTimestamp.value = stamp;
+    if (DOM.tcAutoTimestampText) DOM.tcAutoTimestampText.textContent = stamp;
+    if (DOM.tcAutoAuthorText) DOM.tcAutoAuthorText.textContent = tc.author || "QA Tester";
+
     if (DOM.tcTitle) DOM.tcTitle.value = tc.title;
-    setTestCaseImagePreview(tc.image || "", (tc.id || "test") + "-reference.png");
+    if (DOM.tcExplanation) DOM.tcExplanation.value = tc.explanation || tc.preconditions || "";
+    const mediaUrl = tc.mediaUrl || tc.image || "";
+    const mediaType = tc.mediaType || (mediaUrl.startsWith("data:video") ? "video" : "image");
+    setTestCaseMediaPreview(mediaUrl, mediaType, tc.mediaName || `${tc.id}-evidence`);
     populateSuiteDropdowns();
     if (DOM.tcSuite) DOM.tcSuite.value = tc.suiteId;
     if (DOM.tcPriority) DOM.tcPriority.value = tc.priority;
-    if (DOM.tcType) DOM.tcType.value = tc.type;
-    if (DOM.tcStatus) DOM.tcStatus.value = tc.status;
-    if (DOM.tcPreconditions) DOM.tcPreconditions.value = tc.preconditions || "";
-    if (DOM.tcTags) DOM.tcTags.value = (tc.tags || []).join(", ");
+    if (DOM.tcStatus) DOM.tcStatus.value = normalizeModalStatus(tc.status);
+    populateDeveloperDropdown(tc.assignedDev || "");
     renderStepRows(tc.steps || []);
     if (DOM.editTestCaseDeleteWrap) DOM.editTestCaseDeleteWrap.style.display = "inline-flex";
     if (DOM.testCaseModal) DOM.testCaseModal.style.display = "flex";
@@ -6244,15 +6501,6 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   });
 
   // Action button triggers
-  on(DOM.topbarStartSessionBtn, "click", () => {
-    if (typeof LiveTestSessionManager !== "undefined") LiveTestSessionManager.openModal();
-  });
-  on(DOM.dashboardStartSessionBtn, "click", () => {
-    if (typeof LiveTestSessionManager !== "undefined") LiveTestSessionManager.openModal();
-  });
-  on(DOM.repoStartSessionBtn, "click", () => {
-    if (typeof LiveTestSessionManager !== "undefined") LiveTestSessionManager.openModal();
-  });
   on(DOM.dashboardNewTestCaseBtn, "click", openCreateTestCaseModal);
   on(DOM.createNewTestCaseBtn, "click", openCreateTestCaseModal);
   on(DOM.emptyCreateBtn, "click", openCreateTestCaseModal);
@@ -6269,7 +6517,56 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   });
 
-  on(DOM.saveTestCaseBtn, "click", () => {
+  function syncLinkedDefectForTestCase(tc) {
+    if (!tc) return;
+    const isDefectTrigger = isFailStatus(tc.status) || tc.status === "Blocked" || tc.status === "Ready for Re-Test" || Boolean(tc.assignedDev);
+    const existingDefect = StorageManager.getDefects().find(d => d.linkedTestCaseId === tc.id);
+    const formattedRepro = (tc.steps || [])
+      .map(s => `${s.step}. ${s.action}${s.expected ? ` -> ${s.expected}` : ""}`)
+      .join("\n");
+
+    if (isDefectTrigger) {
+      const defectStatus = isRetestStatus(tc.status)
+        ? "Fixed - Ready for QA"
+        : isPassStatus(tc.status)
+          ? "Resolved & Verified"
+          : "Open";
+      const severity = (tc.priority || "").includes("P0") ? "Critical" : (tc.priority || "").includes("P1") ? "Major" : "Medium";
+
+      if (existingDefect) {
+        StorageManager.updateDefect({
+          ...existingDefect,
+          summary: tc.title,
+          description: tc.explanation || tc.preconditions || existingDefect.description || "",
+          reproSteps: formattedRepro || existingDefect.reproSteps || "",
+          priority: tc.priority || existingDefect.priority,
+          severity,
+          assignee: tc.assignedDev || existingDefect.assignee || "Unassigned",
+          status: defectStatus
+        });
+      } else if (isFailStatus(tc.status) || tc.status === "Blocked" || tc.status === "Ready for Re-Test") {
+        StorageManager.addDefect({
+          summary: tc.title,
+          linkedTestCaseId: tc.id,
+          severity,
+          priority: tc.priority || "P1 - High",
+          status: defectStatus,
+          assignee: tc.assignedDev || "Unassigned",
+          reportedBy: tc.author || "QA Tester",
+          description: tc.explanation || tc.preconditions || `Logged from Test Case ${tc.id}`,
+          reproSteps: formattedRepro,
+          devNotes: tc.mediaUrl ? `Evidence attached (${tc.mediaType || 'image'}): ${tc.mediaName || tc.id}` : ""
+        });
+      }
+    } else if (existingDefect && isPassStatus(tc.status)) {
+      StorageManager.updateDefect({
+        ...existingDefect,
+        status: "Resolved & Verified"
+      });
+    }
+  }
+
+  on(DOM.saveTestCaseBtn, "click", async () => {
     const title = DOM.tcTitle ? DOM.tcTitle.value.trim() : "";
     if (!title) {
       showToast("Please enter a test case title", "error");
@@ -6280,45 +6577,92 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     const steps = [];
     if (DOM.stepsBuilderList) {
       DOM.stepsBuilderList.querySelectorAll(".step-builder-row").forEach((row, idx) => {
-        const action = row.querySelector(".step-input-action").value.trim();
-        const expected = row.querySelector(".step-input-expected").value.trim();
+        const actionEl = row.querySelector(".step-input-action");
+        const expectedEl = row.querySelector(".step-input-expected");
+        const action = actionEl ? actionEl.value.trim() : "";
+        const expected = expectedEl ? expectedEl.value.trim() : "";
         if (action || expected) {
-          steps.push({ step: idx + 1, action: action || `Execute step ${idx + 1}`, expected: expected || "Operation completes successfully." });
+          steps.push({ step: steps.length + 1, action: action || `Step ${steps.length + 1}`, expected });
         }
       });
     }
 
-    const tags = DOM.tcTags ? DOM.tcTags.value.split(",").map(t => t.trim().toLowerCase()).filter(Boolean) : [];
+    const explanation = DOM.tcExplanation ? DOM.tcExplanation.value.trim() : "";
+    const status = DOM.tcStatus ? DOM.tcStatus.value : "Untested";
+    const assignedDev = DOM.tcAssignedDev ? DOM.tcAssignedDev.value.trim() : "";
+    const createdAt = (DOM.tcGeneratedTimestamp && DOM.tcGeneratedTimestamp.value) || new Date().toISOString().replace("T", " ").substring(0, 16);
+    const curUser = StorageManager.getCurrentUser();
+
     const testCaseData = {
       title,
-      suiteId: DOM.tcSuite ? DOM.tcSuite.value : "general",
-      priority: DOM.tcPriority ? DOM.tcPriority.value : "P2 - Medium",
-      type: DOM.tcType ? DOM.tcType.value : "Manual",
-      status: DOM.tcStatus ? DOM.tcStatus.value : "Untested",
-      preconditions: DOM.tcPreconditions ? DOM.tcPreconditions.value.trim() : "",
-      tags,
+      suiteId: DOM.tcSuite ? DOM.tcSuite.value : "suite-auth",
+      priority: DOM.tcPriority ? DOM.tcPriority.value : "P1 - High",
+      type: "Manual",
+      status,
+      assignedDev,
+      explanation,
+      preconditions: explanation,
+      tags: assignedDev ? [assignedDev.toLowerCase().replace(/\s+/g, "-")] : [],
       steps,
-      image: state.currentTcImage || ""
+      createdAt,
+      lastRun: createdAt,
+      author: (curUser ? curUser.name : "QA Tester"),
+      mediaUrl: state.currentTcMedia?.url || state.currentTcImage || "",
+      mediaType: state.currentTcMedia?.mediaType || (state.currentTcImage ? "image" : ""),
+      mediaName: state.currentTcMedia?.mediaName || "",
+      image: (state.currentTcMedia?.mediaType === "video") ? "" : (state.currentTcMedia?.url || state.currentTcImage || "")
     };
 
-    const editId = DOM.editTestCaseId ? DOM.editTestCaseId.value : "";
-    if (editId) {
-      testCaseData.id = editId;
-      StorageManager.updateTestCase(testCaseData);
-      showToast(`Updated test case ${editId}`);
-    } else {
-      const created = StorageManager.addTestCase(testCaseData);
-      showToast(`Created test case ${created.id}`);
+    if (DOM.saveTestCaseBtn) {
+      DOM.saveTestCaseBtn.disabled = true;
+      DOM.saveTestCaseBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
     }
-    if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none";
-    renderTestCaseTable();
-    renderSuitesSidebar();
+
+    try {
+      const editId = DOM.editTestCaseId ? DOM.editTestCaseId.value : "";
+      let savedTc = null;
+      if (editId) {
+        testCaseData.id = editId;
+        savedTc = StorageManager.updateTestCase(testCaseData);
+        if (typeof SupabaseManager !== "undefined") {
+          await SupabaseManager.syncTestCaseUpsert(savedTc || testCaseData);
+        }
+        syncLinkedDefectForTestCase(savedTc || testCaseData);
+        showToast(`Updated ${editId} & synced with Supabase!`, "success");
+      } else {
+        const autoId = (DOM.tcGeneratedId && DOM.tcGeneratedId.value) || (typeof SupabaseManager !== "undefined" ? await SupabaseManager.generateNextTestCaseId() : "");
+        if (autoId) testCaseData.id = autoId;
+        savedTc = StorageManager.addTestCase(testCaseData);
+        if (typeof SupabaseManager !== "undefined") {
+          await SupabaseManager.syncTestCaseUpsert(savedTc);
+        }
+        syncLinkedDefectForTestCase(savedTc);
+        showToast(`Saved ${savedTc.id} to Supabase & synced with Dev Portal!`, "success");
+      }
+
+      if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none";
+      renderDashboard();
+      renderTestCaseTable();
+      renderSuitesSidebar();
+      renderDefects();
+      if (state.currentPortal === "dev") {
+        renderDevDashboard();
+        renderDevKanban();
+        renderDevFailures();
+      }
+    } finally {
+      if (DOM.saveTestCaseBtn) {
+        DOM.saveTestCaseBtn.disabled = false;
+        DOM.saveTestCaseBtn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Save to Supabase`;
+      }
+    }
   });
 
   window.deleteSingleTestCase = function(id) {
     if (confirm(`Are you sure you want to delete test case ${id}?`)) {
       StorageManager.deleteTestCase(id);
       state.selectedTestCaseIds.delete(id);
+      renderDashboard();
       renderTestCaseTable();
       renderSuitesSidebar();
       showToast(`Deleted ${id}`, "info");
@@ -6335,21 +6679,48 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.viewDetailTitle) DOM.viewDetailTitle.textContent = tc.title;
 
     let prioClass = tc.priority.includes("P0") ? "badge-p0" : tc.priority.includes("P1") ? "badge-p1" : tc.priority.includes("P3") ? "badge-p3" : "badge-p2";
-    let statusClass = tc.status === "Passed" ? "badge-passed" : tc.status === "Failed" ? "badge-failed" : tc.status === "Blocked" ? "badge-blocked" : "badge-untested";
+    let statusClass = isPassStatus(tc.status) ? "badge-passed" : isFailStatus(tc.status) ? "badge-failed" : tc.status === "Blocked" ? "badge-blocked" : isRetestStatus(tc.status) ? "badge-retest" : "badge-untested";
 
     const stepsRowsHtml = (tc.steps || []).map(s => `
       <tr>
         <td style="width: 40px; font-family: var(--font-mono); font-weight: bold; color: var(--text-dim);">${s.step}</td>
         <td><strong>${escapeHtml(s.action)}</strong></td>
-        <td><span class="text-cyan">${escapeHtml(s.expected)}</span></td>
+        <td><span class="text-cyan">${escapeHtml(s.expected || '—')}</span></td>
       </tr>
     `).join("");
+
+    const mediaUrl = tc.mediaUrl || tc.image || "";
+    const mediaHtml = mediaUrl ? (
+      tc.mediaType === "video"
+        ? `
+        <div class="mb-3">
+          <label class="console-label"><i class="fa-solid fa-video text-primary"></i> Attached Screen Recording</label>
+          <div class="tc-detail-image-box text-center">
+            <video src="${escapeHtml(mediaUrl)}" controls muted playsinline class="tc-video-preview-player"></video>
+          </div>
+        </div>`
+        : `
+        <div class="mb-3">
+          <label class="console-label"><i class="fa-solid fa-image text-primary"></i> Reference Screenshot / Evidence</label>
+          <div class="tc-detail-image-box text-center">
+            <a href="${escapeHtml(mediaUrl)}" target="_blank" title="Click to view full image in new tab">
+              <img src="${escapeHtml(mediaUrl)}" alt="Reference image for ${escapeHtml(tc.id)}">
+            </a>
+            <div class="text-xs text-muted mt-2 d-flex justify-between align-center">
+              <span><i class="fa-solid fa-up-right-from-square"></i> Click image to open high-resolution view</span>
+              <a href="${escapeHtml(mediaUrl)}" download="${escapeHtml(tc.id)}-evidence.png" class="btn btn-ghost btn-xs text-primary">
+                <i class="fa-solid fa-download"></i> Download Image
+              </a>
+            </div>
+          </div>
+        </div>`
+    ) : "";
 
     if (DOM.viewDetailBody) {
       DOM.viewDetailBody.innerHTML = `
         <div class="detail-meta-grid">
           <div class="detail-meta-item">
-            <span class="meta-label">Suite / Module</span>
+            <span class="meta-label">Module / Feature</span>
             <span class="meta-val"><i class="${suite ? suite.icon : 'fa-solid fa-folder'} text-primary"></i> ${suite ? suite.name : 'General'}</span>
           </div>
           <div class="detail-meta-item">
@@ -6357,44 +6728,29 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
             <span class="meta-val"><span class="badge ${prioClass}">${tc.priority}</span></span>
           </div>
           <div class="detail-meta-item">
-            <span class="meta-label">Category</span>
-            <span class="meta-val"><span class="badge badge-type">${escapeHtml(tc.type || 'Functional')}</span></span>
+            <span class="meta-label">Assigned Developer</span>
+            <span class="meta-val"><span class="badge badge-type">${escapeHtml(tc.assignedDev || 'Unassigned')}</span></span>
           </div>
           <div class="detail-meta-item">
             <span class="meta-label">Current Status</span>
-            <span class="meta-val"><span class="badge ${statusClass}">${tc.status}</span></span>
+            <span class="meta-val"><span class="badge ${statusClass}">${escapeHtml(tc.status || 'Untested')}</span></span>
           </div>
         </div>
         <div class="mb-3">
-          <label class="console-label"><i class="fa-solid fa-circle-info"></i> Preconditions</label>
-          <div class="precondition-box">${escapeHtml(tc.preconditions || 'None specified.')}</div>
+          <label class="console-label"><i class="fa-solid fa-circle-info"></i> What is happening / Bug Explanation</label>
+          <div class="precondition-box">${escapeHtml(tc.explanation || tc.preconditions || 'None specified.')}</div>
         </div>
-        ${tc.image ? `
+        ${mediaHtml}
         <div class="mb-3">
-          <label class="console-label"><i class="fa-solid fa-image text-primary"></i> Reference Screenshot / Attached Mock</label>
-          <div class="tc-detail-image-box text-center">
-            <a href="${tc.image}" target="_blank" title="Click to view full image in new tab">
-              <img src="${tc.image}" alt="Reference image for ${escapeHtml(tc.id)}">
-            </a>
-            <div class="text-xs text-muted mt-2 d-flex justify-between align-center">
-              <span><i class="fa-solid fa-up-right-from-square"></i> Click image to open high-resolution view</span>
-              <a href="${tc.image}" download="${tc.id}-mockup.png" class="btn btn-ghost btn-xs text-primary">
-                <i class="fa-solid fa-download"></i> Download Image
-              </a>
-            </div>
-          </div>
-        </div>
-        ` : ''}
-        <div class="mb-3">
-          <label class="console-label"><i class="fa-solid fa-list-ol"></i> Step-by-Step Procedure (${(tc.steps || []).length} Steps)</label>
+          <label class="console-label"><i class="fa-solid fa-list-ol"></i> Steps to Reproduce (${(tc.steps || []).length} Steps)</label>
           <table class="detail-steps-table">
-            <thead><tr><th>#</th><th>Action / Input</th><th>Expected Result</th></tr></thead>
+            <thead><tr><th>#</th><th>Step Action</th><th>Expected Result</th></tr></thead>
             <tbody>${stepsRowsHtml || '<tr><td colspan="3" class="text-muted">No steps provided.</td></tr>'}</tbody>
           </table>
         </div>
         <div class="d-flex justify-between text-muted text-xs mt-3 pt-3 border-top">
-          <span>Author: <strong>${escapeHtml(tc.author || 'QA Lead')}</strong></span>
-          <span>Last Run: <strong>${tc.lastRun || 'Never'}</strong></span>
+          <span>Logged By: <strong>${escapeHtml(tc.author || 'QA Tester')}</strong></span>
+          <span>Timestamp: <strong>${escapeHtml(tc.createdAt || tc.lastRun || 'Just now')}</strong></span>
         </div>
       `;
     }
@@ -6409,14 +6765,14 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (detailPassBtn) {
       detailPassBtn.onclick = () => {
         if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none";
-        window.markTestCaseStatus(tc.id, "Passed");
+        window.markTestCaseStatus(tc.id, "Pass");
       };
     }
     const detailFailBtn = document.getElementById("detailFailedTestCaseBtn");
     if (detailFailBtn) {
       detailFailBtn.onclick = () => {
         if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none";
-        window.markTestCaseStatus(tc.id, "Failed");
+        window.markTestCaseStatus(tc.id, "Fail");
       };
     }
     const detailBlockBtn = document.getElementById("detailBlockedTestCaseBtn");
@@ -6429,7 +6785,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.runDetailTestCaseBtn) {
       DOM.runDetailTestCaseBtn.onclick = () => {
         if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none";
-        window.markTestCaseStatus(tc.id, "Passed");
+        window.markTestCaseStatus(tc.id, "Pass");
       };
     }
     if (DOM.deleteDetailTestCaseBtn) {
@@ -6447,14 +6803,17 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   window.markTestCaseStatus = function(testCaseId, newStatus) {
     const tc = StorageManager.getTestCaseById(testCaseId);
     if (!tc) return;
-    StorageManager.updateTestCase({ ...tc, status: newStatus, lastRun: "Just now" });
+    const nowStamp = new Date().toISOString().replace("T", " ").substring(0, 16);
+    const updated = StorageManager.updateTestCase({ ...tc, status: newStatus, lastRun: nowStamp });
+    syncLinkedDefectForTestCase(updated || { ...tc, status: newStatus });
     renderTestCaseTable();
     renderDashboard();
-    showToast(`Test ${tc.id} marked as ${newStatus}!`, newStatus === "Failed" ? "error" : "success");
+    renderDefects();
+    showToast(`Test ${tc.id} marked as ${newStatus}!`, isFailStatus(newStatus) ? "error" : "success");
   };
 
   window.launchSingleTestRun = function(testCaseId) {
-    window.markTestCaseStatus(testCaseId, "Passed");
+    window.markTestCaseStatus(testCaseId, "Pass");
   };
 
   // =========================================================================
@@ -7338,793 +7697,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   }
 
-  // =========================================================================
-  // LIVE TEST SESSION CONTROLLER (Flow Checklists & Exploratory Scratchpad Stream)
-  // =========================================================================
-  const LiveTestSessionManager = {
-    timerInterval: null,
-    timerSeconds: 0,
-    sessionBugs: [],
-    checklistItems: [],
-    streamEntries: [],
-    activeFilter: "all",
-    attachedComposerScreenshot: null,
-
-    // Preset libraries
-    flowPresets: {
-      checkout: [
-        { id: "flow-chk-1", title: "Apply coupon discount code to cart & verify total recalculation", flow: "Checkout", status: "untested" },
-        { id: "flow-chk-2", title: "Select standard shipping vs express delivery with fee update", flow: "Shipping", status: "untested" },
-        { id: "flow-chk-3", title: "Credit card payment with 3D Secure OTP verification flow", flow: "Payment", status: "untested" },
-        { id: "flow-chk-4", title: "Order confirmation screen renders order ID & invoice receipt link", flow: "Post-Purchase", status: "untested" },
-        { id: "flow-chk-5", title: "Inventory stock count decrement in real-time across concurrent carts", flow: "Inventory", status: "untested" },
-        { id: "flow-chk-6", title: "Cart abandonment reminder trigger on session timeout", flow: "Notifications", status: "untested" }
-      ],
-      auth: [
-        { id: "flow-auth-1", title: "User sign-in with valid credentials & session token issuance", flow: "Auth", status: "untested" },
-        { id: "flow-auth-2", title: "Multi-factor authentication (MFA / Email OTP verification)", flow: "Security", status: "untested" },
-        { id: "flow-auth-3", title: "Password reset magic link email delivery and expiry check", flow: "Recovery", status: "untested" },
-        { id: "flow-auth-4", title: "Rate limiting lock after 5 consecutive failed login attempts", flow: "Brute-Force", status: "untested" },
-        { id: "flow-auth-5", title: "Remember Me cookie persistence across browser tab restart", flow: "Session", status: "untested" },
-        { id: "flow-auth-6", title: "Session revocation across all active devices on password change", flow: "Security", status: "untested" }
-      ],
-      api: [
-        { id: "flow-api-1", title: "GET /api/v1/health returns HTTP 200 with DB ping and latency", flow: "Health", status: "untested" },
-        { id: "flow-api-2", title: "POST /api/v1/auth/token validates JWT signature & claim audience", flow: "Auth", status: "untested" },
-        { id: "flow-api-3", title: "GET /api/v1/users/me returns sanitized profile without password hash", flow: "Users", status: "untested" },
-        { id: "flow-api-4", title: "Payload size limit & gzip decompression verification on large request bodies", flow: "Gateway", status: "untested" },
-        { id: "flow-api-5", title: "CORS headers correctly restrict unauthorized origins", flow: "Security", status: "untested" },
-        { id: "flow-api-6", title: "Idempotency key prevents duplicate transaction processing", flow: "Transactions", status: "untested" }
-      ],
-      search: [
-        { id: "flow-srch-1", title: "Fuzzy search with spelling mistakes returns intended suggestions", flow: "Search", status: "untested" },
-        { id: "flow-srch-2", title: "Multi-facet filtering by category, price, and customer rating", flow: "Filtering", status: "untested" },
-        { id: "flow-srch-3", title: "Sort by Price: Low to High & High to Low pagination", flow: "Sorting", status: "untested" },
-        { id: "flow-srch-4", title: "Empty search query graceful zero-state fallback with trending tags", flow: "Search", status: "untested" },
-        { id: "flow-srch-5", title: "Debounced autocomplete suggestions render under 150ms", flow: "Performance", status: "untested" }
-      ],
-      mobile: [
-        { id: "flow-mob-1", title: "Portrait & Landscape screen orientation reflow without layout shift", flow: "Layout", status: "untested" },
-        { id: "flow-mob-2", title: "Touch gesture swipe on carousel & pull-to-refresh data sync", flow: "Gestures", status: "untested" },
-        { id: "flow-mob-3", title: "Virtual keyboard dismiss on outside tap without viewport clipping", flow: "Input", status: "untested" },
-        { id: "flow-mob-4", title: "Offline network detection & cached read-only mode banner", flow: "Network", status: "untested" },
-        { id: "flow-mob-5", title: "Push notification deep link opens targeted product modal directly", flow: "DeepLink", status: "untested" }
-      ],
-      security: [
-        { id: "flow-sec-1", title: "XSS prevention in user profile bio & comment markdown fields", flow: "Sanitization", status: "untested" },
-        { id: "flow-sec-2", title: "SQL Injection resistance on URL parameter and search inputs", flow: "Database", status: "untested" },
-        { id: "flow-sec-3", title: "CSRF token validation on sensitive mutation endpoints", flow: "CSRF", status: "untested" },
-        { id: "flow-sec-4", title: "Broken Object Level Authorization (BOLA/IDOR) tenant isolation", flow: "RBAC", status: "untested" },
-        { id: "flow-sec-5", title: "Content Security Policy (CSP) header enforcement & script blocking", flow: "Headers", status: "untested" }
-      ]
-    },
-
-    init() {
-      this.loadPreset("checkout");
-      this.setupEventListeners();
-    },
-
-    openModal() {
-      const modal = document.getElementById("liveTestSessionModal");
-      if (!modal) return;
-      modal.style.display = "flex";
-      this.startTimer();
-      this.renderChecklist();
-      this.renderStream();
-      this.updateHeaderStats();
-    },
-
-    closeModal() {
-      const modal = document.getElementById("liveTestSessionModal");
-      if (modal) modal.style.display = "none";
-    },
-
-    startTimer() {
-      if (this.timerInterval) return;
-      const timerText = document.getElementById("sessionTimerText");
-      this.timerInterval = setInterval(() => {
-        this.timerSeconds++;
-        const mins = String(Math.floor(this.timerSeconds / 60)).padStart(2, "0");
-        const secs = String(this.timerSeconds % 60).padStart(2, "0");
-        if (timerText) timerText.textContent = `${mins}:${secs}`;
-      }, 1000);
-    },
-
-    stopTimer() {
-      if (this.timerInterval) {
-        clearInterval(this.timerInterval);
-        this.timerInterval = null;
-      }
-    },
-
-    loadPreset(presetKey) {
-      const items = this.flowPresets[presetKey] || [];
-      this.checklistItems = items.map(item => ({
-        ...item,
-        id: "item-" + Math.random().toString(36).substr(2, 9),
-        status: "untested",
-        note: "",
-        screenshot: null,
-        createdBug: null
-      }));
-      this.renderChecklist();
-      this.updateChecklistStats();
-    },
-
-    addCustomItem(title, flow) {
-      if (!title) return;
-      this.checklistItems.push({
-        id: "item-" + Math.random().toString(36).substr(2, 9),
-        title,
-        flow: flow || "Feature Flow",
-        status: "untested",
-        note: "",
-        screenshot: null,
-        createdBug: null
-      });
-      this.renderChecklist();
-      this.updateChecklistStats();
-      showToast("Added flow checklist item", "success");
-    },
-
-    setItemStatus(itemId, newStatus) {
-      const item = this.checklistItems.find(i => i.id === itemId);
-      if (!item) return;
-
-      if (item.status === newStatus) {
-        item.status = "untested";
-      } else {
-        item.status = newStatus;
-      }
-
-      // If failed, automatically create a Manual bug ticket in Defect Tracker / Kanban board
-      if (item.status === "fail") {
-        if (!item.createdBug) {
-          const env = (document.getElementById("sessionEnvInput")?.value || "Mobile Chrome").trim();
-          const sessionTitle = (document.getElementById("sessionTitleInput")?.value || "Live Test Session").trim();
-          const curUser = StorageManager.getCurrentUser();
-          
-          const defect = StorageManager.addDefect({
-            summary: `[Fail] ${item.title}`,
-            severity: "Major",
-            priority: "P1 - High",
-            type: "Manual",
-            status: "Open",
-            assignee: (curUser ? curUser.name : "Senior Developer"),
-            reportedBy: (curUser ? curUser.name : "QA Tester"),
-            description: `Auto-generated from Live Test Session: "${sessionTitle}"\nEnvironment: ${env}\nFeature Flow: ${item.flow}\nChecklist Item: ${item.title}\nStatus: Failed`,
-            devNotes: `Failed during Live Test Session execution on ${env}.`
-          });
-
-          item.createdBug = defect;
-          this.sessionBugs.push(defect);
-          this.updateHeaderStats();
-
-          // Also post observation to the timeline stream
-          this.addStreamEntry({
-            text: `Marked checklist item as #bug failed: "${item.title}" [Flow: ${item.flow}]. Automatically logged ticket ${defect.id}.`,
-            promotedBugId: defect.id
-          });
-
-          // Refresh defects table / Kanban if currently visible
-          if (typeof renderDefects === "function") renderDefects();
-          showToast(`Marked Fail: Created bug ${defect.id} in Kanban & Supabase!`, "success");
-        }
-      }
-
-      this.renderChecklist();
-      this.updateChecklistStats();
-    },
-
-    updateChecklistStats() {
-      const total = this.checklistItems.length;
-      const passed = this.checklistItems.filter(i => i.status === "pass").length;
-      const failed = this.checklistItems.filter(i => i.status === "fail").length;
-      const flagged = this.checklistItems.filter(i => i.status === "flag").length;
-
-      const totalEl = document.getElementById("sessionTotalChecklistBadge") || document.getElementById("sessionChecklistCount");
-      const passEl = document.getElementById("sessionPassedCountBadge") || document.getElementById("sessionPassedCount");
-      const failEl = document.getElementById("sessionFailedCountBadge") || document.getElementById("sessionFailedCount");
-      const flagEl = document.getElementById("sessionFlaggedCountBadge") || document.getElementById("sessionFlaggedCount");
-      const progEl = document.getElementById("sessionProgressBar");
-
-      if (totalEl) totalEl.textContent = `${total} Items`;
-      if (passEl) passEl.innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${passed} Passed`;
-      if (failEl) failEl.innerHTML = `<i class="fa-solid fa-xmark mr-1"></i> ${failed} Failed`;
-      if (flagEl) flagEl.innerHTML = `<i class="fa-solid fa-flag mr-1"></i> ${flagged} Flagged`;
-
-      if (progEl) {
-        const pct = total === 0 ? 0 : Math.round((passed / total) * 100);
-        progEl.style.width = `${pct}%`;
-      }
-    },
-
-    updateHeaderStats() {
-      const bugsCountEl = document.getElementById("sessionActiveBugsCount");
-      if (bugsCountEl) {
-        bugsCountEl.textContent = `${this.sessionBugs.length} Bugs Logged`;
-      }
-    },
-
-    renderChecklist() {
-      const list = document.getElementById("sessionChecklistContainer") || document.getElementById("sessionChecklistList");
-      if (!list) return;
-
-      if (this.checklistItems.length === 0) {
-        list.innerHTML = `<div class="p-4 text-center text-muted text-xs">No checklist items yet. Select a preset flow above or add a custom item.</div>`;
-        return;
-      }
-
-      list.innerHTML = this.checklistItems.map(item => {
-        const isPass = item.status === "pass";
-        const isFail = item.status === "fail";
-        const isFlag = item.status === "flag";
-        const statusClass = isPass ? "status-pass" : isFail ? "status-fail" : isFlag ? "status-flag" : "";
-
-        return `
-          <div class="session-checklist-card ${statusClass}" data-item-id="${item.id}">
-            <div class="session-card-main-row">
-              <div class="session-item-info">
-                <div class="session-item-meta">
-                  <span class="session-flow-badge">${escapeHtml(item.flow)}</span>
-                  ${item.createdBug ? `<span class="fail-drawer-bug-pill" title="Linked Kanban Bug"><i class="fa-solid fa-bug"></i> ${item.createdBug.id}</span>` : ""}
-                </div>
-                <h4 class="session-item-title">${escapeHtml(item.title)}</h4>
-              </div>
-              <div class="session-toggles-group">
-                <button type="button" class="btn-session-toggle btn-session-pass ${isPass ? 'active' : ''}" data-action="pass" title="Mark as Passed">
-                  <i class="fa-solid fa-circle-check"></i> <span>Pass</span>
-                </button>
-                <button type="button" class="btn-session-toggle btn-session-fail ${isFail ? 'active' : ''}" data-action="fail" title="Mark as Failed (Creates Bug in Kanban)">
-                  <i class="fa-solid fa-circle-xmark"></i> <span>Fail</span>
-                </button>
-                <button type="button" class="btn-session-toggle btn-session-flag ${isFlag ? 'active' : ''}" data-action="flag" title="Flag for Attention">
-                  <i class="fa-solid fa-flag"></i> <span>Flag</span>
-                </button>
-              </div>
-            </div>
-
-            ${isFail ? `
-              <div class="session-fail-drawer">
-                <div class="fail-drawer-top-row">
-                  <span class="fail-drawer-bug-pill"><i class="fa-solid fa-bug"></i> ${item.createdBug ? item.createdBug.id : "BUG-PENDING"} (Manual) in Kanban</span>
-                  <span class="text-3xs text-muted font-mono"><kbd>Ctrl</kbd>+<kbd>V</kbd> to paste screenshot</span>
-                </div>
-                <div class="fail-drawer-input-row">
-                  <input type="text" class="fail-drawer-note-input" placeholder="Add 1-line note (e.g., Discount code expired popup appears)..." value="${escapeHtml(item.note || '')}" />
-                  <label class="fail-drawer-paste-box" title="Attach screenshot file">
-                    <i class="fa-solid fa-camera"></i> Image
-                    <input type="file" accept="image/*" class="fail-drawer-file-input" style="display: none;" />
-                  </label>
-                </div>
-                ${item.screenshot ? `
-                  <div class="fail-drawer-screenshot-preview">
-                    <img src="${item.screenshot}" alt="Fail Evidence" />
-                    <button type="button" class="fail-drawer-remove-img" title="Remove screenshot"><i class="fa-solid fa-xmark"></i></button>
-                  </div>
-                ` : ""}
-              </div>
-            ` : ""}
-          </div>
-        `;
-      }).join("");
-
-      // Bind checklist event listeners
-      list.querySelectorAll(".session-checklist-card").forEach(card => {
-        const id = card.getAttribute("data-item-id");
-
-        card.querySelectorAll(".btn-session-toggle").forEach(btn => {
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const action = btn.getAttribute("data-action");
-            this.setItemStatus(id, action);
-          });
-        });
-
-        // Fail drawer note input
-        const noteInput = card.querySelector(".fail-drawer-note-input");
-        if (noteInput) {
-          noteInput.addEventListener("input", (e) => {
-            const item = this.checklistItems.find(i => i.id === id);
-            if (item) {
-              item.note = e.target.value;
-              if (item.createdBug) {
-                item.createdBug.devNotes = item.note;
-                StorageManager.updateDefect(item.createdBug);
-              }
-            }
-          });
-
-          // Ctrl+V paste support for fail drawer
-          noteInput.addEventListener("paste", (e) => {
-            const clipboardData = e.clipboardData || window.clipboardData;
-            if (!clipboardData) return;
-            const items = clipboardData.items;
-            for (let i = 0; i < items.length; i++) {
-              if (items[i].type.indexOf("image") !== -1) {
-                e.preventDefault();
-                const file = items[i].getAsFile();
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                  const item = this.checklistItems.find(it => it.id === id);
-                  if (item) {
-                    item.screenshot = evt.target.result;
-                    if (item.createdBug) {
-                      item.createdBug.description += `\n\n[Screenshot Evidence Attached]`;
-                      StorageManager.updateDefect(item.createdBug);
-                    }
-                    this.renderChecklist();
-                    showToast("Screenshot attached to failed checklist item!", "success");
-                  }
-                };
-                reader.readAsDataURL(file);
-                break;
-              }
-            }
-          });
-        }
-
-        // File upload input inside fail drawer
-        const fileInput = card.querySelector(".fail-drawer-file-input");
-        if (fileInput) {
-          fileInput.addEventListener("change", (e) => {
-            const file = e.target.files[0];
-            if (file) {
-              const reader = new FileReader();
-              reader.onload = (evt) => {
-                const item = this.checklistItems.find(it => it.id === id);
-                if (item) {
-                  item.screenshot = evt.target.result;
-                  if (item.createdBug) {
-                    item.createdBug.description += `\n\n[Screenshot Evidence Attached]`;
-                    StorageManager.updateDefect(item.createdBug);
-                  }
-                  this.renderChecklist();
-                  showToast("Screenshot attached!", "success");
-                }
-              };
-              reader.readAsDataURL(file);
-            }
-          });
-        }
-
-        // Remove screenshot
-        const removeImgBtn = card.querySelector(".fail-drawer-remove-img");
-        if (removeImgBtn) {
-          removeImgBtn.addEventListener("click", () => {
-            const item = this.checklistItems.find(it => it.id === id);
-            if (item) {
-              item.screenshot = null;
-              this.renderChecklist();
-            }
-          });
-        }
-      });
-    },
-
-    // Timeline Stream & Composer
-    addStreamEntry({ text, screenshot, promotedBugId = null }) {
-      if (!text && !screenshot) return;
-      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      
-      const tags = [];
-      if (/#bug\b/i.test(text)) tags.push("bug");
-      if (/#idea\b/i.test(text)) tags.push("idea");
-      if (/#verified\b/i.test(text)) tags.push("verified");
-      if (/#note\b/i.test(text)) tags.push("note");
-
-      const entry = {
-        id: "stream-" + Math.random().toString(36).substr(2, 9),
-        time: timeStr,
-        text,
-        screenshot: screenshot || null,
-        tags,
-        promotedBugId
-      };
-
-      this.streamEntries.push(entry);
-      this.renderStream();
-
-      // Scroll to bottom
-      const scrollWrap = document.getElementById("sessionStreamScrollContainer");
-      if (scrollWrap) {
-        setTimeout(() => {
-          scrollWrap.scrollTop = scrollWrap.scrollHeight;
-        }, 50);
-      }
-    },
-
-    promoteToBugTicket(entryId, customSummary = null, customDesc = null) {
-      let entry = null;
-      if (entryId) {
-        entry = this.streamEntries.find(e => e.id === entryId);
-      }
-
-      const env = (document.getElementById("sessionEnvInput")?.value || "Mobile Chrome").trim();
-      const sessionTitle = (document.getElementById("sessionTitleInput")?.value || "Live Test Session").trim();
-      const curUser = StorageManager.getCurrentUser();
-
-      const summaryText = customSummary || (entry ? entry.text.split("\n")[0].replace(/#(bug|idea|verified|note)/gi, "").trim() : "Observation from Live Session");
-      const cleanSummary = summaryText.length > 80 ? summaryText.substring(0, 77) + "..." : summaryText;
-
-      const fullDesc = customDesc || (entry ? entry.text : summaryText);
-
-      const defect = StorageManager.addDefect({
-        summary: cleanSummary || `[Live Session] Bug observation on ${env}`,
-        severity: "Major",
-        priority: "P1 - High",
-        type: "Manual",
-        status: "Open",
-        assignee: (curUser ? curUser.name : "Senior Developer"),
-        reportedBy: (curUser ? curUser.name : "QA Tester"),
-        description: `Promoted from Live Test Session: "${sessionTitle}"\nEnvironment: ${env}\n\nObservation:\n${fullDesc}`,
-        devNotes: `Promoted from stream observation during Live Test Session on ${env}.`
-      });
-
-      if (entry) {
-        entry.promotedBugId = defect.id;
-      }
-
-      this.sessionBugs.push(defect);
-      this.updateHeaderStats();
-      this.renderStream();
-
-      if (typeof renderDefects === "function") renderDefects();
-      showToast(`Promoted to ${defect.id} in Kanban & Supabase!`, "success");
-      return defect;
-    },
-
-    renderStream() {
-      const feed = document.getElementById("sessionStreamFeed");
-      if (!feed) return;
-
-      let filtered = this.streamEntries;
-      if (this.activeFilter !== "all") {
-        filtered = this.streamEntries.filter(e => e.tags.includes(this.activeFilter));
-      }
-
-      if (filtered.length === 0) {
-        feed.innerHTML = `
-          <div class="p-4 text-center text-muted text-xs">
-            <i class="fa-solid fa-stream fa-2x mb-2 opacity-30"></i>
-            <div>No observations logged yet for this filter.</div>
-            <div class="text-3xs text-muted mt-1">Use the composer below or paste Ctrl+V screenshots to record findings.</div>
-          </div>
-        `;
-        return;
-      }
-
-      feed.innerHTML = filtered.map(entry => {
-        const hasBug = entry.tags.includes("bug");
-        const hasIdea = entry.tags.includes("idea");
-        const hasVerified = entry.tags.includes("verified");
-        const borderClass = hasBug ? "has-bug" : hasIdea ? "has-idea" : hasVerified ? "has-verified" : "";
-
-        let formattedText = escapeHtml(entry.text)
-          .replace(/#bug\b/gi, '<span class="stream-tag-pill tag-bug">#bug</span>')
-          .replace(/#idea\b/gi, '<span class="stream-tag-pill tag-idea">#idea</span>')
-          .replace(/#verified\b/gi, '<span class="stream-tag-pill tag-verified">#verified</span>')
-          .replace(/#note\b/gi, '<span class="stream-tag-pill tag-note">#note</span>')
-          .replace(/`([^`]+)`/g, '<code>$1</code>');
-
-        return `
-          <div class="session-stream-card ${borderClass}" data-stream-id="${entry.id}">
-            <div class="session-stream-card-header">
-              <span class="stream-timestamp"><i class="fa-regular fa-clock mr-1"></i> ${entry.time}</span>
-              <div class="d-flex align-center gap-1">
-                ${entry.tags.map(t => `<span class="stream-tag-pill tag-${t}">#${t}</span>`).join("")}
-              </div>
-            </div>
-
-            <p class="stream-card-text">${formattedText}</p>
-
-            ${entry.screenshot ? `
-              <div class="stream-card-image-wrap" title="Click to view full screenshot">
-                <img src="${entry.screenshot}" alt="Observation Screenshot" />
-              </div>
-            ` : ""}
-
-            <div class="stream-card-footer">
-              ${entry.promotedBugId ? `
-                <span class="stream-promoted-pill"><i class="fa-solid fa-circle-check"></i> Promoted ${entry.promotedBugId}</span>
-              ` : `
-                <button type="button" class="btn-promote-stream" data-stream-id="${entry.id}" title="Convert to Kanban bug ticket">
-                  <i class="fa-solid fa-bug"></i> Promote to Bug Ticket
-                </button>
-              `}
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      // Bind Promote to Bug buttons
-      feed.querySelectorAll(".btn-promote-stream").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const streamId = btn.getAttribute("data-stream-id");
-          this.promoteToBugTicket(streamId);
-        });
-      });
-    },
-
-    endAndSaveSession() {
-      this.stopTimer();
-      const mins = String(Math.floor(this.timerSeconds / 60)).padStart(2, "0");
-      const secs = String(this.timerSeconds % 60).padStart(2, "0");
-      const durationStr = `${mins}m ${secs}s`;
-
-      const title = (document.getElementById("sessionTitleInput")?.value || "Live Exploratory Test Session").trim();
-      const env = (document.getElementById("sessionEnvInput")?.value || "Mobile Chrome").trim();
-
-      const passed = this.checklistItems.filter(i => i.status === "pass").length;
-      const failed = this.checklistItems.filter(i => i.status === "fail").length;
-      const flagged = this.checklistItems.filter(i => i.status === "flag").length;
-      const total = this.checklistItems.length;
-
-      // Save as a formal test execution run in StorageManager & Supabase
-      const run = StorageManager.createTestRun(
-        `[Session] ${title}`,
-        env,
-        []
-      );
-
-      if (run) {
-        run.duration = durationStr;
-        run.status = failed > 0 ? "Completed with Defects" : "Passed";
-        run.notes = `Live Test Session Summary:
-- Environment: ${env}
-- Duration: ${durationStr}
-- Checklists: ${passed}/${total} Passed, ${failed} Failed, ${flagged} Flagged
-- Observations Logged: ${this.streamEntries.length}
-- Bugs Logged to Kanban: ${this.sessionBugs.length} (${this.sessionBugs.map(b => b.id).join(", ") || "None"})`;
-
-        StorageManager.saveTestRuns(StorageManager.getTestRuns());
-        if (typeof SupabaseManager !== "undefined") {
-          SupabaseManager.syncTestRunUpsert(run);
-        }
-      }
-
-      showToast(`Saved session "${title}" to Supabase & Test Runs!`, "success");
-      this.closeModal();
-    },
-
-    setupEventListeners() {
-      // Open modal triggers
-      const openButtons = [
-        document.getElementById("topbarStartSessionBtn"),
-        document.getElementById("dashboardStartSessionBtn"),
-        document.getElementById("repoStartSessionBtn")
-      ];
-      openButtons.forEach(btn => {
-        if (btn) btn.addEventListener("click", () => this.openModal());
-      });
-
-      // Close modal
-      const closeBtn = document.getElementById("closeLiveSessionModalBtn");
-      if (closeBtn) closeBtn.addEventListener("click", () => this.closeModal());
-
-      // End & Save Session
-      const endBtn = document.getElementById("endSessionBtn");
-      if (endBtn) endBtn.addEventListener("click", () => this.endAndSaveSession());
-
-      // Quick Env Chips
-      const envChips = document.querySelectorAll(".session-env-chip");
-      const envInput = document.getElementById("sessionEnvInput");
-      envChips.forEach(chip => {
-        chip.addEventListener("click", () => {
-          envChips.forEach(c => c.classList.remove("active"));
-          chip.classList.add("active");
-          if (envInput) envInput.value = chip.getAttribute("data-env");
-        });
-      });
-
-      // Checklist preset loader
-      const loadPresetBtn = document.getElementById("loadPresetChecklistBtn") || document.getElementById("loadChecklistPresetBtn");
-      const presetSelect = document.getElementById("sessionChecklistPresetSelect") || document.getElementById("checklistPresetSelect");
-      if (loadPresetBtn && presetSelect) {
-        loadPresetBtn.addEventListener("click", () => {
-          this.loadPreset(presetSelect.value);
-          showToast(`Loaded ${presetSelect.options[presetSelect.selectedIndex].text} checklist`, "info");
-        });
-      }
-
-      // Add custom checklist item
-      const addCustomBtn = document.getElementById("addChecklistItemBtn") || document.getElementById("addNewChecklistItemBtn");
-      const customTitleInput = document.getElementById("newChecklistItemInput") || document.getElementById("newChecklistItemText");
-      const customFlowInput = document.getElementById("newChecklistFlowName");
-
-      const handleAddCustom = () => {
-        if (!customTitleInput) return;
-        const title = customTitleInput.value.trim();
-        const flow = customFlowInput ? customFlowInput.value.trim() : "Custom Flow";
-        if (title) {
-          this.addCustomItem(title, flow);
-          customTitleInput.value = "";
-        }
-      };
-
-      if (addCustomBtn) addCustomBtn.addEventListener("click", handleAddCustom);
-      if (customTitleInput) {
-        customTitleInput.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            handleAddCustom();
-          }
-        });
-      }
-
-      // Stream filter chips
-      const filterChips = document.querySelectorAll(".stream-filter-chip");
-      filterChips.forEach(chip => {
-        chip.addEventListener("click", () => {
-          filterChips.forEach(c => c.classList.remove("active"));
-          chip.classList.add("active");
-          this.activeFilter = chip.getAttribute("data-filter");
-          this.renderStream();
-        });
-      });
-
-      // Composer tag chips
-      const composerTags = document.querySelectorAll(".composer-tag-chip");
-      const streamInput = document.getElementById("sessionStreamInput");
-      composerTags.forEach(chip => {
-        chip.addEventListener("click", () => {
-          if (!streamInput) return;
-          const tag = chip.getAttribute("data-tag");
-          streamInput.value = (streamInput.value + " " + tag + " ").trimStart();
-          streamInput.focus();
-        });
-      });
-
-      // Composer file upload
-      const streamFileInput = document.getElementById("sessionStreamFileInput");
-      if (streamFileInput) {
-        streamFileInput.addEventListener("change", (e) => {
-          const file = e.target.files[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-              this.attachedComposerScreenshot = evt.target.result;
-              this.updateComposerAttachmentUI(file.name);
-            };
-            reader.readAsDataURL(file);
-          }
-        });
-      }
-
-      // Composer remove image
-      const removeImgBtn = document.getElementById("removeSessionComposerImageBtn");
-      if (removeImgBtn) {
-        removeImgBtn.addEventListener("click", () => {
-          this.attachedComposerScreenshot = null;
-          this.updateComposerAttachmentUI(null);
-        });
-      }
-
-      // Composer Ctrl+V Screenshot Paste on Textarea
-      const handlePasteImage = (e) => {
-        const clipboardData = e.clipboardData || window.clipboardData;
-        if (!clipboardData) return;
-        const items = clipboardData.items;
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].type.indexOf("image") !== -1) {
-            e.preventDefault();
-            const file = items[i].getAsFile();
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-              this.attachedComposerScreenshot = evt.target.result;
-              this.updateComposerAttachmentUI("clipboard-screenshot.png");
-              showToast("Screenshot pasted into composer!", "success");
-            };
-            reader.readAsDataURL(file);
-            break;
-          }
-        }
-      };
-
-      if (streamInput) {
-        streamInput.addEventListener("paste", handlePasteImage);
-        streamInput.addEventListener("keydown", (e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            this.submitComposer();
-          }
-        });
-      }
-
-      const streamSubmitBtn = document.getElementById("sessionStreamSubmitBtn");
-      if (streamSubmitBtn) {
-        streamSubmitBtn.addEventListener("click", () => this.submitComposer());
-      }
-
-      // Floating Selection Action Tooltip
-      this.setupSelectionTooltip();
-    },
-
-    updateComposerAttachmentUI(fileName) {
-      const previewBar = document.getElementById("sessionComposerPreviewBar");
-      const previewImg = document.getElementById("sessionComposerPreviewImg");
-      const fileNameEl = document.getElementById("sessionComposerFileName");
-
-      if (this.attachedComposerScreenshot) {
-        if (previewBar) previewBar.style.display = "flex";
-        if (previewImg) previewImg.src = this.attachedComposerScreenshot;
-        if (fileNameEl) fileNameEl.textContent = fileName || "screenshot.png";
-      } else {
-        if (previewBar) previewBar.style.display = "none";
-        if (previewImg) previewImg.src = "";
-        const fileInput = document.getElementById("sessionStreamFileInput");
-        if (fileInput) fileInput.value = "";
-      }
-    },
-
-    submitComposer() {
-      const streamInput = document.getElementById("sessionStreamInput");
-      if (!streamInput) return;
-      const text = streamInput.value.trim();
-
-      if (!text && !this.attachedComposerScreenshot) {
-        showToast("Please enter an observation or attach a screenshot", "warning");
-        return;
-      }
-
-      this.addStreamEntry({
-        text,
-        screenshot: this.attachedComposerScreenshot
-      });
-
-      streamInput.value = "";
-      this.attachedComposerScreenshot = null;
-      this.updateComposerAttachmentUI(null);
-    },
-
-    setupSelectionTooltip() {
-      const tooltip = document.getElementById("floatingSelectionBugBtn");
-      const promoteBtn = document.getElementById("btnPromoteSelection");
-      const streamFeed = document.getElementById("sessionStreamFeed");
-
-      let currentSelectionText = "";
-
-      document.addEventListener("selectionchange", () => {
-        const selection = window.getSelection();
-        const text = selection.toString().trim();
-
-        if (text && text.length > 3 && streamFeed && streamFeed.contains(selection.anchorNode)) {
-          currentSelectionText = text;
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          if (tooltip && rect.width > 0) {
-            tooltip.style.left = `${rect.left + rect.width / 2}px`;
-            tooltip.style.top = `${rect.top}px`;
-            tooltip.style.display = "block";
-          }
-        } else {
-          if (tooltip && !tooltip.contains(document.activeElement)) {
-            tooltip.style.display = "none";
-          }
-        }
-      });
-
-      if (promoteBtn) {
-        promoteBtn.addEventListener("mousedown", (e) => {
-          e.preventDefault();
-          if (currentSelectionText) {
-            const truncated = currentSelectionText.length > 80 ? currentSelectionText.substring(0, 77) + "..." : currentSelectionText;
-            this.promoteToBugTicket(null, `[Selected finding] ${truncated}`, currentSelectionText);
-            if (tooltip) tooltip.style.display = "none";
-            window.getSelection()?.removeAllRanges();
-          }
-        });
-      }
-    }
-  };
-
-  window.LiveTestSessionManager = LiveTestSessionManager;
-
   // Boot Back to Top, Routing & Conference Room
   initBackToTopButton();
   initRouting();
   initConferenceRoom();
-  LiveTestSessionManager.init();
   applyUrlViewRouting();
 });
 
