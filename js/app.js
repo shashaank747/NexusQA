@@ -337,8 +337,6 @@ document.addEventListener("DOMContentLoaded", () => {
     stepsBuilderList: document.getElementById("stepsBuilderList"),
     addStepBtn: document.getElementById("addStepBtn"),
     saveTestCaseBtn: document.getElementById("saveTestCaseBtn"),
-    autoInputTestCaseBtn: document.getElementById("autoInputTestCaseBtn"),
-    easyApplyTestCaseBtn: document.getElementById("easyApplyTestCaseBtn"),
     closeTestCaseModalBtn: document.getElementById("closeTestCaseModalBtn"),
     cancelTestCaseModalBtn: document.getElementById("cancelTestCaseModalBtn"),
     tcImageFileInput: document.getElementById("tcImageFileInput"),
@@ -352,6 +350,15 @@ document.addEventListener("DOMContentLoaded", () => {
     editTestCaseDeleteWrap: document.getElementById("editTestCaseDeleteWrap"),
     deleteTestCaseModalBtn: document.getElementById("deleteTestCaseModalBtn"),
 
+    // Live Test Session Elements
+    topbarStartSessionBtn: document.getElementById("topbarStartSessionBtn"),
+    dashboardStartSessionBtn: document.getElementById("dashboardStartSessionBtn"),
+    repoStartSessionBtn: document.getElementById("repoStartSessionBtn"),
+    dashboardNewTestCaseBtn: document.getElementById("dashboardNewTestCaseBtn"),
+    liveTestSessionModal: document.getElementById("liveTestSessionModal"),
+    closeLiveSessionModalBtn: document.getElementById("closeLiveSessionModalBtn"),
+    endSessionBtn: document.getElementById("endSessionBtn"),
+
     // Conversational AI QA Assistant & Auto Input Studio Modal
     autoInputModal: document.getElementById("autoInputModal"),
     aiTargetSuite: document.getElementById("aiTargetSuite"),
@@ -364,10 +371,6 @@ document.addEventListener("DOMContentLoaded", () => {
     openTaskRefModalBtn: document.getElementById("openTaskRefModalBtn"),
     closeAutoInputModalBtn: document.getElementById("closeAutoInputModalBtn"),
     cancelAutoInputModalBtn: document.getElementById("cancelAutoInputModalBtn"),
-    dashboardAutoInputBtn: document.getElementById("dashboardAutoInputBtn"),
-    repoAutoInputBtn: document.getElementById("repoAutoInputBtn"),
-    autoInputTestCaseBtn: document.getElementById("autoInputTestCaseBtn"),
-    dashboardNewTestCaseBtn: document.getElementById("dashboardNewTestCaseBtn"),
 
     // Session Status Pills
     valTestRef: document.getElementById("valTestRef"),
@@ -5399,32 +5402,6 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   ];
 
-  let easyApplyScenarioIndex = 0;
-  function applyEasyTestTemplate() {
-    if (!autoInputScenarios || autoInputScenarios.length === 0) return;
-    const scenario = autoInputScenarios[easyApplyScenarioIndex % autoInputScenarios.length];
-    easyApplyScenarioIndex++;
-
-    if (DOM.tcTitle) DOM.tcTitle.value = scenario.title;
-    if (DOM.tcPriority) DOM.tcPriority.value = scenario.priority;
-    if (DOM.tcType) DOM.tcType.value = scenario.type;
-    if (DOM.tcStatus) DOM.tcStatus.value = scenario.status || "Untested";
-    if (DOM.tcPreconditions) DOM.tcPreconditions.value = scenario.preconditions || "";
-    if (DOM.tcTags) DOM.tcTags.value = (scenario.tags || []).join(", ");
-    
-    if (DOM.tcSuite && scenario.suiteId) {
-      if (DOM.tcSuite.querySelector(`option[value="${scenario.suiteId}"]`)) {
-        DOM.tcSuite.value = scenario.suiteId;
-      }
-    }
-
-    if (scenario.steps && typeof renderStepRows === "function") {
-      renderStepRows(scenario.steps);
-    }
-
-    showToast("Easy Apply: Template populated into test case!", "success");
-  }
-
   // ==========================================================================
   // CAMPUSOS CONVERSATIONAL AI QA ASSISTANT CONTROLLER
   // ==========================================================================
@@ -6267,10 +6244,15 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   });
 
   // Action button triggers
-  on(DOM.easyApplyTestCaseBtn, "click", applyEasyTestTemplate);
-  on(DOM.autoInputTestCaseBtn, "click", openAutoInputModal);
-  on(DOM.dashboardAutoInputBtn, "click", openAutoInputModal);
-  on(DOM.repoAutoInputBtn, "click", openAutoInputModal);
+  on(DOM.topbarStartSessionBtn, "click", () => {
+    if (typeof LiveTestSessionManager !== "undefined") LiveTestSessionManager.openModal();
+  });
+  on(DOM.dashboardStartSessionBtn, "click", () => {
+    if (typeof LiveTestSessionManager !== "undefined") LiveTestSessionManager.openModal();
+  });
+  on(DOM.repoStartSessionBtn, "click", () => {
+    if (typeof LiveTestSessionManager !== "undefined") LiveTestSessionManager.openModal();
+  });
   on(DOM.dashboardNewTestCaseBtn, "click", openCreateTestCaseModal);
   on(DOM.createNewTestCaseBtn, "click", openCreateTestCaseModal);
   on(DOM.emptyCreateBtn, "click", openCreateTestCaseModal);
@@ -7356,10 +7338,793 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   }
 
+  // =========================================================================
+  // LIVE TEST SESSION CONTROLLER (Flow Checklists & Exploratory Scratchpad Stream)
+  // =========================================================================
+  const LiveTestSessionManager = {
+    timerInterval: null,
+    timerSeconds: 0,
+    sessionBugs: [],
+    checklistItems: [],
+    streamEntries: [],
+    activeFilter: "all",
+    attachedComposerScreenshot: null,
+
+    // Preset libraries
+    flowPresets: {
+      checkout: [
+        { id: "flow-chk-1", title: "Apply coupon discount code to cart & verify total recalculation", flow: "Checkout", status: "untested" },
+        { id: "flow-chk-2", title: "Select standard shipping vs express delivery with fee update", flow: "Shipping", status: "untested" },
+        { id: "flow-chk-3", title: "Credit card payment with 3D Secure OTP verification flow", flow: "Payment", status: "untested" },
+        { id: "flow-chk-4", title: "Order confirmation screen renders order ID & invoice receipt link", flow: "Post-Purchase", status: "untested" },
+        { id: "flow-chk-5", title: "Inventory stock count decrement in real-time across concurrent carts", flow: "Inventory", status: "untested" },
+        { id: "flow-chk-6", title: "Cart abandonment reminder trigger on session timeout", flow: "Notifications", status: "untested" }
+      ],
+      auth: [
+        { id: "flow-auth-1", title: "User sign-in with valid credentials & session token issuance", flow: "Auth", status: "untested" },
+        { id: "flow-auth-2", title: "Multi-factor authentication (MFA / Email OTP verification)", flow: "Security", status: "untested" },
+        { id: "flow-auth-3", title: "Password reset magic link email delivery and expiry check", flow: "Recovery", status: "untested" },
+        { id: "flow-auth-4", title: "Rate limiting lock after 5 consecutive failed login attempts", flow: "Brute-Force", status: "untested" },
+        { id: "flow-auth-5", title: "Remember Me cookie persistence across browser tab restart", flow: "Session", status: "untested" },
+        { id: "flow-auth-6", title: "Session revocation across all active devices on password change", flow: "Security", status: "untested" }
+      ],
+      api: [
+        { id: "flow-api-1", title: "GET /api/v1/health returns HTTP 200 with DB ping and latency", flow: "Health", status: "untested" },
+        { id: "flow-api-2", title: "POST /api/v1/auth/token validates JWT signature & claim audience", flow: "Auth", status: "untested" },
+        { id: "flow-api-3", title: "GET /api/v1/users/me returns sanitized profile without password hash", flow: "Users", status: "untested" },
+        { id: "flow-api-4", title: "Payload size limit & gzip decompression verification on large request bodies", flow: "Gateway", status: "untested" },
+        { id: "flow-api-5", title: "CORS headers correctly restrict unauthorized origins", flow: "Security", status: "untested" },
+        { id: "flow-api-6", title: "Idempotency key prevents duplicate transaction processing", flow: "Transactions", status: "untested" }
+      ],
+      search: [
+        { id: "flow-srch-1", title: "Fuzzy search with spelling mistakes returns intended suggestions", flow: "Search", status: "untested" },
+        { id: "flow-srch-2", title: "Multi-facet filtering by category, price, and customer rating", flow: "Filtering", status: "untested" },
+        { id: "flow-srch-3", title: "Sort by Price: Low to High & High to Low pagination", flow: "Sorting", status: "untested" },
+        { id: "flow-srch-4", title: "Empty search query graceful zero-state fallback with trending tags", flow: "Search", status: "untested" },
+        { id: "flow-srch-5", title: "Debounced autocomplete suggestions render under 150ms", flow: "Performance", status: "untested" }
+      ],
+      mobile: [
+        { id: "flow-mob-1", title: "Portrait & Landscape screen orientation reflow without layout shift", flow: "Layout", status: "untested" },
+        { id: "flow-mob-2", title: "Touch gesture swipe on carousel & pull-to-refresh data sync", flow: "Gestures", status: "untested" },
+        { id: "flow-mob-3", title: "Virtual keyboard dismiss on outside tap without viewport clipping", flow: "Input", status: "untested" },
+        { id: "flow-mob-4", title: "Offline network detection & cached read-only mode banner", flow: "Network", status: "untested" },
+        { id: "flow-mob-5", title: "Push notification deep link opens targeted product modal directly", flow: "DeepLink", status: "untested" }
+      ],
+      security: [
+        { id: "flow-sec-1", title: "XSS prevention in user profile bio & comment markdown fields", flow: "Sanitization", status: "untested" },
+        { id: "flow-sec-2", title: "SQL Injection resistance on URL parameter and search inputs", flow: "Database", status: "untested" },
+        { id: "flow-sec-3", title: "CSRF token validation on sensitive mutation endpoints", flow: "CSRF", status: "untested" },
+        { id: "flow-sec-4", title: "Broken Object Level Authorization (BOLA/IDOR) tenant isolation", flow: "RBAC", status: "untested" },
+        { id: "flow-sec-5", title: "Content Security Policy (CSP) header enforcement & script blocking", flow: "Headers", status: "untested" }
+      ]
+    },
+
+    init() {
+      this.loadPreset("checkout");
+      this.setupEventListeners();
+    },
+
+    openModal() {
+      const modal = document.getElementById("liveTestSessionModal");
+      if (!modal) return;
+      modal.style.display = "flex";
+      this.startTimer();
+      this.renderChecklist();
+      this.renderStream();
+      this.updateHeaderStats();
+    },
+
+    closeModal() {
+      const modal = document.getElementById("liveTestSessionModal");
+      if (modal) modal.style.display = "none";
+    },
+
+    startTimer() {
+      if (this.timerInterval) return;
+      const timerText = document.getElementById("sessionTimerText");
+      this.timerInterval = setInterval(() => {
+        this.timerSeconds++;
+        const mins = String(Math.floor(this.timerSeconds / 60)).padStart(2, "0");
+        const secs = String(this.timerSeconds % 60).padStart(2, "0");
+        if (timerText) timerText.textContent = `${mins}:${secs}`;
+      }, 1000);
+    },
+
+    stopTimer() {
+      if (this.timerInterval) {
+        clearInterval(this.timerInterval);
+        this.timerInterval = null;
+      }
+    },
+
+    loadPreset(presetKey) {
+      const items = this.flowPresets[presetKey] || [];
+      this.checklistItems = items.map(item => ({
+        ...item,
+        id: "item-" + Math.random().toString(36).substr(2, 9),
+        status: "untested",
+        note: "",
+        screenshot: null,
+        createdBug: null
+      }));
+      this.renderChecklist();
+      this.updateChecklistStats();
+    },
+
+    addCustomItem(title, flow) {
+      if (!title) return;
+      this.checklistItems.push({
+        id: "item-" + Math.random().toString(36).substr(2, 9),
+        title,
+        flow: flow || "Feature Flow",
+        status: "untested",
+        note: "",
+        screenshot: null,
+        createdBug: null
+      });
+      this.renderChecklist();
+      this.updateChecklistStats();
+      showToast("Added flow checklist item", "success");
+    },
+
+    setItemStatus(itemId, newStatus) {
+      const item = this.checklistItems.find(i => i.id === itemId);
+      if (!item) return;
+
+      if (item.status === newStatus) {
+        item.status = "untested";
+      } else {
+        item.status = newStatus;
+      }
+
+      // If failed, automatically create a Manual bug ticket in Defect Tracker / Kanban board
+      if (item.status === "fail") {
+        if (!item.createdBug) {
+          const env = (document.getElementById("sessionEnvInput")?.value || "Mobile Chrome").trim();
+          const sessionTitle = (document.getElementById("sessionTitleInput")?.value || "Live Test Session").trim();
+          const curUser = StorageManager.getCurrentUser();
+          
+          const defect = StorageManager.addDefect({
+            summary: `[Fail] ${item.title}`,
+            severity: "Major",
+            priority: "P1 - High",
+            type: "Manual",
+            status: "Open",
+            assignee: (curUser ? curUser.name : "Senior Developer"),
+            reportedBy: (curUser ? curUser.name : "QA Tester"),
+            description: `Auto-generated from Live Test Session: "${sessionTitle}"\nEnvironment: ${env}\nFeature Flow: ${item.flow}\nChecklist Item: ${item.title}\nStatus: Failed`,
+            devNotes: `Failed during Live Test Session execution on ${env}.`
+          });
+
+          item.createdBug = defect;
+          this.sessionBugs.push(defect);
+          this.updateHeaderStats();
+
+          // Also post observation to the timeline stream
+          this.addStreamEntry({
+            text: `Marked checklist item as #bug failed: "${item.title}" [Flow: ${item.flow}]. Automatically logged ticket ${defect.id}.`,
+            promotedBugId: defect.id
+          });
+
+          // Refresh defects table / Kanban if currently visible
+          if (typeof renderDefects === "function") renderDefects();
+          showToast(`Marked Fail: Created bug ${defect.id} in Kanban & Supabase!`, "success");
+        }
+      }
+
+      this.renderChecklist();
+      this.updateChecklistStats();
+    },
+
+    updateChecklistStats() {
+      const total = this.checklistItems.length;
+      const passed = this.checklistItems.filter(i => i.status === "pass").length;
+      const failed = this.checklistItems.filter(i => i.status === "fail").length;
+      const flagged = this.checklistItems.filter(i => i.status === "flag").length;
+
+      const totalEl = document.getElementById("sessionTotalChecklistBadge") || document.getElementById("sessionChecklistCount");
+      const passEl = document.getElementById("sessionPassedCountBadge") || document.getElementById("sessionPassedCount");
+      const failEl = document.getElementById("sessionFailedCountBadge") || document.getElementById("sessionFailedCount");
+      const flagEl = document.getElementById("sessionFlaggedCountBadge") || document.getElementById("sessionFlaggedCount");
+      const progEl = document.getElementById("sessionProgressBar");
+
+      if (totalEl) totalEl.textContent = `${total} Items`;
+      if (passEl) passEl.innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${passed} Passed`;
+      if (failEl) failEl.innerHTML = `<i class="fa-solid fa-xmark mr-1"></i> ${failed} Failed`;
+      if (flagEl) flagEl.innerHTML = `<i class="fa-solid fa-flag mr-1"></i> ${flagged} Flagged`;
+
+      if (progEl) {
+        const pct = total === 0 ? 0 : Math.round((passed / total) * 100);
+        progEl.style.width = `${pct}%`;
+      }
+    },
+
+    updateHeaderStats() {
+      const bugsCountEl = document.getElementById("sessionActiveBugsCount");
+      if (bugsCountEl) {
+        bugsCountEl.textContent = `${this.sessionBugs.length} Bugs Logged`;
+      }
+    },
+
+    renderChecklist() {
+      const list = document.getElementById("sessionChecklistContainer") || document.getElementById("sessionChecklistList");
+      if (!list) return;
+
+      if (this.checklistItems.length === 0) {
+        list.innerHTML = `<div class="p-4 text-center text-muted text-xs">No checklist items yet. Select a preset flow above or add a custom item.</div>`;
+        return;
+      }
+
+      list.innerHTML = this.checklistItems.map(item => {
+        const isPass = item.status === "pass";
+        const isFail = item.status === "fail";
+        const isFlag = item.status === "flag";
+        const statusClass = isPass ? "status-pass" : isFail ? "status-fail" : isFlag ? "status-flag" : "";
+
+        return `
+          <div class="session-checklist-card ${statusClass}" data-item-id="${item.id}">
+            <div class="session-card-main-row">
+              <div class="session-item-info">
+                <div class="session-item-meta">
+                  <span class="session-flow-badge">${escapeHtml(item.flow)}</span>
+                  ${item.createdBug ? `<span class="fail-drawer-bug-pill" title="Linked Kanban Bug"><i class="fa-solid fa-bug"></i> ${item.createdBug.id}</span>` : ""}
+                </div>
+                <h4 class="session-item-title">${escapeHtml(item.title)}</h4>
+              </div>
+              <div class="session-toggles-group">
+                <button type="button" class="btn-session-toggle btn-session-pass ${isPass ? 'active' : ''}" data-action="pass" title="Mark as Passed">
+                  <i class="fa-solid fa-circle-check"></i> <span>Pass</span>
+                </button>
+                <button type="button" class="btn-session-toggle btn-session-fail ${isFail ? 'active' : ''}" data-action="fail" title="Mark as Failed (Creates Bug in Kanban)">
+                  <i class="fa-solid fa-circle-xmark"></i> <span>Fail</span>
+                </button>
+                <button type="button" class="btn-session-toggle btn-session-flag ${isFlag ? 'active' : ''}" data-action="flag" title="Flag for Attention">
+                  <i class="fa-solid fa-flag"></i> <span>Flag</span>
+                </button>
+              </div>
+            </div>
+
+            ${isFail ? `
+              <div class="session-fail-drawer">
+                <div class="fail-drawer-top-row">
+                  <span class="fail-drawer-bug-pill"><i class="fa-solid fa-bug"></i> ${item.createdBug ? item.createdBug.id : "BUG-PENDING"} (Manual) in Kanban</span>
+                  <span class="text-3xs text-muted font-mono"><kbd>Ctrl</kbd>+<kbd>V</kbd> to paste screenshot</span>
+                </div>
+                <div class="fail-drawer-input-row">
+                  <input type="text" class="fail-drawer-note-input" placeholder="Add 1-line note (e.g., Discount code expired popup appears)..." value="${escapeHtml(item.note || '')}" />
+                  <label class="fail-drawer-paste-box" title="Attach screenshot file">
+                    <i class="fa-solid fa-camera"></i> Image
+                    <input type="file" accept="image/*" class="fail-drawer-file-input" style="display: none;" />
+                  </label>
+                </div>
+                ${item.screenshot ? `
+                  <div class="fail-drawer-screenshot-preview">
+                    <img src="${item.screenshot}" alt="Fail Evidence" />
+                    <button type="button" class="fail-drawer-remove-img" title="Remove screenshot"><i class="fa-solid fa-xmark"></i></button>
+                  </div>
+                ` : ""}
+              </div>
+            ` : ""}
+          </div>
+        `;
+      }).join("");
+
+      // Bind checklist event listeners
+      list.querySelectorAll(".session-checklist-card").forEach(card => {
+        const id = card.getAttribute("data-item-id");
+
+        card.querySelectorAll(".btn-session-toggle").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const action = btn.getAttribute("data-action");
+            this.setItemStatus(id, action);
+          });
+        });
+
+        // Fail drawer note input
+        const noteInput = card.querySelector(".fail-drawer-note-input");
+        if (noteInput) {
+          noteInput.addEventListener("input", (e) => {
+            const item = this.checklistItems.find(i => i.id === id);
+            if (item) {
+              item.note = e.target.value;
+              if (item.createdBug) {
+                item.createdBug.devNotes = item.note;
+                StorageManager.updateDefect(item.createdBug);
+              }
+            }
+          });
+
+          // Ctrl+V paste support for fail drawer
+          noteInput.addEventListener("paste", (e) => {
+            const clipboardData = e.clipboardData || window.clipboardData;
+            if (!clipboardData) return;
+            const items = clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+              if (items[i].type.indexOf("image") !== -1) {
+                e.preventDefault();
+                const file = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                  const item = this.checklistItems.find(it => it.id === id);
+                  if (item) {
+                    item.screenshot = evt.target.result;
+                    if (item.createdBug) {
+                      item.createdBug.description += `\n\n[Screenshot Evidence Attached]`;
+                      StorageManager.updateDefect(item.createdBug);
+                    }
+                    this.renderChecklist();
+                    showToast("Screenshot attached to failed checklist item!", "success");
+                  }
+                };
+                reader.readAsDataURL(file);
+                break;
+              }
+            }
+          });
+        }
+
+        // File upload input inside fail drawer
+        const fileInput = card.querySelector(".fail-drawer-file-input");
+        if (fileInput) {
+          fileInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (evt) => {
+                const item = this.checklistItems.find(it => it.id === id);
+                if (item) {
+                  item.screenshot = evt.target.result;
+                  if (item.createdBug) {
+                    item.createdBug.description += `\n\n[Screenshot Evidence Attached]`;
+                    StorageManager.updateDefect(item.createdBug);
+                  }
+                  this.renderChecklist();
+                  showToast("Screenshot attached!", "success");
+                }
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+        }
+
+        // Remove screenshot
+        const removeImgBtn = card.querySelector(".fail-drawer-remove-img");
+        if (removeImgBtn) {
+          removeImgBtn.addEventListener("click", () => {
+            const item = this.checklistItems.find(it => it.id === id);
+            if (item) {
+              item.screenshot = null;
+              this.renderChecklist();
+            }
+          });
+        }
+      });
+    },
+
+    // Timeline Stream & Composer
+    addStreamEntry({ text, screenshot, promotedBugId = null }) {
+      if (!text && !screenshot) return;
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      
+      const tags = [];
+      if (/#bug\b/i.test(text)) tags.push("bug");
+      if (/#idea\b/i.test(text)) tags.push("idea");
+      if (/#verified\b/i.test(text)) tags.push("verified");
+      if (/#note\b/i.test(text)) tags.push("note");
+
+      const entry = {
+        id: "stream-" + Math.random().toString(36).substr(2, 9),
+        time: timeStr,
+        text,
+        screenshot: screenshot || null,
+        tags,
+        promotedBugId
+      };
+
+      this.streamEntries.push(entry);
+      this.renderStream();
+
+      // Scroll to bottom
+      const scrollWrap = document.getElementById("sessionStreamScrollContainer");
+      if (scrollWrap) {
+        setTimeout(() => {
+          scrollWrap.scrollTop = scrollWrap.scrollHeight;
+        }, 50);
+      }
+    },
+
+    promoteToBugTicket(entryId, customSummary = null, customDesc = null) {
+      let entry = null;
+      if (entryId) {
+        entry = this.streamEntries.find(e => e.id === entryId);
+      }
+
+      const env = (document.getElementById("sessionEnvInput")?.value || "Mobile Chrome").trim();
+      const sessionTitle = (document.getElementById("sessionTitleInput")?.value || "Live Test Session").trim();
+      const curUser = StorageManager.getCurrentUser();
+
+      const summaryText = customSummary || (entry ? entry.text.split("\n")[0].replace(/#(bug|idea|verified|note)/gi, "").trim() : "Observation from Live Session");
+      const cleanSummary = summaryText.length > 80 ? summaryText.substring(0, 77) + "..." : summaryText;
+
+      const fullDesc = customDesc || (entry ? entry.text : summaryText);
+
+      const defect = StorageManager.addDefect({
+        summary: cleanSummary || `[Live Session] Bug observation on ${env}`,
+        severity: "Major",
+        priority: "P1 - High",
+        type: "Manual",
+        status: "Open",
+        assignee: (curUser ? curUser.name : "Senior Developer"),
+        reportedBy: (curUser ? curUser.name : "QA Tester"),
+        description: `Promoted from Live Test Session: "${sessionTitle}"\nEnvironment: ${env}\n\nObservation:\n${fullDesc}`,
+        devNotes: `Promoted from stream observation during Live Test Session on ${env}.`
+      });
+
+      if (entry) {
+        entry.promotedBugId = defect.id;
+      }
+
+      this.sessionBugs.push(defect);
+      this.updateHeaderStats();
+      this.renderStream();
+
+      if (typeof renderDefects === "function") renderDefects();
+      showToast(`Promoted to ${defect.id} in Kanban & Supabase!`, "success");
+      return defect;
+    },
+
+    renderStream() {
+      const feed = document.getElementById("sessionStreamFeed");
+      if (!feed) return;
+
+      let filtered = this.streamEntries;
+      if (this.activeFilter !== "all") {
+        filtered = this.streamEntries.filter(e => e.tags.includes(this.activeFilter));
+      }
+
+      if (filtered.length === 0) {
+        feed.innerHTML = `
+          <div class="p-4 text-center text-muted text-xs">
+            <i class="fa-solid fa-stream fa-2x mb-2 opacity-30"></i>
+            <div>No observations logged yet for this filter.</div>
+            <div class="text-3xs text-muted mt-1">Use the composer below or paste Ctrl+V screenshots to record findings.</div>
+          </div>
+        `;
+        return;
+      }
+
+      feed.innerHTML = filtered.map(entry => {
+        const hasBug = entry.tags.includes("bug");
+        const hasIdea = entry.tags.includes("idea");
+        const hasVerified = entry.tags.includes("verified");
+        const borderClass = hasBug ? "has-bug" : hasIdea ? "has-idea" : hasVerified ? "has-verified" : "";
+
+        let formattedText = escapeHtml(entry.text)
+          .replace(/#bug\b/gi, '<span class="stream-tag-pill tag-bug">#bug</span>')
+          .replace(/#idea\b/gi, '<span class="stream-tag-pill tag-idea">#idea</span>')
+          .replace(/#verified\b/gi, '<span class="stream-tag-pill tag-verified">#verified</span>')
+          .replace(/#note\b/gi, '<span class="stream-tag-pill tag-note">#note</span>')
+          .replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        return `
+          <div class="session-stream-card ${borderClass}" data-stream-id="${entry.id}">
+            <div class="session-stream-card-header">
+              <span class="stream-timestamp"><i class="fa-regular fa-clock mr-1"></i> ${entry.time}</span>
+              <div class="d-flex align-center gap-1">
+                ${entry.tags.map(t => `<span class="stream-tag-pill tag-${t}">#${t}</span>`).join("")}
+              </div>
+            </div>
+
+            <p class="stream-card-text">${formattedText}</p>
+
+            ${entry.screenshot ? `
+              <div class="stream-card-image-wrap" title="Click to view full screenshot">
+                <img src="${entry.screenshot}" alt="Observation Screenshot" />
+              </div>
+            ` : ""}
+
+            <div class="stream-card-footer">
+              ${entry.promotedBugId ? `
+                <span class="stream-promoted-pill"><i class="fa-solid fa-circle-check"></i> Promoted ${entry.promotedBugId}</span>
+              ` : `
+                <button type="button" class="btn-promote-stream" data-stream-id="${entry.id}" title="Convert to Kanban bug ticket">
+                  <i class="fa-solid fa-bug"></i> Promote to Bug Ticket
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // Bind Promote to Bug buttons
+      feed.querySelectorAll(".btn-promote-stream").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const streamId = btn.getAttribute("data-stream-id");
+          this.promoteToBugTicket(streamId);
+        });
+      });
+    },
+
+    endAndSaveSession() {
+      this.stopTimer();
+      const mins = String(Math.floor(this.timerSeconds / 60)).padStart(2, "0");
+      const secs = String(this.timerSeconds % 60).padStart(2, "0");
+      const durationStr = `${mins}m ${secs}s`;
+
+      const title = (document.getElementById("sessionTitleInput")?.value || "Live Exploratory Test Session").trim();
+      const env = (document.getElementById("sessionEnvInput")?.value || "Mobile Chrome").trim();
+
+      const passed = this.checklistItems.filter(i => i.status === "pass").length;
+      const failed = this.checklistItems.filter(i => i.status === "fail").length;
+      const flagged = this.checklistItems.filter(i => i.status === "flag").length;
+      const total = this.checklistItems.length;
+
+      // Save as a formal test execution run in StorageManager & Supabase
+      const run = StorageManager.createTestRun(
+        `[Session] ${title}`,
+        env,
+        []
+      );
+
+      if (run) {
+        run.duration = durationStr;
+        run.status = failed > 0 ? "Completed with Defects" : "Passed";
+        run.notes = `Live Test Session Summary:
+- Environment: ${env}
+- Duration: ${durationStr}
+- Checklists: ${passed}/${total} Passed, ${failed} Failed, ${flagged} Flagged
+- Observations Logged: ${this.streamEntries.length}
+- Bugs Logged to Kanban: ${this.sessionBugs.length} (${this.sessionBugs.map(b => b.id).join(", ") || "None"})`;
+
+        StorageManager.saveTestRuns(StorageManager.getTestRuns());
+        if (typeof SupabaseManager !== "undefined") {
+          SupabaseManager.syncTestRunUpsert(run);
+        }
+      }
+
+      showToast(`Saved session "${title}" to Supabase & Test Runs!`, "success");
+      this.closeModal();
+    },
+
+    setupEventListeners() {
+      // Open modal triggers
+      const openButtons = [
+        document.getElementById("topbarStartSessionBtn"),
+        document.getElementById("dashboardStartSessionBtn"),
+        document.getElementById("repoStartSessionBtn")
+      ];
+      openButtons.forEach(btn => {
+        if (btn) btn.addEventListener("click", () => this.openModal());
+      });
+
+      // Close modal
+      const closeBtn = document.getElementById("closeLiveSessionModalBtn");
+      if (closeBtn) closeBtn.addEventListener("click", () => this.closeModal());
+
+      // End & Save Session
+      const endBtn = document.getElementById("endSessionBtn");
+      if (endBtn) endBtn.addEventListener("click", () => this.endAndSaveSession());
+
+      // Quick Env Chips
+      const envChips = document.querySelectorAll(".session-env-chip");
+      const envInput = document.getElementById("sessionEnvInput");
+      envChips.forEach(chip => {
+        chip.addEventListener("click", () => {
+          envChips.forEach(c => c.classList.remove("active"));
+          chip.classList.add("active");
+          if (envInput) envInput.value = chip.getAttribute("data-env");
+        });
+      });
+
+      // Checklist preset loader
+      const loadPresetBtn = document.getElementById("loadPresetChecklistBtn") || document.getElementById("loadChecklistPresetBtn");
+      const presetSelect = document.getElementById("sessionChecklistPresetSelect") || document.getElementById("checklistPresetSelect");
+      if (loadPresetBtn && presetSelect) {
+        loadPresetBtn.addEventListener("click", () => {
+          this.loadPreset(presetSelect.value);
+          showToast(`Loaded ${presetSelect.options[presetSelect.selectedIndex].text} checklist`, "info");
+        });
+      }
+
+      // Add custom checklist item
+      const addCustomBtn = document.getElementById("addChecklistItemBtn") || document.getElementById("addNewChecklistItemBtn");
+      const customTitleInput = document.getElementById("newChecklistItemInput") || document.getElementById("newChecklistItemText");
+      const customFlowInput = document.getElementById("newChecklistFlowName");
+
+      const handleAddCustom = () => {
+        if (!customTitleInput) return;
+        const title = customTitleInput.value.trim();
+        const flow = customFlowInput ? customFlowInput.value.trim() : "Custom Flow";
+        if (title) {
+          this.addCustomItem(title, flow);
+          customTitleInput.value = "";
+        }
+      };
+
+      if (addCustomBtn) addCustomBtn.addEventListener("click", handleAddCustom);
+      if (customTitleInput) {
+        customTitleInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleAddCustom();
+          }
+        });
+      }
+
+      // Stream filter chips
+      const filterChips = document.querySelectorAll(".stream-filter-chip");
+      filterChips.forEach(chip => {
+        chip.addEventListener("click", () => {
+          filterChips.forEach(c => c.classList.remove("active"));
+          chip.classList.add("active");
+          this.activeFilter = chip.getAttribute("data-filter");
+          this.renderStream();
+        });
+      });
+
+      // Composer tag chips
+      const composerTags = document.querySelectorAll(".composer-tag-chip");
+      const streamInput = document.getElementById("sessionStreamInput");
+      composerTags.forEach(chip => {
+        chip.addEventListener("click", () => {
+          if (!streamInput) return;
+          const tag = chip.getAttribute("data-tag");
+          streamInput.value = (streamInput.value + " " + tag + " ").trimStart();
+          streamInput.focus();
+        });
+      });
+
+      // Composer file upload
+      const streamFileInput = document.getElementById("sessionStreamFileInput");
+      if (streamFileInput) {
+        streamFileInput.addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              this.attachedComposerScreenshot = evt.target.result;
+              this.updateComposerAttachmentUI(file.name);
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+
+      // Composer remove image
+      const removeImgBtn = document.getElementById("removeSessionComposerImageBtn");
+      if (removeImgBtn) {
+        removeImgBtn.addEventListener("click", () => {
+          this.attachedComposerScreenshot = null;
+          this.updateComposerAttachmentUI(null);
+        });
+      }
+
+      // Composer Ctrl+V Screenshot Paste on Textarea
+      const handlePasteImage = (e) => {
+        const clipboardData = e.clipboardData || window.clipboardData;
+        if (!clipboardData) return;
+        const items = clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf("image") !== -1) {
+            e.preventDefault();
+            const file = items[i].getAsFile();
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              this.attachedComposerScreenshot = evt.target.result;
+              this.updateComposerAttachmentUI("clipboard-screenshot.png");
+              showToast("Screenshot pasted into composer!", "success");
+            };
+            reader.readAsDataURL(file);
+            break;
+          }
+        }
+      };
+
+      if (streamInput) {
+        streamInput.addEventListener("paste", handlePasteImage);
+        streamInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            this.submitComposer();
+          }
+        });
+      }
+
+      const streamSubmitBtn = document.getElementById("sessionStreamSubmitBtn");
+      if (streamSubmitBtn) {
+        streamSubmitBtn.addEventListener("click", () => this.submitComposer());
+      }
+
+      // Floating Selection Action Tooltip
+      this.setupSelectionTooltip();
+    },
+
+    updateComposerAttachmentUI(fileName) {
+      const previewBar = document.getElementById("sessionComposerPreviewBar");
+      const previewImg = document.getElementById("sessionComposerPreviewImg");
+      const fileNameEl = document.getElementById("sessionComposerFileName");
+
+      if (this.attachedComposerScreenshot) {
+        if (previewBar) previewBar.style.display = "flex";
+        if (previewImg) previewImg.src = this.attachedComposerScreenshot;
+        if (fileNameEl) fileNameEl.textContent = fileName || "screenshot.png";
+      } else {
+        if (previewBar) previewBar.style.display = "none";
+        if (previewImg) previewImg.src = "";
+        const fileInput = document.getElementById("sessionStreamFileInput");
+        if (fileInput) fileInput.value = "";
+      }
+    },
+
+    submitComposer() {
+      const streamInput = document.getElementById("sessionStreamInput");
+      if (!streamInput) return;
+      const text = streamInput.value.trim();
+
+      if (!text && !this.attachedComposerScreenshot) {
+        showToast("Please enter an observation or attach a screenshot", "warning");
+        return;
+      }
+
+      this.addStreamEntry({
+        text,
+        screenshot: this.attachedComposerScreenshot
+      });
+
+      streamInput.value = "";
+      this.attachedComposerScreenshot = null;
+      this.updateComposerAttachmentUI(null);
+    },
+
+    setupSelectionTooltip() {
+      const tooltip = document.getElementById("floatingSelectionBugBtn");
+      const promoteBtn = document.getElementById("btnPromoteSelection");
+      const streamFeed = document.getElementById("sessionStreamFeed");
+
+      let currentSelectionText = "";
+
+      document.addEventListener("selectionchange", () => {
+        const selection = window.getSelection();
+        const text = selection.toString().trim();
+
+        if (text && text.length > 3 && streamFeed && streamFeed.contains(selection.anchorNode)) {
+          currentSelectionText = text;
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          if (tooltip && rect.width > 0) {
+            tooltip.style.left = `${rect.left + rect.width / 2}px`;
+            tooltip.style.top = `${rect.top}px`;
+            tooltip.style.display = "block";
+          }
+        } else {
+          if (tooltip && !tooltip.contains(document.activeElement)) {
+            tooltip.style.display = "none";
+          }
+        }
+      });
+
+      if (promoteBtn) {
+        promoteBtn.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          if (currentSelectionText) {
+            const truncated = currentSelectionText.length > 80 ? currentSelectionText.substring(0, 77) + "..." : currentSelectionText;
+            this.promoteToBugTicket(null, `[Selected finding] ${truncated}`, currentSelectionText);
+            if (tooltip) tooltip.style.display = "none";
+            window.getSelection()?.removeAllRanges();
+          }
+        });
+      }
+    }
+  };
+
+  window.LiveTestSessionManager = LiveTestSessionManager;
+
   // Boot Back to Top, Routing & Conference Room
   initBackToTopButton();
   initRouting();
   initConferenceRoom();
+  LiveTestSessionManager.init();
   applyUrlViewRouting();
 });
 

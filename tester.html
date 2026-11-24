@@ -236,6 +236,10 @@
       </div>
 
       <div class="topbar-right">
+        <button class="btn btn-emerald btn-sm" id="topbarStartSessionBtn" title="Launch a live exploratory testing session">
+          <i class="fa-solid fa-play"></i>
+          <span>+ Start Test Session</span>
+        </button>
         <button class="btn btn-primary btn-sm" id="createQuickBtn">
           <i class="fa-solid fa-plus"></i>
           <span id="createQuickBtnLabel">New Test Case</span>
@@ -426,8 +430,11 @@
               <button class="btn btn-outline btn-sm" id="exportDashboardReportBtn">
                 <i class="fa-solid fa-file-export"></i> Export Report
               </button>
-              <button class="auto-input-pill" id="dashboardAutoInputBtn" title="Open Auto Input AI card">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Input
+              <button class="btn btn-emerald btn-sm" id="dashboardStartSessionBtn" title="Launch a live exploratory testing session">
+                <i class="fa-solid fa-play"></i> + Start Test Session
+              </button>
+              <button class="btn btn-primary btn-sm" id="dashboardNewTestCaseBtn" title="Create formal test case">
+                <i class="fa-solid fa-plus"></i> + New Test Case
               </button>
             </div>
           </div>
@@ -584,8 +591,8 @@
             <div class="view-actions">
               <button class="btn btn-outline btn-sm" id="importTestsBtn"><i class="fa-solid fa-file-import"></i> Import JSON</button>
               <button class="btn btn-outline btn-sm" id="exportTestsBtn"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+              <button class="btn btn-emerald btn-sm" id="repoStartSessionBtn" title="Launch a live exploratory testing session"><i class="fa-solid fa-play"></i> + Start Test Session</button>
               <button class="btn btn-primary btn-sm" id="createNewTestCaseBtn"><i class="fa-solid fa-plus"></i> Create Test Case</button>
-              <button class="auto-input-pill" id="repoAutoInputBtn" title="Open Auto Input AI card"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto Input</button>
             </div>
           </div>
 
@@ -1431,16 +1438,184 @@
           <button type="button" class="btn btn-ghost" id="cancelTestCaseModalBtn">Cancel</button>
           <button type="button" class="btn btn-primary" id="saveTestCaseBtn"><i class="fa-solid fa-floppy-disk"></i> Save Test Case</button>
         </div>
-        <div class="d-flex align-center gap-2">
-          <button type="button" class="easy-apply-pill" id="easyApplyTestCaseBtn" title="Easy Apply Test Case Template">
-            <i class="fa-solid fa-bolt"></i> Easy Apply
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: LIVE TEST SESSION (Interactive Flow Checklists & Exploratory Scratchpad Stream) -->
+  <!-- ============================================== -->
+  <div class="modal-backdrop" id="liveTestSessionModal" style="display: none;">
+    <div class="modal-dialog modal-2xl session-modal-dialog">
+      <!-- Session Header -->
+      <div class="session-modal-header">
+        <div class="d-flex align-center gap-3 session-header-left">
+          <div class="session-live-indicator">
+            <span class="session-pulse-dot"></span>
+            <span class="session-live-text font-bold">LIVE TEST SESSION</span>
+          </div>
+          <span class="badge badge-emerald font-mono text-xs session-timer-pill" id="sessionTimerBadge">
+            <i class="fa-solid fa-stopwatch mr-1"></i> <span id="sessionTimerText">00:00</span>
+          </span>
+          <div class="session-inputs-row">
+            <div class="session-input-wrap title-wrap">
+              <i class="fa-solid fa-pen-to-square text-muted text-xs"></i>
+              <input type="text" id="sessionTitleInput" class="session-glass-input" placeholder="Session Title (e.g. Checkout Flow — Mobile Chrome)" value="Checkout Flow — Mobile Chrome" />
+            </div>
+            <div class="session-input-wrap env-wrap">
+              <i class="fa-solid fa-mobile-screen text-muted text-xs"></i>
+              <input type="text" id="sessionEnvInput" class="session-glass-input" placeholder="Env / Device Tag" value="Mobile Chrome" />
+              <div class="session-quick-env-chips" id="sessionQuickEnvChips">
+                <span class="session-env-chip active" data-env="Mobile Chrome">Mobile Chrome</span>
+                <span class="session-env-chip" data-env="Desktop Web">Desktop Web</span>
+                <span class="session-env-chip" data-env="iOS Safari">iOS Safari</span>
+                <span class="session-env-chip" data-env="Staging">Staging</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex align-center gap-2 session-header-right">
+          <button type="button" class="btn btn-emerald btn-sm" id="endSessionBtn" title="Save session summary to Supabase and export results">
+            <i class="fa-solid fa-cloud-arrow-up mr-1"></i> End &amp; Save Session
           </button>
-          <button type="button" class="auto-input-pill" id="autoInputTestCaseBtn" title="Open Auto Input AI card">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Input
+          <button type="button" class="btn-icon modal-close-btn" id="closeLiveSessionModalBtn" aria-label="Close session">
+            <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
       </div>
+
+      <!-- Split-Pane Workspace Body -->
+      <div class="session-modal-body">
+        <div class="session-split-container">
+          
+          <!-- LEFT PANE: REUSABLE INTERACTIVE FLOW CHECKLISTS -->
+          <div class="session-pane session-left-pane" id="sessionChecklistPane">
+            <div class="session-pane-header">
+              <div class="d-flex align-center justify-between w-100 mb-2">
+                <div class="d-flex align-center gap-2">
+                  <i class="fa-solid fa-list-check text-cyan font-semibold"></i>
+                  <h3 class="session-pane-title m-0">Interactive Flow Checklists</h3>
+                </div>
+                <div class="session-checklist-presets d-flex align-center gap-2">
+                  <select id="sessionChecklistPresetSelect" class="nexus-select text-xs session-preset-select">
+                    <option value="checkout" selected>E-Commerce Checkout &amp; Payments</option>
+                    <option value="auth">Auth &amp; Login Flow</option>
+                    <option value="api">REST API &amp; Microservices</option>
+                    <option value="search">Search, Catalog &amp; Filtering</option>
+                    <option value="mobile">Mobile Portal &amp; Responsive UI</option>
+                    <option value="security">Security &amp; Vulnerability</option>
+                  </select>
+                  <button type="button" class="btn btn-secondary btn-xs" id="loadPresetChecklistBtn" title="Load Checklist Preset">
+                    <i class="fa-solid fa-folder-open mr-1"></i> Load
+                  </button>
+                </div>
+              </div>
+
+              <!-- Metrics bar -->
+              <div class="session-checklist-summary-bar">
+                <div class="d-flex align-center gap-2">
+                  <span class="badge badge-passed text-2xs" id="sessionPassedCountBadge"><i class="fa-solid fa-check mr-1"></i> 0 Passed</span>
+                  <span class="badge badge-danger text-2xs" id="sessionFailedCountBadge"><i class="fa-solid fa-xmark mr-1"></i> 0 Failed</span>
+                  <span class="badge badge-blocked text-2xs" id="sessionFlaggedCountBadge"><i class="fa-solid fa-flag mr-1"></i> 0 Flagged</span>
+                  <span class="text-xs text-muted font-mono" id="sessionTotalChecklistBadge">0 Items</span>
+                </div>
+                <div class="session-progress-track">
+                  <div class="session-progress-bar" id="sessionProgressBar" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- Quick Add Item Input -->
+              <div class="session-add-item-row mt-2">
+                <input type="text" id="newChecklistItemInput" class="nexus-input text-xs" placeholder="+ Add custom feature checklist item... (Press Enter)" />
+                <button type="button" class="btn btn-primary btn-xs" id="addChecklistItemBtn"><i class="fa-solid fa-plus mr-1"></i> Add</button>
+              </div>
+            </div>
+
+            <!-- Scrollable checklist list -->
+            <div class="session-checklist-scroll" id="sessionChecklistContainer">
+              <!-- Dynamically rendered checklist item cards -->
+            </div>
+          </div>
+
+          <!-- PANE DIVIDER -->
+          <div class="session-pane-divider"></div>
+
+          <!-- RIGHT PANE: EXPLORATORY SCRATCHPAD & TIMELINE STREAM -->
+          <div class="session-pane session-right-pane" id="sessionStreamPane">
+            <div class="session-pane-header">
+              <div class="d-flex align-center justify-between w-100 mb-2">
+                <div class="d-flex align-center gap-2">
+                  <i class="fa-solid fa-stream text-primary font-semibold"></i>
+                  <h3 class="session-pane-title m-0">Exploratory Scratchpad &amp; Timeline Stream</h3>
+                </div>
+                <div class="d-flex align-center gap-1 session-stream-filters" id="sessionStreamFilterPills">
+                  <button type="button" class="stream-filter-chip active" data-filter="all">All</button>
+                  <button type="button" class="stream-filter-chip filter-bug" data-filter="bug">#bug</button>
+                  <button type="button" class="stream-filter-chip filter-idea" data-filter="idea">#idea</button>
+                  <button type="button" class="stream-filter-chip filter-verified" data-filter="verified">#verified</button>
+                </div>
+              </div>
+              <p class="text-xs text-muted m-0">Rapidly log findings, paste console snippets, or Ctrl+V screenshots. Click <strong>Promote to Bug Ticket</strong> or select text to convert to a Kanban bug in Supabase.</p>
+            </div>
+
+            <!-- Scrollable Timeline Stream Feed -->
+            <div class="session-stream-scroll" id="sessionStreamScrollContainer">
+              <div class="session-stream-feed" id="sessionStreamFeed">
+                <!-- Dynamically rendered timeline cards -->
+              </div>
+            </div>
+
+            <!-- Bottom Composer Bar -->
+            <div class="session-composer-wrapper">
+              <!-- Inline Attached Screenshot Preview -->
+              <div class="session-composer-preview-bar" id="sessionComposerPreviewBar" style="display: none;">
+                <div class="d-flex align-center gap-2">
+                  <img id="sessionComposerPreviewImg" src="" alt="Screenshot" class="composer-thumb-img" />
+                  <div class="text-xs">
+                    <span class="font-semibold text-emerald"><i class="fa-solid fa-paperclip mr-1"></i> Screenshot attached</span>
+                    <span class="text-muted ml-1" id="sessionComposerFileName">clipboard.png</span>
+                  </div>
+                </div>
+                <button type="button" class="btn-icon btn-xs" id="removeSessionComposerImageBtn" title="Remove attachment"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+
+              <!-- Quick Tag Helper Chips -->
+              <div class="session-composer-tag-chips">
+                <span class="composer-tag-chip chip-bug" data-tag="#bug"><i class="fa-solid fa-bug text-rose mr-1"></i> #bug</span>
+                <span class="composer-tag-chip chip-idea" data-tag="#idea"><i class="fa-solid fa-lightbulb text-amber mr-1"></i> #idea</span>
+                <span class="composer-tag-chip chip-verified" data-tag="#verified"><i class="fa-solid fa-circle-check text-emerald mr-1"></i> #verified</span>
+                <span class="composer-tag-chip chip-note" data-tag="#note"><i class="fa-solid fa-note-sticky text-cyan mr-1"></i> #note</span>
+                <span class="text-3xs text-muted ml-auto font-mono"><kbd>Ctrl</kbd>+<kbd>V</kbd> to paste screenshot</span>
+              </div>
+
+              <!-- Input Area -->
+              <div class="session-composer-input-row">
+                <textarea id="sessionStreamInput" class="session-composer-textarea" rows="2" placeholder="Type observation, paste error logs, or press Ctrl+V to attach screenshot... (Enter to log, Shift+Enter for newline)"></textarea>
+                <div class="session-composer-actions">
+                  <label class="btn btn-secondary btn-sm composer-upload-btn" for="sessionStreamFileInput" title="Attach Image File">
+                    <i class="fa-solid fa-camera"></i>
+                  </label>
+                  <input type="file" id="sessionStreamFileInput" accept="image/*" style="display: none;" />
+                  <button type="button" class="btn btn-primary btn-sm" id="sessionStreamSubmitBtn" title="Log observation (Enter)">
+                    <i class="fa-solid fa-paper-plane mr-1"></i> Log
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
     </div>
+  </div>
+
+  <!-- FLOATING CONTEXTUAL SELECTION TOOLTIP -->
+  <div class="floating-selection-action" id="floatingSelectionBugBtn" style="display: none;">
+    <button type="button" class="btn btn-danger btn-xs" id="btnPromoteSelection">
+      <i class="fa-solid fa-bug mr-1"></i> Promote Selection to Bug Ticket
+    </button>
   </div>
 
   <!-- MODAL: AI AUTO INPUT STUDIO (CampusOS Conversational QA Assistant) -->
@@ -2289,9 +2464,9 @@
   
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.5"></script>
-  <script src="js/supabase.js?v=1.0.8"></script>
+  <script src="js/supabase.js?v=1.0.9"></script>
   <script src="js/storage.js?v=1.0.13"></script>
   <script src="js/qa-assistant.js?v=1.0.5"></script>
-  <script src="js/app.js?v=1.0.13"></script>
+  <script src="js/app.js?v=1.0.14"></script>
 </body>
 </html>

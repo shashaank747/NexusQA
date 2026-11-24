@@ -346,17 +346,17 @@ const SupabaseManager = {
   mapDefectToDB(d) {
     return {
       id: d.id,
-      summary: d.summary,
-      linked_test_case_id: d.linkedTestCaseId,
-      severity: d.severity,
-      priority: d.priority,
-      assignee: d.assignee,
-      reported_by: d.reportedBy,
-      status: d.status,
-      description: d.description,
-      dev_notes: d.devNotes,
-      pr_link: d.prLink,
-      git_branch: d.gitBranch,
+      title: d.summary || d.title || "Defect",
+      linked_test_id: d.linkedTestCaseId || d.linked_test_id || null,
+      severity: d.severity || "Medium",
+      priority: d.priority || "P1 - High",
+      assignee: d.assignee || null,
+      reporter: d.reportedBy || d.reporter || "QA Tester",
+      status: d.status || "Open",
+      description: d.description || null,
+      notes: d.devNotes || d.notes || null,
+      dev_pr: d.prLink || d.dev_pr || null,
+      dev_branch: d.gitBranch || d.dev_branch || null,
       updated_at: new Date().toISOString()
     };
   },
@@ -364,17 +364,18 @@ const SupabaseManager = {
   mapDefectFromDB(row) {
     return {
       id: row.id,
-      summary: row.summary,
-      linkedTestCaseId: row.linked_test_case_id,
+      title: row.title,
+      summary: row.title || row.summary || "Defect",
+      linkedTestCaseId: row.linked_test_id || row.linked_test_case_id,
       severity: row.severity,
       priority: row.priority,
       assignee: row.assignee,
-      reportedBy: row.reported_by,
+      reportedBy: row.reporter || row.reported_by,
       status: row.status,
       description: row.description,
-      devNotes: row.dev_notes,
-      prLink: row.pr_link,
-      gitBranch: row.git_branch,
+      devNotes: row.notes || row.dev_notes,
+      prLink: row.dev_pr || row.pr_link,
+      gitBranch: row.dev_branch || row.git_branch,
       createdAt: row.created_at ? row.created_at.substring(0, 16).replace("T", " ") : "",
       updatedAt: row.updated_at ? row.updated_at.substring(0, 16).replace("T", " ") : ""
     };
