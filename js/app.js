@@ -1932,7 +1932,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         const approvedUser = msg.payload.user;
         if (approvedUser && (approvedUser.email.toLowerCase() === state.pendingRegistrationEmail.toLowerCase())) {
           StorageManager.setCurrentUser(approvedUser);
-          showToast(`🎉 Access Granted! You have been approved by Marcus Vance. Loading QA Workspace...`, "success");
+          showToast(`🎉 Access Granted! You have been approved by Senior Developer. Loading QA Workspace...`, "success");
           setTimeout(() => {
             window.location.href = "tester.html";
           }, 800);
@@ -1976,9 +1976,49 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   }
 
   if (DOM.refreshApprovalsBtn) {
-    DOM.refreshApprovalsBtn.addEventListener("click", () => {
-      renderDevApprovals();
-      showToast("Approvals list refreshed!");
+    DOM.refreshApprovalsBtn.addEventListener("click", async () => {
+      const origHtml = DOM.refreshApprovalsBtn.innerHTML;
+      DOM.refreshApprovalsBtn.disabled = true;
+      DOM.refreshApprovalsBtn.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin"></i> Refreshing...`;
+
+      // Show proper loading state in pending container and table
+      const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+      const isSenior = StorageManager.isSeniorDev(currentUser);
+      if (DOM.pendingApprovalsListContainer) {
+        DOM.pendingApprovalsListContainer.innerHTML = `
+          <div class="empty-state p-4 text-center">
+            <div class="empty-icon text-muted mb-2"><i class="fa-solid fa-spinner fa-spin" style="font-size:2rem; color:#6366f1;"></i></div>
+            <h4>Refreshing Requests...</h4>
+            <p class="text-muted text-xs">Querying latest authorization status from Supabase...</p>
+          </div>
+        `;
+      }
+      if (DOM.authorizedTestersTableBody) {
+        DOM.authorizedTestersTableBody.innerHTML = `
+          <tr>
+            <td colspan="${isSenior ? 8 : 4}" class="text-center p-4">
+              <div class="text-muted py-3">
+                <i class="fa-solid fa-spinner fa-spin mr-2" style="color:#10b981;"></i> Refreshing live roster from Supabase...
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+
+      try {
+        if (typeof SupabaseManager !== "undefined") {
+          await SupabaseManager.fetchUsersFromSupabase();
+        }
+        renderDevApprovals();
+        showToast("Team roster & access requests refreshed from Supabase!", "success");
+      } catch (err) {
+        console.error("Failed to refresh users from Supabase:", err);
+        renderDevApprovals();
+        showToast("Error refreshing from Supabase: " + (err.message || err), "error");
+      } finally {
+        DOM.refreshApprovalsBtn.disabled = false;
+        DOM.refreshApprovalsBtn.innerHTML = origHtml;
+      }
     });
   }
 
@@ -1987,9 +2027,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const pending = allUsers.filter(u => u.status === "pending_approval");
     const activeMembers = allUsers.filter(u => u.status === "active");
 
-    if (DOM.kpiPendingApprovalsCount) DOM.kpiPendingApprovalsCount.textContent = pending.length;
-    if (DOM.kpiActiveTestersCount) DOM.kpiActiveTestersCount.textContent = activeMembers.length;
-    if (DOM.kpiOtpVerifiedCount) DOM.kpiOtpVerifiedCount.textContent = "100%";
+    // Dynamic KPI calculations from live Supabase query results
+    const pendingCount = pending.length;
+    const activeCount = activeMembers.length;
+    const verifiedUsers = allUsers.filter(u => u.emailVerified === true || u.emailVerified === "true" || u.email_verified === true);
+    const otpVerifiedPercent = allUsers.length > 0 
+      ? Math.round((verifiedUsers.length / allUsers.length) * 100) + "%" 
+      : "0%";
+
+    if (DOM.kpiPendingApprovalsCount) DOM.kpiPendingApprovalsCount.textContent = pendingCount;
+    if (DOM.kpiActiveTestersCount) DOM.kpiActiveTestersCount.textContent = activeCount;
+    if (DOM.kpiOtpVerifiedCount) DOM.kpiOtpVerifiedCount.textContent = otpVerifiedPercent;
 
     updateDevApprovalsBadge();
 
@@ -2023,7 +2071,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                 : `<span class="badge badge-untested" style="background: rgba(99, 102, 241, 0.15) !important; color: #818cf8 !important; border: 1px solid rgba(99, 102, 241, 0.3) !important; font-size:11px;"><i class="fa-solid fa-vial-circle-check"></i> ${roleTitle}</span>`;
 
               return `
-                <div class="pending-approval-card">
+                <div class="pending-approval-card" id="pending-card-${user.id}">
                   <div class="pending-req-header">
                     ${renderUserAvatar(user, { size: 38, fontSize: 13 })}
                     <div class="pending-req-meta">
@@ -2034,15 +2082,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                   </div>
 
                   <div class="pending-req-badges">
-                    <span class="badge badge-passed"><i class="fa-solid fa-check"></i> Email OTP Verified</span>
+                    <span class="badge badge-passed"><i class="fa-solid fa-check"></i> ${user.emailVerified !== false ? 'Email OTP Verified' : 'Pending OTP'}</span>
                     <span class="badge badge-blocked"><i class="fa-solid fa-clock"></i> Awaiting Dev Signoff</span>
                   </div>
 
                   <div class="pending-req-actions">
-                    <button class="btn-approve-qa" onclick="window.approveTester('${user.id}')">
+                    <button class="btn-approve-qa" id="btn-approve-${user.id}" onclick="window.approveTester('${user.id}')">
                       <i class="fa-solid fa-user-check"></i> Approve Access
                     </button>
-                    <button class="btn-reject-qa" onclick="window.rejectTester('${user.id}')">
+                    <button class="btn-reject-qa" id="btn-reject-${user.id}" onclick="window.rejectTester('${user.id}')">
                       <i class="fa-solid fa-user-xmark"></i> Reject
                     </button>
                   </div>
@@ -2066,65 +2114,79 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         th.style.display = isSenior ? "" : "none";
       });
 
-      DOM.authorizedTestersTableBody.innerHTML = managedUsers.map(u => {
-        let statusBadge = '<span class="badge badge-passed"><i class="fa-solid fa-check"></i> Active & Authorized</span>';
-        if (u.status === "pending_approval") {
-          statusBadge = '<span class="badge badge-blocked"><i class="fa-solid fa-clock"></i> Pending Dev Signoff</span>';
-        } else if (u.status === "rejected") {
-          statusBadge = '<span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Rejected</span>';
-        }
-
-        const isDev = u.role === "dev";
-        const isSeniorMember = StorageManager.isSeniorDev(u);
-        const avatarClass = isDev ? "avatar-dev" : "avatar-qa";
-        
-        let rolePill = '';
-        if (isDev) {
-          rolePill = `<span class="badge badge-ai" style="background: rgba(16, 185, 129, 0.15) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important;"><i class="fa-solid fa-code"></i> ${escapeHtml(u.roleTitle || (isSeniorMember ? 'Senior Developer' : 'Developer'))}</span>`;
-        } else {
-          rolePill = `<span class="badge badge-untested" style="background: rgba(99, 102, 241, 0.15) !important; color: #818cf8 !important; border: 1px solid rgba(99, 102, 241, 0.3) !important;"><i class="fa-solid fa-vial-circle-check"></i> ${escapeHtml(u.roleTitle || 'QA Tester')}</span>`;
-        }
-
-        // Assigned Projects calculation
-        const userProjects = StorageManager.getUserProjects(u.id);
-        const projCount = userProjects.length;
-        const projectNames = userProjects.map(p => p.name).join(" • ");
-        const projectBadge = projCount > 0
-          ? `<span class="badge badge-primary font-mono text-xs" title="${escapeHtml(projectNames)}" style="cursor: help;"><i class="fa-solid fa-folder-tree mr-1"></i> ${projCount} Project${projCount === 1 ? '' : 's'}</span>`
-          : `<span class="badge badge-secondary text-xs text-muted">0 Projects</span>`;
-
-        const isSelf = currentUser && (currentUser.id === u.id || (currentUser.email && u.email && currentUser.email.toLowerCase() === u.email.toLowerCase()));
-        
-        const actionCell = isSenior
-          ? `<div class="d-flex align-center gap-1">
-              <button class="btn btn-secondary btn-xs" onclick="window.openEditMemberModal('${u.id}')" title="Edit member details"><i class="fa-solid fa-user-pen"></i> Edit</button>
-              ${isSelf ? '<span class="badge badge-version" style="font-size:10px; opacity:0.85;">You</span>' : createDeleteButtonHtml({ onClick: `window.deleteMember('${u.id}')`, title: 'Delete user from workspace', isCompact: true })}
-            </div>`
-          : `<span class="badge badge-untested text-xs" title="Only Developers can edit"><i class="fa-solid fa-lock"></i> View Only</span>`;
-
-        return `
+      if (managedUsers.length === 0) {
+        DOM.authorizedTestersTableBody.innerHTML = `
           <tr>
-            <td>
-              <div class="d-flex align-center gap-2">
-                ${renderUserAvatar(u, { size: 28, fontSize: 11 })}
-                <div>
-                  <strong>${escapeHtml(u.name)}</strong>
-                  ${isSelf ? '<span class="badge badge-version" style="font-size:9px; margin-left:4px; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981;">You</span>' : ''}
-                </div>
+            <td colspan="${isSenior ? 8 : 4}" class="text-center p-4">
+              <div class="empty-state text-center py-4">
+                <div class="empty-icon text-muted mb-2"><i class="fa-solid fa-users-slash" style="font-size:2.5rem; color: #64748b;"></i></div>
+                <h4>No Workspace Members Found</h4>
+                <p class="text-muted text-xs">No active or registered team members found in the Supabase database.</p>
               </div>
             </td>
-            <td><span class="font-mono text-xs text-muted">${escapeHtml(u.email)}</span></td>
-            <td>${rolePill}</td>
-            <td>${projectBadge}</td>
-            ${isSenior ? `
-              <td><span class="badge badge-passed"><i class="fa-solid fa-check"></i> ${u.emailVerified !== false ? '100% Verified' : 'Pending OTP'}</span></td>
-              <td>${statusBadge}</td>
-              <td><span class="text-xs text-muted">${escapeHtml(u.approvedBy || (u.status === 'active' ? 'Active / Auto' : 'Pending'))}</span></td>
-              <td>${actionCell}</td>
-            ` : ''}
           </tr>
         `;
-      }).join("");
+      } else {
+        DOM.authorizedTestersTableBody.innerHTML = managedUsers.map(u => {
+          let statusBadge = '<span class="badge badge-passed"><i class="fa-solid fa-check"></i> Active & Authorized</span>';
+          if (u.status === "pending_approval") {
+            statusBadge = '<span class="badge badge-blocked"><i class="fa-solid fa-clock"></i> Pending Dev Signoff</span>';
+          } else if (u.status === "rejected") {
+            statusBadge = '<span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Rejected</span>';
+          }
+
+          const isDev = u.role === "dev";
+          const isSeniorMember = StorageManager.isSeniorDev(u);
+          const avatarClass = isDev ? "avatar-dev" : "avatar-qa";
+          
+          let rolePill = '';
+          if (isDev) {
+            rolePill = `<span class="badge badge-ai" style="background: rgba(16, 185, 129, 0.15) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important;"><i class="fa-solid fa-code"></i> ${escapeHtml(u.roleTitle || (isSeniorMember ? 'Senior Developer' : 'Developer'))}</span>`;
+          } else {
+            rolePill = `<span class="badge badge-untested" style="background: rgba(99, 102, 241, 0.15) !important; color: #818cf8 !important; border: 1px solid rgba(99, 102, 241, 0.3) !important;"><i class="fa-solid fa-vial-circle-check"></i> ${escapeHtml(u.roleTitle || 'QA Tester')}</span>`;
+          }
+
+          // Assigned Projects calculation
+          const userProjects = StorageManager.getUserProjects(u.id, u.email);
+          const projCount = userProjects.length;
+          const projectNames = userProjects.map(p => p.name).join(" • ");
+          const projectBadge = projCount > 0
+            ? `<span class="badge badge-primary font-mono text-xs" title="${escapeHtml(projectNames)}" style="cursor: help;"><i class="fa-solid fa-folder-tree mr-1"></i> ${projCount} Project${projCount === 1 ? '' : 's'}</span>`
+            : `<span class="badge badge-secondary text-xs text-muted">0 Projects</span>`;
+
+          const isSelf = currentUser && (currentUser.id === u.id || (currentUser.email && u.email && currentUser.email.toLowerCase() === u.email.toLowerCase()));
+          
+          const actionCell = isSenior
+            ? `<div class="d-flex align-center gap-1">
+                <button class="btn btn-secondary btn-xs" onclick="window.openEditMemberModal('${u.id}')" title="Edit member details"><i class="fa-solid fa-user-pen"></i> Edit</button>
+                ${isSelf ? '<span class="badge badge-version" style="font-size:10px; opacity:0.85;">You</span>' : createDeleteButtonHtml({ onClick: `window.deleteMember('${u.id}')`, title: 'Delete user from workspace', isCompact: true })}
+              </div>`
+            : `<span class="badge badge-untested text-xs" title="Only Developers can edit"><i class="fa-solid fa-lock"></i> View Only</span>`;
+
+          return `
+            <tr id="member-row-${u.id}">
+              <td>
+                <div class="d-flex align-center gap-2">
+                  ${renderUserAvatar(u, { size: 28, fontSize: 11 })}
+                  <div>
+                    <strong>${escapeHtml(u.name)}</strong>
+                    ${isSelf ? '<span class="badge badge-version" style="font-size:9px; margin-left:4px; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981;">You</span>' : ''}
+                  </div>
+                </div>
+              </td>
+              <td><span class="font-mono text-xs text-muted">${escapeHtml(u.email)}</span></td>
+              <td>${rolePill}</td>
+              <td>${projectBadge}</td>
+              ${isSenior ? `
+                <td><span class="badge badge-passed"><i class="fa-solid fa-check"></i> ${u.emailVerified !== false ? '100% Verified' : 'Pending OTP'}</span></td>
+                <td>${statusBadge}</td>
+                <td><span class="text-xs text-muted">${escapeHtml(u.approvedBy || (u.status === 'active' ? 'Active / Auto' : 'Pending'))}</span></td>
+                <td>${actionCell}</td>
+              ` : ''}
+            </tr>
+          `;
+        }).join("");
+      }
     }
   }
 
@@ -2149,7 +2211,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
     if (DOM.editMemberSpecialty) DOM.editMemberSpecialty.value = user.roleTitle || "";
     if (DOM.editMemberStatus) DOM.editMemberStatus.value = user.status || "active";
-    if (DOM.editMemberApprovedBy) DOM.editMemberApprovedBy.value = user.approvedBy || (state.currentUser ? state.currentUser.name : "Marcus Vance (Dev Lead)");
+    if (DOM.editMemberApprovedBy) DOM.editMemberApprovedBy.value = user.approvedBy || (state.currentUser ? state.currentUser.name : "Senior Developer");
     if (DOM.editMemberIdBadge) DOM.editMemberIdBadge.textContent = "ID: " + user.id;
     if (DOM.editMemberAuthBadge) {
       DOM.editMemberAuthBadge.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Senior Dev (${escapeHtml(state.currentUser ? state.currentUser.name : "Lead Dev")})`;
@@ -2186,7 +2248,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.editMemberModal) DOM.editMemberModal.style.display = "flex";
   };
 
-  window.deleteMember = function(userId) {
+  window.deleteMember = async function(userId) {
     const isSenior = StorageManager.isSeniorDev(state.currentUser);
     if (!isSenior) {
       showToast("Permission Denied: Only Senior Developers can remove users.", "error");
@@ -2204,18 +2266,23 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       return;
     }
 
-    const confirmMsg = `Are you sure you want to permanently delete user "${user.name}" (${user.email}) from the workspace?\n\nThis will remove their account credentials and access permissions.`;
-    if (confirm(confirmMsg)) {
-      const result = StorageManager.deleteUser(userId);
-      if (result && result.success) {
-        if (DOM.editMemberModal) DOM.editMemberModal.style.display = "none";
-        showToast(`User "${user.name}" has been removed from workspace.`, "info");
-        renderDevApprovals();
-      } else if (result && result.error === "CANNOT_DELETE_SELF") {
-        showToast("Cannot delete your own active account while logged in.", "error");
+    const confirmMsg = `Are you sure you want to permanently delete user "${user.name}" (${user.email}) from Supabase?\n\nThis will remove their account credentials and access permissions from the database.`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+        await SupabaseManager.deleteUserFromSupabase(userId);
       } else {
-        showToast("Failed to delete user.", "error");
+        const result = StorageManager.deleteUser(userId);
+        if (!result || !result.success) throw new Error("Local delete failed.");
       }
+
+      if (DOM.editMemberModal) DOM.editMemberModal.style.display = "none";
+      showToast(`User "${user.name}" permanently removed from workspace.`, "info");
+      renderDevApprovals();
+    } catch (err) {
+      console.error("Error deleting user from Supabase:", err);
+      showToast("Failed to delete user from Supabase: " + (err.message || err), "error");
     }
   };
 
@@ -2234,7 +2301,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   });
 
-  on(DOM.saveEditMemberBtn, "click", () => {
+  on(DOM.saveEditMemberBtn, "click", async () => {
     const isSenior = StorageManager.isSeniorDev(state.currentUser);
     if (!isSenior) {
       showToast("Permission Denied: Only Senior Developers can modify team members.", "error");
@@ -2247,7 +2314,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const roleType = DOM.editMemberRoleType ? DOM.editMemberRoleType.value : "qa";
     const roleTitle = DOM.editMemberSpecialty ? DOM.editMemberSpecialty.value.trim() : "";
     const status = DOM.editMemberStatus ? DOM.editMemberStatus.value : "active";
-    const approvedBy = DOM.editMemberApprovedBy ? DOM.editMemberApprovedBy.value.trim() : (state.currentUser ? state.currentUser.name : "Marcus Vance (Dev Lead)");
+    const approvedBy = DOM.editMemberApprovedBy ? DOM.editMemberApprovedBy.value.trim() : (state.currentUser ? state.currentUser.name : "Senior Developer");
 
     if (!name || !email) {
       showToast("Please provide both name and email.", "error");
@@ -2255,25 +2322,49 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
 
     const isJuniorDev = roleType === "junior-dev";
-    const updated = StorageManager.updateUser(userId, {
-      name,
-      email,
-      role: isJuniorDev ? "dev" : "qa",
-      devLevel: isJuniorDev ? "junior" : "",
-      roleTitle: roleTitle || (isJuniorDev ? "Junior Developer" : "QA Tester"),
-      status,
-      approvedBy,
-      photo: state.tempEditMemberPhoto !== undefined ? state.tempEditMemberPhoto : (user.photo || "")
-    });
+    const role = isJuniorDev ? "dev" : "qa";
+    const devLevel = isJuniorDev ? "junior" : "";
+    const resolvedRoleTitle = roleTitle || (isJuniorDev ? "Junior Developer" : "QA Tester");
 
-    if (updated) {
+    const origSaveHtml = DOM.saveEditMemberBtn.innerHTML;
+    DOM.saveEditMemberBtn.disabled = true;
+    DOM.saveEditMemberBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
+
+    try {
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+        await SupabaseManager.updateUserInSupabase(userId, {
+          name,
+          email,
+          role,
+          roleTitle: resolvedRoleTitle,
+          status
+        });
+      }
+
+      const updated = StorageManager.updateUser(userId, {
+        name,
+        email,
+        role,
+        devLevel,
+        roleTitle: resolvedRoleTitle,
+        status,
+        approvedBy,
+        photo: state.tempEditMemberPhoto !== undefined ? state.tempEditMemberPhoto : ""
+      });
+
       if (DOM.editMemberModal) DOM.editMemberModal.style.display = "none";
-      if (state.currentUser && state.currentUser.id === updated.id) {
+      if (state.currentUser && state.currentUser.id === userId) {
         state.currentUser = updated;
         updateUserProfileUI();
       }
-      showToast(`Updated details for ${updated.name}!`, "success");
+      showToast(`Updated details for ${name} in Supabase!`, "success");
       renderDevApprovals();
+    } catch (err) {
+      console.error("Error saving user to Supabase:", err);
+      showToast("Failed to save changes to Supabase: " + (err.message || err), "error");
+    } finally {
+      DOM.saveEditMemberBtn.disabled = false;
+      DOM.saveEditMemberBtn.innerHTML = origSaveHtml;
     }
   });
 
@@ -2315,30 +2406,74 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     });
   }
 
-  window.approveTester = function(userId) {
+  window.approveTester = async function(userId) {
     const currentUser = StorageManager.getCurrentUser() || state.currentUser;
     if (!StorageManager.isSeniorDev(currentUser)) {
       showToast("Access Denied: Only Senior Developers can approve new workspace members.", "error");
       return;
     }
-    const user = StorageManager.approveTesterRequest(userId, (currentUser && currentUser.name) || "Senior Developer", currentUser);
-    if (user) {
-      showToast(`Approved workspace access for ${user.name}!`, "success");
+
+    const user = StorageManager.getUsers().find(u => u.id === userId);
+    const userName = user ? user.name : "Member";
+
+    const approveBtn = document.getElementById(`btn-approve-${userId}`);
+    const origText = approveBtn ? approveBtn.innerHTML : "";
+    if (approveBtn) {
+      approveBtn.disabled = true;
+      approveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Approving...`;
+    }
+
+    try {
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+        await SupabaseManager.approveUserInSupabase(userId, (currentUser && currentUser.name) || "Senior Developer");
+      }
+      StorageManager.approveTesterRequest(userId, (currentUser && currentUser.name) || "Senior Developer", currentUser);
+      showToast(`Approved workspace access for ${userName} in Supabase!`, "success");
       renderDevApprovals();
+    } catch (err) {
+      console.error("Error approving user in Supabase:", err);
+      showToast("Failed to approve access in Supabase: " + (err.message || err), "error");
+      if (approveBtn) {
+        approveBtn.disabled = false;
+        approveBtn.innerHTML = origText;
+      }
     }
   };
 
-  window.rejectTester = function(userId) {
+  window.rejectTester = async function(userId) {
     const currentUser = StorageManager.getCurrentUser() || state.currentUser;
     if (!StorageManager.isSeniorDev(currentUser)) {
       showToast("Access Denied: Only Senior Developers can reject workspace requests.", "error");
       return;
     }
-    if (confirm("Reject this member's access request?")) {
-      const user = StorageManager.rejectTesterRequest(userId, currentUser);
-      if (user) {
-        showToast(`Rejected access request for ${user.name}`, "error");
-        renderDevApprovals();
+
+    const user = StorageManager.getUsers().find(u => u.id === userId);
+    const userName = user ? user.name : "Member";
+
+    if (!confirm(`Reject workspace access request for "${userName}"?`)) {
+      return;
+    }
+
+    const rejectBtn = document.getElementById(`btn-reject-${userId}`);
+    const origText = rejectBtn ? rejectBtn.innerHTML : "";
+    if (rejectBtn) {
+      rejectBtn.disabled = true;
+      rejectBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Rejecting...`;
+    }
+
+    try {
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+        await SupabaseManager.rejectUserInSupabase(userId);
+      }
+      StorageManager.rejectTesterRequest(userId, currentUser);
+      showToast(`Rejected access request for ${userName} in Supabase.`, "info");
+      renderDevApprovals();
+    } catch (err) {
+      console.error("Error rejecting user in Supabase:", err);
+      showToast("Failed to reject request in Supabase: " + (err.message || err), "error");
+      if (rejectBtn) {
+        rejectBtn.disabled = false;
+        rejectBtn.innerHTML = origText;
       }
     }
   };
@@ -2453,7 +2588,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       renderConference();
     }
     if (viewName === "dev-dashboard") renderDevDashboard();
-    if (viewName === "dev-approvals") renderDevApprovals();
+    if (viewName === "dev-approvals") {
+      renderDevApprovals();
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+        SupabaseManager.fetchUsersFromSupabase().then(() => renderDevApprovals()).catch(() => {});
+      }
+    }
     if (viewName === "dev-kanban") renderDevKanban();
     if (viewName === "dev-failures") renderDevFailures();
     if (viewName === "settings") populateProfileForm();
@@ -2581,7 +2721,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   function renderDevDashboard() {
     updateDevApprovalsBadge();
     const defects = StorageManager.getDefects();
-    const currentUser = state.currentUser || { name: "Marcus Vance" };
+    const currentUser = state.currentUser || { name: "Developer" };
 
     const critical = defects.filter(d => (d.severity === "Critical" || d.priority.includes("P0")) && d.status !== "Resolved & Verified" && d.status !== "Closed");
     const assigned = defects.filter(d => d.assignee && d.assignee.toLowerCase().includes(currentUser.name.toLowerCase().split(" ")[0]) && d.status !== "Resolved & Verified" && d.status !== "Closed");
@@ -2646,7 +2786,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   function renderDevKanban() {
     const defects = StorageManager.getDefects();
-    const currentUser = state.currentUser || { name: "Marcus Vance" };
+    const currentUser = state.currentUser || { name: "Developer" };
 
     let filtered = defects;
     if (state.devOnlyMyBugs) {
@@ -2834,7 +2974,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         linkedTestCaseId: tcId,
         severity: "Critical",
         priority: "P0 - Urgent",
-        assignee: state.currentUser ? state.currentUser.name : "Marcus Vance",
+        assignee: state.currentUser ? state.currentUser.name : "Developer",
         description: `Triggered from failed test diagnostics for ${tcId}`
       });
       window.openDevFixModal(newBug.id);
@@ -4047,8 +4187,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         projectId: pId,
         senderId: curUserId,
         recipientId: targetUserId,
-        senderName: curUser.name || "Alex Morgan",
-        senderAvatar: curUser.avatar || (curUser.name ? curUser.name.substring(0, 2).toUpperCase() : "AM"),
+        senderName: curUser.name || "QA Tester",
+        senderAvatar: curUser.avatar || (curUser.name ? curUser.name.substring(0, 2).toUpperCase() : "QA"),
         senderRole: curUser.role || "qa",
         roleTitle: curUser.roleTitle || (curUser.role === "dev" ? "Lead Developer" : "QA Lead"),
         text
@@ -6438,7 +6578,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       severity: DOM.bugSeverity ? DOM.bugSeverity.value : "Major",
       priority: DOM.bugPriority ? DOM.bugPriority.value : "P1 - High",
       linkedTestCaseId: DOM.bugLinkedTest ? DOM.bugLinkedTest.value.trim() : "",
-      assignee: (DOM.bugAssignee ? DOM.bugAssignee.value.trim() : "") || "Marcus Vance",
+      assignee: (DOM.bugAssignee ? DOM.bugAssignee.value.trim() : "") || "Senior Developer",
       description: DOM.bugDescription ? DOM.bugDescription.value.trim() : ""
     };
 

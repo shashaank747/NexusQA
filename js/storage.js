@@ -161,14 +161,14 @@ const StorageManager = {
           icon: "fa-solid fa-credit-card",
           color: "#06b6d4",
           status: "Active Sprint",
-          leadDev: "Marcus Vance",
-          leadQa: "Alex Morgan",
-          headId: "usr-dev-1",
-          headName: "Marcus Vance",
+          leadDev: "Senior Developer",
+          leadQa: "QA Tester",
+          headId: "user-dev-hardcoded",
+          headName: "Senior Developer",
           headRole: "Lead Software Architect",
-          members: ["usr-dev-1", "usr-qa-1", "usr-qa-2", "usr-dev-2"],
+          members: ["user-dev-hardcoded", "user-test-hardcoded"],
           createdAt: "2026-10-20",
-          participantsCount: 4,
+          participantsCount: 2,
           lastActivity: "2 mins ago"
         },
         {
@@ -180,14 +180,14 @@ const StorageManager = {
           icon: "fa-solid fa-shield-halved",
           color: "#6366f1",
           status: "Regression Pass",
-          leadDev: "Marcus Vance",
-          leadQa: "Elena Rostova",
-          headId: "usr-qa-3",
-          headName: "Elena Rostova",
-          headRole: "Security QA",
-          members: ["usr-dev-1", "usr-qa-3", "usr-dev-2"],
+          leadDev: "Senior Developer",
+          leadQa: "QA Tester",
+          headId: "user-dev-hardcoded",
+          headName: "Senior Developer",
+          headRole: "Lead Software Architect",
+          members: ["user-dev-hardcoded", "user-test-hardcoded"],
           createdAt: "2026-10-21",
-          participantsCount: 3,
+          participantsCount: 2,
           lastActivity: "15 mins ago"
         },
         {
@@ -199,14 +199,14 @@ const StorageManager = {
           icon: "fa-solid fa-wand-magic-sparkles",
           color: "#a855f7",
           status: "Release Candidate",
-          leadDev: "Marcus Vance",
-          leadQa: "Alex Morgan",
-          headId: "usr-qa-1",
-          headName: "Alex Morgan",
+          leadDev: "Senior Developer",
+          leadQa: "QA Tester",
+          headId: "user-test-hardcoded",
+          headName: "QA Tester",
           headRole: "QA Lead",
-          members: ["usr-dev-1", "usr-qa-1", "usr-dev-3", "usr-qa-4"],
+          members: ["user-dev-hardcoded", "user-test-hardcoded"],
           createdAt: "2026-10-22",
-          participantsCount: 4,
+          participantsCount: 2,
           lastActivity: "1 hour ago"
         },
         {
@@ -218,12 +218,12 @@ const StorageManager = {
           icon: "fa-solid fa-mobile-screen-button",
           color: "#10b981",
           status: "In Triage",
-          leadDev: "Marcus Vance",
-          leadQa: "Alex Morgan",
-          headId: "usr-dev-3",
-          headName: "Liam Patel",
-          headRole: "Frontend Specialist",
-          members: ["usr-dev-3", "usr-qa-1", "usr-qa-2"],
+          leadDev: "Senior Developer",
+          leadQa: "QA Tester",
+          headId: "user-dev-hardcoded",
+          headName: "Senior Developer",
+          headRole: "Lead Software Architect",
+          members: ["user-dev-hardcoded", "user-test-hardcoded"],
           createdAt: "2026-10-24",
           participantsCount: 3,
           lastActivity: "3 hours ago"
@@ -243,7 +243,7 @@ const StorageManager = {
             changed = true;
           }
           if (!Array.isArray(p.members)) {
-            p.members = ["usr-dev-1", "usr-qa-1"];
+            p.members = [];
             changed = true;
           }
           if (p.participantsCount === undefined) {
@@ -350,16 +350,20 @@ const StorageManager = {
     }).length;
   },
 
-  getUserProjects(userIdOrName) {
-    if (!userIdOrName) return [];
+  getUserProjects(userIdOrName, userEmail = null) {
+    if (!userIdOrName && !userEmail) return [];
     const projects = this.getConferenceProjects();
-    const query = (userIdOrName + "").toLowerCase().trim();
+    const query = userIdOrName ? (userIdOrName + "").toLowerCase().trim() : "";
+    const emailQuery = userEmail ? (userEmail + "").toLowerCase().trim() : "";
     return projects.filter(p => {
       if (Array.isArray(p.members)) {
-        if (p.members.some(m => (m + "").toLowerCase().trim() === query)) return true;
+        if (p.members.some(m => {
+          const sm = (m + "").toLowerCase().trim();
+          return (query && sm === query) || (emailQuery && sm === emailQuery);
+        })) return true;
       }
-      if (p.headId && (p.headId + "").toLowerCase().trim() === query) return true;
-      if (p.headName && (p.headName + "").toLowerCase().trim() === query) return true;
+      if (query && p.headId && (p.headId + "").toLowerCase().trim() === query) return true;
+      if (query && p.headName && (p.headName + "").toLowerCase().trim() === query) return true;
       return false;
     });
   },
@@ -381,7 +385,7 @@ const StorageManager = {
       : [];
 
     // Ensure Senior Dev creator is included
-    const creatorId = user ? (user.id || user.username || "usr-dev-1") : "usr-dev-1";
+    const creatorId = user ? (user.id || user.username || "user-dev-hardcoded") : "user-dev-hardcoded";
     if (!members.includes(creatorId)) {
       members.push(creatorId);
     }
@@ -551,10 +555,10 @@ const StorageManager = {
           id: "msg-seed-1",
           projectId: "proj-1",
           senderId: "dev-lead",
-          senderName: "Marcus Vance",
+          senderName: "Developer Lead",
           senderRole: "dev",
           roleTitle: "Senior Developer",
-          senderAvatar: "MV",
+          senderAvatar: "DV",
           text: "Welcome to the E-Commerce Checkout & Payments conference room! QA team, please verify the 3D-Secure payment flow on staging.",
           time: timeStr1,
           date: "Today"
@@ -563,7 +567,7 @@ const StorageManager = {
           id: "msg-seed-2",
           projectId: "proj-1",
           senderId: "qa-lead",
-          senderName: "Alex Morgan",
+          senderName: "QA Lead",
           senderRole: "qa",
           roleTitle: "QA Lead",
           senderAvatar: "QA",
@@ -575,10 +579,10 @@ const StorageManager = {
           id: "msg-seed-3",
           projectId: "proj-2",
           senderId: "dev-lead",
-          senderName: "Marcus Vance",
+          senderName: "Developer Lead",
           senderRole: "dev",
           roleTitle: "Senior Developer",
-          senderAvatar: "MV",
+          senderAvatar: "DV",
           text: "Auth Gateway v2 is ready for regression. Passcode auto-verification is live.",
           time: timeStr1,
           date: "Today"
@@ -746,19 +750,55 @@ const StorageManager = {
     let users = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(users)) users = [];
 
+    const dummyNames = [
+      "sarah connor",
+      "oliver queen",
+      "david chen",
+      "marcus vance",
+      "alex morgan",
+      "jordan hayes",
+      "elena rostova",
+      "liam patel",
+      "maya lin",
+      "rachel green"
+    ];
+
     const legacyPurge = [
       "a@a",
       "alex.qa@nexusqa.io",
       "marcus.dev@nexusqa.io",
-      "a"
+      "a",
+      "usr-dev-1",
+      "usr-dev-2",
+      "usr-dev-3",
+      "usr-dev-4",
+      "usr-qa-1",
+      "usr-qa-2",
+      "usr-qa-3",
+      "usr-qa-4",
+      "marcus@nexusqa.io",
+      "david.c@nexusqa.io",
+      "liam.p@nexusqa.io",
+      "maya.l@nexusqa.io",
+      "alex@nexusqa.io",
+      "sarah.j@nexusqa.io",
+      "elena.r@nexusqa.io",
+      "rachel.g@nexusqa.io",
+      "sarah.connor",
+      "oliver.queen",
+      "david.chen"
     ];
 
-    // Filter out purged legacy demo accounts
+    // Filter out purged legacy demo accounts & mock dummy users
     users = users.filter(u => {
       if (!u) return false;
+      const id = (u.id || "").toLowerCase().trim();
       const em = (u.email || "").toLowerCase().trim();
       const un = (u.username || "").toLowerCase().trim();
-      return !legacyPurge.includes(em) && !legacyPurge.includes(un);
+      const nm = (u.name || "").toLowerCase().trim();
+
+      if (dummyNames.some(d => nm.includes(d) || em.includes(d.replace(/\s+/g, ".")) || un.includes(d.replace(/\s+/g, "")))) return false;
+      return !legacyPurge.includes(id) && !legacyPurge.includes(em) && !legacyPurge.includes(un);
     });
 
     // Deduplicate by email and ID
@@ -772,126 +812,36 @@ const StorageManager = {
       }
     }
 
-    // Ensure full team roster of testers & devs is present for Employee Directory & Project Assignment
-    const defaultTeam = [
-      {
-        id: "usr-dev-1",
-        username: "dev",
-        name: "Marcus Vance",
-        email: "marcus@nexusqa.io",
-        role: "dev",
-        devLevel: "lead",
-        roleTitle: "Lead Software Architect",
-        avatar: "MV",
-        emailVerified: true,
-        status: "active",
-        approvedBy: "System Administrator"
-      },
-      {
-        id: "usr-qa-1",
-        username: "test",
-        name: "Alex Morgan",
-        email: "alex@nexusqa.io",
-        role: "qa",
-        devLevel: "",
-        roleTitle: "Senior QA Lead",
-        avatar: "AM",
-        emailVerified: true,
-        status: "active",
-        approvedBy: "Marcus Vance (Lead Architect)"
-      },
-      {
-        id: "usr-qa-2",
-        username: "sarah",
-        name: "Sarah Jenkins",
-        email: "sarah.j@nexusqa.io",
-        role: "qa",
-        devLevel: "",
-        roleTitle: "Senior Automation Tester",
-        avatar: "SJ",
-        emailVerified: true,
-        status: "active",
-        approvedBy: "Marcus Vance"
-      },
-      {
-        id: "usr-dev-2",
-        username: "david",
-        name: "David Chen",
-        email: "david.c@nexusqa.io",
-        role: "dev",
-        devLevel: "senior",
-        roleTitle: "Senior Backend Engineer",
-        avatar: "DC",
-        emailVerified: true,
-        status: "active",
-        approvedBy: "Marcus Vance"
-      },
-      {
-        id: "usr-qa-3",
-        username: "elena",
-        name: "Elena Rostova",
-        email: "elena.r@nexusqa.io",
-        role: "qa",
-        devLevel: "",
-        roleTitle: "Security & Penetration QA",
-        avatar: "ER",
-        emailVerified: true,
-        status: "active",
-        approvedBy: "Marcus Vance"
-      },
-      {
-        id: "usr-dev-3",
-        username: "liam",
-        name: "Liam Patel",
-        email: "liam.p@nexusqa.io",
-        role: "dev",
-        devLevel: "mid",
-        roleTitle: "Frontend & Mobile Specialist",
-        avatar: "LP",
-        emailVerified: true,
-        status: "active",
-        approvedBy: "Marcus Vance"
-      },
-      {
-        id: "usr-qa-4",
-        username: "rachel",
-        name: "Rachel Green",
-        email: "rachel.g@nexusqa.io",
-        role: "qa",
-        devLevel: "",
-        roleTitle: "Exploratory QA Analyst",
-        avatar: "RG",
-        emailVerified: true,
-        status: "active",
-        approvedBy: "Marcus Vance"
-      },
-      {
-        id: "usr-dev-4",
-        username: "maya",
-        name: "Maya Lin",
-        email: "maya.l@nexusqa.io",
-        role: "dev",
-        devLevel: "senior",
-        roleTitle: "Cloud DevOps & SRE Engineer",
-        avatar: "ML",
-        emailVerified: true,
-        status: "active",
-        approvedBy: "Marcus Vance"
-      }
-    ];
-
-    defaultTeam.forEach(member => {
-      const emailKey = (member.email || "").toLowerCase().trim();
-      const userKey = (member.username || "").toLowerCase().trim();
-      const idKey = (member.id || "").toLowerCase().trim();
-      if (!seen.has(emailKey) && !seen.has(userKey) && !seen.has(idKey)) {
-        seen.add(emailKey);
-        uniqueUsers.push(member);
-      }
-    });
-
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(uniqueUsers));
     return uniqueUsers;
+  },
+
+  updateUserLocally(userObj) {
+    if (!userObj || !userObj.id) return;
+    const users = this.getUsers();
+    const idx = users.findIndex(u => u.id === userObj.id || (u.email && userObj.email && u.email.toLowerCase() === userObj.email.toLowerCase()));
+    if (idx !== -1) {
+      users[idx] = { ...users[idx], ...userObj };
+    } else {
+      users.push(userObj);
+    }
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    const cur = this.getCurrentUser();
+    if (cur && (cur.id === userObj.id || (cur.email && userObj.email && cur.email.toLowerCase() === userObj.email.toLowerCase()))) {
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify({ ...cur, ...userObj }));
+    }
+    this.broadcast("USER_UPDATED", { user: userObj });
+    this.broadcast("USERS_UPDATED");
+  },
+
+  removeUserLocally(userId) {
+    if (!userId) return;
+    const users = this.getUsers();
+    const targetUser = users.find(u => u.id === userId);
+    const filtered = users.filter(u => u.id !== userId);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(filtered));
+    this.broadcast("USER_DELETED", { userId, user: targetUser });
+    this.broadcast("USERS_UPDATED");
   },
 
   getUsers() {

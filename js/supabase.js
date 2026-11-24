@@ -74,6 +74,7 @@ const SupabaseManager = {
       this.isConnected = true;
       this.setupRealtimeSubscriptions();
       this.setupAuthListener();
+      await this.fetchUsersFromSupabase();
       return true;
     } catch (err) {
       console.error("Failed to connect to Supabase:", err);
@@ -185,13 +186,15 @@ const SupabaseManager = {
       }
     } else if (payload.eventType === "UPDATE") {
       const idx = users.findIndex(u => u.id === payload.new.id || (u.email && u.email.toLowerCase() === (payload.new.email || "").toLowerCase()));
+      const mapped = this.mapUserFromDB(payload.new);
       if (idx !== -1) {
-        const mapped = this.mapUserFromDB(payload.new);
         users[idx] = mapped;
-        StorageManager.saveUsers(users, true);
-        if (mapped.status === "pending_approval") {
-          StorageManager.broadcast("TESTER_APPROVAL_REQUESTED", { user: mapped });
-        }
+      } else {
+        users.push(mapped);
+      }
+      StorageManager.saveUsers(users, true);
+      if (mapped.status === "pending_approval") {
+        StorageManager.broadcast("TESTER_APPROVAL_REQUESTED", { user: mapped });
       }
     } else if (payload.eventType === "DELETE") {
       const filtered = users.filter(u => u.id !== payload.old.id);
@@ -431,18 +434,10 @@ const SupabaseManager = {
         const mapped = defectsRes.data.map(d => this.mapDefectFromDB(d));
         StorageManager.saveDefects(mapped, false);
       }
-      if (usersRes.data && usersRes.data.length > 0) {
-        const localUsers = StorageManager.getUsers();
+      if (usersRes.data) {
         const mapped = usersRes.data.map(u => this.mapUserFromDB(u));
-        // Safe merge: keep local users that have pending status or are not yet in remote
-        const merged = [...mapped];
-        localUsers.forEach(lu => {
-          const exists = merged.some(ru => ru.id === lu.id || (ru.email && lu.email && ru.email.toLowerCase() === lu.email.toLowerCase()));
-          if (!exists) {
-            merged.push(lu);
-          }
-        });
-        StorageManager.saveUsers(merged, true);
+        // Exclusively save Supabase database users - DO NOT merge, fallback, or seed dummy users
+        StorageManager.saveUsers(mapped, true);
       }
 
       return true;
@@ -497,6 +492,125 @@ const SupabaseManager = {
     } catch(e) {
       console.warn("Error syncing users to Supabase:", e);
     }
+  },
+
+  /**
+   * Fetch all users exclusively from live Supabase table
+   */
+  async fetchUsersFromSupabase() {
+    const client = this.getClient();
+    if (!client) {
+      console.warn("Supabase client not initialized.");
+      return null;
+    }
+    try {
+      const { data, error } = await client
+        .from("nexus_users")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Supabase fetch users error:", error);
+        throw error;
+      }
+
+      const mapped = (data || []).map(u => this.mapUserFromDB(u));
+      // Exclusively save users from Supabase — do not merge or fallback to dummy users
+      if (typeof StorageManager !== "undefined") {
+        StorageManager.saveUsers(mapped, true);
+      }
+      return mapped;
+    } catch (err) {
+      console.error("Failed to fetch users from Supabase:", err);
+      throw err;
+    }
+  },
+
+  /**
+   * Update user details directly in Supabase table
+   */
+  async updateUserInSupabase(userId, updates) {
+    const client = this.getClient();
+    if (!client) throw new Error("Supabase is not connected.");
+
+    const dbPayload = {
+      updated_at: new Date().toISOString()
+    };
+    if (updates.name !== undefined) {
+      dbPayload.name = updates.name.trim();
+      const parts = updates.name.trim().split(/\s+/);
+      dbPayload.avatar = parts.length > 1 
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : updates.name.trim().substring(0, 2).toUpperCase();
+    }
+    if (updates.email !== undefined) dbPayload.email = updates.email.trim();
+    if (updates.username !== undefined) dbPayload.username = updates.username.trim();
+    if (updates.role !== undefined) dbPayload.role = updates.role;
+    if (updates.roleTitle !== undefined) dbPayload.role_title = updates.roleTitle;
+    if (updates.role_title !== undefined) dbPayload.role_title = updates.role_title;
+    if (updates.avatar !== undefined) dbPayload.avatar = updates.avatar;
+    if (updates.color !== undefined) dbPayload.color = updates.color;
+    if (updates.status !== undefined) dbPayload.status = updates.status;
+    if (updates.emailVerified !== undefined) dbPayload.email_verified = updates.emailVerified !== false;
+    if (updates.email_verified !== undefined) dbPayload.email_verified = updates.email_verified !== false;
+
+    const { data, error } = await client
+      .from("nexus_users")
+      .update(dbPayload)
+      .eq("id", userId)
+      .select();
+
+    if (error) {
+      console.error("Supabase user update error:", error);
+      throw error;
+    }
+
+    const updated = data && data[0] ? this.mapUserFromDB(data[0]) : null;
+    if (updated && typeof StorageManager !== "undefined" && StorageManager.updateUserLocally) {
+      StorageManager.updateUserLocally(updated);
+    }
+    return updated;
+  },
+
+  /**
+   * Delete user directly from Supabase table
+   */
+  async deleteUserFromSupabase(userId) {
+    const client = this.getClient();
+    if (!client) throw new Error("Supabase is not connected.");
+
+    const { error } = await client
+      .from("nexus_users")
+      .delete()
+      .eq("id", userId);
+
+    if (error) {
+      console.error("Supabase user delete error:", error);
+      throw error;
+    }
+
+    if (typeof StorageManager !== "undefined" && StorageManager.removeUserLocally) {
+      StorageManager.removeUserLocally(userId);
+    }
+    return true;
+  },
+
+  /**
+   * Senior Developer Approves a Member directly in Supabase
+   */
+  async approveUserInSupabase(userId, approverName = "Senior Developer") {
+    return this.updateUserInSupabase(userId, {
+      status: "active"
+    });
+  },
+
+  /**
+   * Senior Developer Rejects a Member directly in Supabase
+   */
+  async rejectUserInSupabase(userId) {
+    return this.updateUserInSupabase(userId, {
+      status: "rejected"
+    });
   },
 
   // -------------------------------------------------------------
