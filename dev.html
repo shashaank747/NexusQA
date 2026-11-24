@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.10">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.12">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -1079,9 +1079,22 @@
             <div class="form-group flex-1">
               <label for="devFixStatusSelect">Update Lifecycle Status</label>
               <select id="devFixStatusSelect" class="nexus-select w-100">
-                <option value="Fixed - Ready for QA" selected>Fixed - Ready for QA Re-Test</option>
-                <option value="In Progress">In Progress (Investigating)</option>
-                <option value="Open">Open (Deferred)</option>
+                <optgroup label="QA Testing">
+                  <option value="Untested">Untested</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Pass">Pass</option>
+                  <option value="Fail">Fail</option>
+                  <option value="Blocked">Blocked</option>
+                </optgroup>
+                <optgroup label="Developer Triage">
+                  <option value="In Dev / Fixing">In Dev / Fixing</option>
+                  <option value="Cannot Reproduce">Cannot Reproduce</option>
+                  <option value="Ready for Re-Test" selected>Ready for Re-Test</option>
+                </optgroup>
+                <optgroup label="Resolution">
+                  <option value="Verified &amp; Closed">Verified &amp; Closed</option>
+                  <option value="Won't Fix / By Design">Won't Fix / By Design</option>
+                </optgroup>
               </select>
             </div>
             <div class="form-group flex-1">
@@ -1535,9 +1548,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <!-- Scripts -->
-  <script src="js/data.js?v=1.0.5"></script>
-  <script src="js/supabase.js?v=1.0.10"></script>
-  <script src="js/storage.js?v=1.0.14"></script>
-  <script src="js/app.js?v=1.0.15"></script>
+  <script src="js/data.js?v=1.0.6"></script>
+  <script src="js/supabase.js?v=1.0.11"></script>
+  <script src="js/storage.js?v=1.0.16"></script>
+  <script src="js/app.js?v=1.0.17"></script>
 </body>
 </html>

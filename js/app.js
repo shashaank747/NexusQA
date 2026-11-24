@@ -2701,7 +2701,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   function checkRetestBanner() {
     const defects = StorageManager.getDefects();
-    const retestBugs = defects.filter(d => d.status === "Fixed - Ready for QA");
+    const retestBugs = defects.filter(d => d.status === "Fixed - Ready for QA" || d.status === "Ready for Re-Test");
     if (retestBugs.length > 0 && state.currentPortal === "qa") {
       if (DOM.retestAlertBanner) DOM.retestAlertBanner.style.display = "flex";
       if (DOM.retestAlertCount) DOM.retestAlertCount.textContent = `${retestBugs.length} bug${retestBugs.length === 1 ? '' : 's'}`;
@@ -2724,20 +2724,20 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const defects = StorageManager.getDefects();
     const currentUser = state.currentUser || { name: "Developer" };
 
-    const critical = defects.filter(d => (d.severity === "Critical" || d.priority.includes("P0")) && d.status !== "Resolved & Verified" && d.status !== "Closed");
-    const assigned = defects.filter(d => d.assignee && d.assignee.toLowerCase().includes(currentUser.name.toLowerCase().split(" ")[0]) && d.status !== "Resolved & Verified" && d.status !== "Closed");
-    const readyRetest = defects.filter(d => d.status === "Fixed - Ready for QA");
-    const verified = defects.filter(d => d.status === "Resolved & Verified" || d.status === "Closed");
+    const critical = defects.filter(d => (d.severity === "Critical" || (d.priority && d.priority.includes("P0"))) && d.status !== "Resolved & Verified" && d.status !== "Closed" && d.status !== "Verified & Closed" && d.status !== "Won't Fix / By Design");
+    const assigned = defects.filter(d => d.assignee && d.assignee.toLowerCase().includes(currentUser.name.toLowerCase().split(" ")[0]) && d.status !== "Resolved & Verified" && d.status !== "Closed" && d.status !== "Verified & Closed" && d.status !== "Won't Fix / By Design");
+    const readyRetest = defects.filter(d => d.status === "Fixed - Ready for QA" || d.status === "Ready for Re-Test");
+    const verified = defects.filter(d => d.status === "Resolved & Verified" || d.status === "Closed" || d.status === "Verified & Closed" || d.status === "Pass" || d.status === "Won't Fix / By Design");
 
     if (DOM.devKpiCritical) DOM.devKpiCritical.textContent = critical.length;
     if (DOM.devKpiAssigned) DOM.devKpiAssigned.textContent = assigned.length;
-    if (DOM.devKpiAssignedSub) DOM.devKpiAssignedSub.textContent = `${assigned.filter(d => d.status === "In Progress").length} actively in progress`;
+    if (DOM.devKpiAssignedSub) DOM.devKpiAssignedSub.textContent = `${assigned.filter(d => d.status === "In Progress" || d.status === "In Dev / Fixing").length} actively in progress`;
     if (DOM.devKpiReadyRetest) DOM.devKpiReadyRetest.textContent = readyRetest.length;
     if (DOM.devKpiVerified) DOM.devKpiVerified.textContent = verified.length;
 
     if (DOM.devAssignedBadge) DOM.devAssignedBadge.textContent = assigned.length;
 
-    const unfixBugs = defects.filter(d => d.status === "Open" || d.status === "In Progress");
+    const unfixBugs = defects.filter(d => d.status === "Open" || d.status === "In Progress" || d.status === "Fail" || d.status === "Blocked" || d.status === "In Dev / Fixing" || d.status === "Cannot Reproduce");
     if (DOM.devActiveDefectsList) {
       if (unfixBugs.length === 0) {
         DOM.devActiveDefectsList.innerHTML = `<div class="p-4 text-center text-muted">🎉 No unresolved defects! All bugs fixed.</div>`;
@@ -2748,6 +2748,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
               <div class="d-flex align-center gap-1">
                 <span class="test-id-pill" style="color:var(--rose); background:rgba(244,63,94,0.1);">${d.id}</span>
                 <span class="badge ${d.severity === 'Critical' ? 'badge-p0' : 'badge-p1'} text-xs">${d.severity}</span>
+                <span class="badge ${getStatusBadgeClass(d.status === 'Open' ? 'Fail' : d.status)} text-xs">${escapeHtml(d.status)}</span>
               </div>
               <div class="dev-feed-title">${escapeHtml(d.summary)}</div>
               <div class="text-xs text-muted">Linked: <strong>${d.linkedTestCaseId || 'None'}</strong> • Assignee: <strong>${escapeHtml(d.assignee || 'Unassigned')}</strong></div>
@@ -2770,7 +2771,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             <div class="dev-feed-info">
               <div class="d-flex align-center gap-1">
                 <strong class="font-mono text-xs text-cyan">${d.id}</strong>
-                <span class="badge badge-passed text-xs">${d.status}</span>
+                <span class="badge ${getStatusBadgeClass(d.status)} text-xs">${escapeHtml(d.status)}</span>
               </div>
               <div class="dev-feed-title">${escapeHtml(d.devNotes || d.summary)}</div>
               <div class="text-xs text-muted">
@@ -2794,10 +2795,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       filtered = filtered.filter(d => d.assignee && d.assignee.toLowerCase().includes(currentUser.name.toLowerCase().split(" ")[0]));
     }
 
-    const openBugs = filtered.filter(d => d.status === "Open");
-    const progressBugs = filtered.filter(d => d.status === "In Progress");
-    const retestBugs = filtered.filter(d => d.status === "Fixed - Ready for QA");
-    const verifiedBugs = filtered.filter(d => d.status === "Resolved & Verified" || d.status === "Closed");
+    const openBugs = filtered.filter(d => d.status === "Open" || d.status === "Fail" || d.status === "Blocked" || d.status === "Untested");
+    const progressBugs = filtered.filter(d => d.status === "In Progress" || d.status === "In Dev / Fixing" || d.status === "Cannot Reproduce");
+    const retestBugs = filtered.filter(d => d.status === "Fixed - Ready for QA" || d.status === "Ready for Re-Test");
+    const verifiedBugs = filtered.filter(d => d.status === "Resolved & Verified" || d.status === "Closed" || d.status === "Verified & Closed" || d.status === "Pass" || d.status === "Won't Fix / By Design");
 
     if (DOM.kanbanOpenCount) DOM.kanbanOpenCount.textContent = openBugs.length;
     if (DOM.kanbanProgressCount) DOM.kanbanProgressCount.textContent = progressBugs.length;
@@ -2879,7 +2880,16 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.devFixBranchInput) DOM.devFixBranchInput.value = defect.gitBranch || "";
     if (DOM.devFixPrInput) DOM.devFixPrInput.value = defect.prLink || "";
     if (DOM.devFixNotesInput) DOM.devFixNotesInput.value = defect.devNotes || "";
-    if (DOM.devFixStatusSelect) DOM.devFixStatusSelect.value = defect.status || "Fixed - Ready for QA";
+    if (DOM.devFixStatusSelect) {
+      const mappedSelectVal = defect.status === "Fixed - Ready for QA"
+        ? "Ready for Re-Test"
+        : defect.status === "Resolved & Verified" || defect.status === "Closed"
+          ? "Verified & Closed"
+          : defect.status === "Open"
+            ? "Fail"
+            : (defect.status || "Ready for Re-Test");
+      DOM.devFixStatusSelect.value = TEST_CASE_STATUSES.includes(mappedSelectVal) ? mappedSelectVal : "Ready for Re-Test";
+    }
     if (DOM.devFixAssigneeSelect) DOM.devFixAssigneeSelect.value = defect.assignee || state.currentUser.name;
 
     if (DOM.devFixModal) DOM.devFixModal.style.display = "flex";
@@ -2893,7 +2903,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const devNotes = DOM.devFixNotesInput ? DOM.devFixNotesInput.value.trim() : "";
     const prLink = DOM.devFixPrInput ? DOM.devFixPrInput.value.trim() : "";
     const gitBranch = DOM.devFixBranchInput ? DOM.devFixBranchInput.value.trim() : "";
-    const status = DOM.devFixStatusSelect ? DOM.devFixStatusSelect.value : "Fixed - Ready for QA";
+    const status = DOM.devFixStatusSelect ? DOM.devFixStatusSelect.value : "Ready for Re-Test";
     const assignee = (DOM.devFixAssigneeSelect ? DOM.devFixAssigneeSelect.value.trim() : "") || state.currentUser.name;
 
     if (!devNotes) {
@@ -2910,7 +2920,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       assignee
     });
 
-    // Also sync linked Test Case status when developer resolves / marks Ready for QA
+    // Also sync linked Test Case status when developer updates lifecycle status
     const defect = StorageManager.getDefectById(bugId);
     if (defect && defect.linkedTestCaseId) {
       const linkedTc = StorageManager.getTestCaseById(defect.linkedTestCaseId);
@@ -2918,13 +2928,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         const mappedTcStatus = status === "Fixed - Ready for QA"
           ? "Ready for Re-Test"
           : (status === "Resolved & Verified" || status === "Closed")
-            ? "Pass"
-            : linkedTc.status;
+            ? "Verified & Closed"
+            : status === "Open"
+              ? "Fail"
+              : status;
         StorageManager.updateTestCase({
           ...linkedTc,
           status: mappedTcStatus,
           assignedDev: assignee || linkedTc.assignedDev || "",
-          lastRun: new Date().toISOString().replace("T", " ").substring(0, 16)
+          lastRun: formatLocalTimestamp()
         });
       }
     }
@@ -2939,17 +2951,19 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   window.updateTestCaseStatusFromDev = async function(tcId, newStatus) {
     const tc = StorageManager.getTestCaseById(tcId);
     if (!tc) return;
-    const nowStamp = new Date().toISOString().replace("T", " ").substring(0, 16);
+    const nowStamp = formatLocalTimestamp();
     const updated = StorageManager.updateTestCase({ ...tc, status: newStatus, lastRun: nowStamp });
     const linkedDefect = StorageManager.getDefects().find(d => d.linkedTestCaseId === tcId);
     if (linkedDefect) {
       const defectStatus = newStatus === "Ready for Re-Test"
         ? "Fixed - Ready for QA"
-        : (newStatus === "Pass" || newStatus === "Passed")
-          ? "Resolved & Verified"
-          : (newStatus === "Fail" || newStatus === "Failed" || newStatus === "Blocked")
-            ? "Open"
-            : linkedDefect.status;
+        : (newStatus === "In Dev / Fixing" || newStatus === "Cannot Reproduce" || newStatus === "In Progress")
+          ? "In Progress"
+          : (newStatus === "Pass" || newStatus === "Passed" || newStatus === "Verified & Closed" || newStatus === "Won't Fix / By Design")
+            ? "Resolved & Verified"
+            : (newStatus === "Fail" || newStatus === "Failed" || newStatus === "Blocked")
+              ? "Open"
+              : linkedDefect.status;
       StorageManager.updateDefect({ ...linkedDefect, status: defectStatus });
     }
     if (typeof SupabaseManager !== "undefined" && updated) {
@@ -2969,10 +2983,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const failedTests = [];
     const seenTcIds = new Set();
 
-    // Include live logged test cases in Fail, Blocked, Ready for Re-Test, or assigned to a developer
+    // Include live logged test cases in active defect / blocked / pending / assigned states
     cases.forEach(tc => {
       const s = tc.status || "Untested";
-      if (s === "Fail" || s === "Failed" || s === "Blocked" || s === "Ready for Re-Test" || tc.assignedDev) {
+      if (isActiveDefectStatus(s) || s === "Blocked" || s === "In Progress" || tc.assignedDev) {
         seenTcIds.add(tc.id);
         failedTests.push({
           run: { name: tc.createdAt ? `Logged ${tc.createdAt}` : "Manual QA Log", environment: tc.assignedDev ? `Assigned: ${tc.assignedDev}` : "Unassigned" },
@@ -2985,7 +2999,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     runs.forEach(run => {
       Object.entries(run.results || {}).forEach(([tcId, res]) => {
-        if ((res.status === "Failed" || res.status === "Fail" || res.status === "Blocked") && !seenTcIds.has(tcId)) {
+        if ((isActiveDefectStatus(res.status) || res.status === "Blocked") && !seenTcIds.has(tcId)) {
           failedTests.push({ run, testCase: caseMap.get(tcId), status: res.status, notes: res.notes });
         }
       });
@@ -3001,15 +3015,14 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
       DOM.devFailuresContainer.innerHTML = failedTests.map(f => {
         const tc = f.testCase || { id: "TC-Unknown", title: "Test Case", steps: [] };
-        const st = f.status || "Untested";
-        const badgeCls = (st === "Pass" || st === "Passed") ? "badge-passed" : st === "Ready for Re-Test" ? "badge-retest" : st === "Blocked" ? "badge-blocked" : "badge-failed";
+        const st = normalizeModalStatus(f.status || "Untested");
+        const badgeCls = getStatusBadgeClass(st);
         const mediaUrl = tc.mediaUrl || tc.image || "";
         const mediaHtml = mediaUrl ? (
           tc.mediaType === "video"
             ? `<div class="mt-2"><video src="${escapeHtml(mediaUrl)}" controls muted playsinline style="max-height:180px; border-radius:8px; background:#000;"></video></div>`
             : `<div class="mt-2"><a href="${escapeHtml(mediaUrl)}" target="_blank"><img src="${escapeHtml(mediaUrl)}" alt="Evidence" style="max-height:160px; border-radius:8px; border:1px solid var(--border-color);"></a></div>`
         ) : "";
-        const statuses = ["Untested", "Pass", "Fail", "Blocked", "Ready for Re-Test"];
 
         return `
           <div class="dev-failure-card">
@@ -3022,7 +3035,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
               </div>
               <div class="d-flex align-center gap-2">
                 <select class="nexus-select text-xs" style="padding: 0.25rem 0.5rem; width: auto;" onchange="window.updateTestCaseStatusFromDev('${escapeHtml(tc.id)}', this.value)" title="Update QA Test Case Status">
-                  ${statuses.map(opt => `<option value="${opt}" ${st === opt || (opt === 'Pass' && st === 'Passed') || (opt === 'Fail' && st === 'Failed') ? 'selected' : ''}>${opt}</option>`).join("")}
+                  ${TEST_CASE_STATUSES.map(opt => `<option value="${escapeHtml(opt)}" ${st === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join("")}
                 </select>
                 <button class="btn btn-danger btn-xs" onclick="window.openDevFixModalForTest('${escapeHtml(tc.id)}')">
                   <i class="fa-solid fa-bug"></i> Link / File Fix
@@ -4800,12 +4813,44 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   // =========================================================================
   // QA PORTAL LOGIC (Analytics, Repository, Runner, Defects, AI Generator)
   // =========================================================================
+  const TEST_CASE_STATUSES = [
+    "Untested",
+    "In Progress",
+    "Pass",
+    "Fail",
+    "Blocked",
+    "In Dev / Fixing",
+    "Cannot Reproduce",
+    "Ready for Re-Test",
+    "Verified & Closed",
+    "Won't Fix / By Design"
+  ];
+
+  function formatLocalTimestamp(date = new Date(), withSeconds = true) {
+    const pad = (n) => String(n).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    const mm = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const mi = pad(date.getMinutes());
+    const ss = pad(date.getSeconds());
+    return withSeconds ? `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}` : `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  }
+
   function isPassStatus(status) {
-    return status === "Pass" || status === "Passed";
+    return status === "Pass" || status === "Passed" || status === "Verified & Closed";
   }
 
   function isFailStatus(status) {
     return status === "Fail" || status === "Failed";
+  }
+
+  function isActiveDefectStatus(status) {
+    return status === "Fail" || status === "Failed" || status === "In Dev / Fixing" || status === "Cannot Reproduce" || status === "Ready for Re-Test";
+  }
+
+  function isPendingStatus(status) {
+    return !status || status === "Untested" || status === "In Progress" || status === "Blocked";
   }
 
   function isRetestStatus(status) {
@@ -4819,6 +4864,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     return status || "Untested";
   }
 
+  function getStatusBadgeClass(status) {
+    const s = normalizeModalStatus(status);
+    if (s === "Pass" || s === "Verified & Closed") return "badge-passed";
+    if (s === "Fail") return "badge-failed";
+    if (s === "Blocked" || s === "Cannot Reproduce") return "badge-blocked";
+    if (s === "In Dev / Fixing") return "badge-fixing";
+    if (s === "In Progress") return "badge-in-progress";
+    if (s === "Ready for Re-Test") return "badge-retest";
+    return "badge-untested";
+  }
+
   function renderDashboard() {
     checkRetestBanner();
     const cases = StorageManager.getTestCases();
@@ -4828,36 +4884,45 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     const total = cases.length;
     const passed = cases.filter(c => isPassStatus(c.status)).length;
-    const failed = cases.filter(c => isFailStatus(c.status)).length;
+    const activeDefectCases = cases.filter(c => isActiveDefectStatus(c.status));
     const blocked = cases.filter(c => c.status === "Blocked").length;
-    const untested = cases.filter(c => !c.status || c.status === "Untested" || isRetestStatus(c.status)).length;
+    const pending = cases.filter(c => isPendingStatus(c.status)).length;
+    const otherClosed = Math.max(0, total - passed - activeDefectCases.length - pending);
 
     const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
-    const untestedPercent = total > 0 ? Math.round((untested / total) * 100) : 0;
+    const pendingPercent = total > 0 ? Math.round((pending / total) * 100) : 0;
 
-    const openBugs = defects.filter(d => d.status !== "Closed" && d.status !== "Resolved & Verified");
-    const criticalBugs = openBugs.filter(d => d.severity === "Critical" || (d.priority && d.priority.includes("P0")));
+    // Count test cases in active defect states + any standalone/unlinked open bugs in nexus_defects
+    const caseIdSet = new Set(cases.map(c => c.id));
+    const unlinkedOpenBugs = defects.filter(d =>
+      d.status !== "Closed" &&
+      d.status !== "Resolved & Verified" &&
+      (!d.linkedTestCaseId || !caseIdSet.has(d.linkedTestCaseId))
+    );
+    const activeDefectsCount = activeDefectCases.length + unlinkedOpenBugs.length;
+    const criticalCount = activeDefectCases.filter(c => c.priority && c.priority.includes("P0")).length +
+      unlinkedOpenBugs.filter(d => d.severity === "Critical" || (d.priority && d.priority.includes("P0"))).length;
 
     if (DOM.kpiTotalTests) DOM.kpiTotalTests.textContent = total;
     if (DOM.kpiPassRate) DOM.kpiPassRate.textContent = `${passRate}%`;
     if (DOM.kpiPassRateProgress) DOM.kpiPassRateProgress.style.width = `${passRate}%`;
 
-    if (DOM.kpiUntestedCount) DOM.kpiUntestedCount.textContent = untested;
-    if (DOM.kpiUntestedSub) DOM.kpiUntestedSub.textContent = `${untested} awaiting manual test`;
-    if (DOM.kpiUntestedProgress) DOM.kpiUntestedProgress.style.width = `${untestedPercent}%`;
+    if (DOM.kpiUntestedCount) DOM.kpiUntestedCount.textContent = pending;
+    if (DOM.kpiUntestedSub) DOM.kpiUntestedSub.textContent = `${pending} pending / blocked`;
+    if (DOM.kpiUntestedProgress) DOM.kpiUntestedProgress.style.width = `${pendingPercent}%`;
 
     // Backward-compatibility
-    if (DOM.kpiAutomationRate) DOM.kpiAutomationRate.textContent = `${untested}`;
-    if (DOM.kpiAutoCount) DOM.kpiAutoCount.textContent = `${untested} Pending`;
-    if (DOM.kpiAutoProgress) DOM.kpiAutoProgress.style.width = `${untestedPercent}%`;
+    if (DOM.kpiAutomationRate) DOM.kpiAutomationRate.textContent = `${pending}`;
+    if (DOM.kpiAutoCount) DOM.kpiAutoCount.textContent = `${pending} Pending`;
+    if (DOM.kpiAutoProgress) DOM.kpiAutoProgress.style.width = `${pendingPercent}%`;
 
-    if (DOM.kpiDefectsCount) DOM.kpiDefectsCount.textContent = openBugs.length;
-    if (DOM.kpiCriticalDefects) DOM.kpiCriticalDefects.textContent = `${criticalBugs.length} Critical Blocker${criticalBugs.length === 1 ? '' : 's'}`;
+    if (DOM.kpiDefectsCount) DOM.kpiDefectsCount.textContent = activeDefectsCount;
+    if (DOM.kpiCriticalDefects) DOM.kpiCriticalDefects.textContent = `${criticalCount} Critical Blocker${criticalCount === 1 ? '' : 's'}`;
 
     if (DOM.testCaseCountBadge) DOM.testCaseCountBadge.textContent = total;
-    if (DOM.defectCountBadge) DOM.defectCountBadge.textContent = openBugs.length;
+    if (DOM.defectCountBadge) DOM.defectCountBadge.textContent = activeDefectsCount;
 
-    renderDonutChart(passed, failed, blocked, untested, total);
+    renderDonutChart(passed, activeDefectCases.length, blocked, Math.max(0, pending - blocked + otherClosed), total);
     renderModuleHealth(suites, cases);
     renderRecentRuns(runs);
     renderPriorityBreakdown(cases);
@@ -4896,11 +4961,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.statusLegend) {
       DOM.statusLegend.innerHTML = `
         <div class="legend-item">
-          <div class="legend-left"><span class="legend-color-dot" style="background: #10b981;"></span> <span>Passed</span></div>
+          <div class="legend-left"><span class="legend-color-dot" style="background: #10b981;"></span> <span>Pass / Verified</span></div>
           <span class="legend-val text-emerald">${passed} (${Math.round(pPassed)}%)</span>
         </div>
         <div class="legend-item">
-          <div class="legend-left"><span class="legend-color-dot" style="background: #f43f5e;"></span> <span>Failed</span></div>
+          <div class="legend-left"><span class="legend-color-dot" style="background: #f43f5e;"></span> <span>Active Defects</span></div>
           <span class="legend-val text-rose">${failed} (${Math.round(pFailed)}%)</span>
         </div>
         <div class="legend-item">
@@ -4908,7 +4973,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           <span class="legend-val text-amber">${blocked} (${Math.round(pBlocked)}%)</span>
         </div>
         <div class="legend-item">
-          <div class="legend-left"><span class="legend-color-dot" style="background: #475569;"></span> <span>Untested</span></div>
+          <div class="legend-left"><span class="legend-color-dot" style="background: #475569;"></span> <span>Pending / Other</span></div>
           <span class="legend-val text-muted">${untested} (${Math.round(pUntested)}%)</span>
         </div>
       `;
@@ -5041,41 +5106,52 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (!DOM.suiteNavList) return;
     const suites = StorageManager.getSuites();
     const cases = StorageManager.getTestCases();
-    const filterQuery = DOM.suiteSearchInput ? DOM.suiteSearchInput.value.toLowerCase() : "";
-
-    let filtered = suites;
-    if (filterQuery) {
-      filtered = suites.filter(s => s.name.toLowerCase().includes(filterQuery) || s.description.toLowerCase().includes(filterQuery));
-    }
 
     let html = `
-      <div class="suite-item ${state.selectedSuiteId === 'all' ? 'active' : ''}" data-suite-id="all">
-        <span class="suite-item-name"><i class="fa-solid fa-layer-group"></i> All Test Cases</span>
-        <span class="suite-count">${cases.length}</span>
-      </div>
+      <button type="button" class="suite-pill-btn ${state.selectedSuiteId === 'all' ? 'active' : ''}" data-suite-id="all">
+        <i class="fa-solid fa-layer-group"></i>
+        <span>All Cases</span>
+        <span class="suite-pill-count">${cases.length}</span>
+      </button>
     `;
 
-    filtered.forEach(suite => {
+    suites.forEach(suite => {
       const suiteCases = cases.filter(c => c.suiteId === suite.id);
       const isSelected = state.selectedSuiteId === suite.id;
       html += `
-        <div class="suite-item ${isSelected ? 'active' : ''}" data-suite-id="${suite.id}">
-          <span class="suite-item-name"><i class="${suite.icon || 'fa-solid fa-folder'}"></i> ${suite.name}</span>
-          <span class="suite-count">${suiteCases.length}</span>
-        </div>
+        <button type="button" class="suite-pill-btn ${isSelected ? 'active' : ''}" data-suite-id="${escapeHtml(suite.id)}">
+          <i class="${escapeHtml(suite.icon || 'fa-solid fa-folder')}"></i>
+          <span>${escapeHtml(suite.name)}</span>
+          <span class="suite-pill-count">${suiteCases.length}</span>
+        </button>
       `;
     });
 
+    html += `
+      <button type="button" class="suite-pill-btn suite-pill-new" id="inlineNewSuitePillBtn" title="Create New Suite">
+        <i class="fa-solid fa-plus"></i>
+        <span>New Suite</span>
+      </button>
+    `;
+
     DOM.suiteNavList.innerHTML = html;
 
-    DOM.suiteNavList.querySelectorAll(".suite-item").forEach(item => {
-      item.addEventListener("click", () => {
-        state.selectedSuiteId = item.getAttribute("data-suite-id");
-        DOM.suiteNavList.querySelectorAll(".suite-item").forEach(i => i.classList.remove("active"));
-        item.classList.add("active");
+    DOM.suiteNavList.querySelectorAll(".suite-pill-btn[data-suite-id]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        state.selectedSuiteId = btn.getAttribute("data-suite-id");
+        DOM.suiteNavList.querySelectorAll(".suite-pill-btn").forEach(i => i.classList.remove("active"));
+        btn.classList.add("active");
         renderTestCaseTable();
       });
     });
+
+    const newSuiteBtn = document.getElementById("inlineNewSuitePillBtn");
+    if (newSuiteBtn) {
+      newSuiteBtn.addEventListener("click", () => {
+        if (DOM.suiteForm) DOM.suiteForm.reset();
+        if (DOM.suiteModal) DOM.suiteModal.style.display = "flex";
+      });
+    }
 
     const activeCases = state.selectedSuiteId === "all" ? cases : cases.filter(c => c.suiteId === state.selectedSuiteId);
     if (DOM.selectedSuiteTestCount) DOM.selectedSuiteTestCount.textContent = activeCases.length;
@@ -5086,7 +5162,9 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
   function populateSuiteDropdowns() {
     const suites = StorageManager.getSuites();
-    const options = suites.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+    const options = suites.length > 0
+      ? suites.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join("")
+      : `<option value="">General / Uncategorized</option>`;
     if (DOM.tcSuite) DOM.tcSuite.innerHTML = options;
     if (DOM.aiTargetSuiteSelect) DOM.aiTargetSuiteSelect.innerHTML = options;
   }
@@ -5143,10 +5221,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.showingCount) DOM.showingCount.textContent = filteredCases.length;
     if (DOM.totalTestsCount) DOM.totalTestsCount.textContent = allCases.length;
 
-    if (DOM.statPassed) DOM.statPassed.textContent = `${allCases.filter(c => isPassStatus(c.status)).length} Pass`;
-    if (DOM.statFailed) DOM.statFailed.textContent = `${allCases.filter(c => isFailStatus(c.status)).length} Fail`;
+    if (DOM.statPassed) DOM.statPassed.textContent = `${allCases.filter(c => isPassStatus(c.status)).length} Pass / Verified`;
+    if (DOM.statFailed) DOM.statFailed.textContent = `${allCases.filter(c => isActiveDefectStatus(c.status)).length} Active Defects / Fail`;
     if (DOM.statBlocked) DOM.statBlocked.textContent = `${allCases.filter(c => c.status === "Blocked").length} Blocked`;
-    if (DOM.statUntested) DOM.statUntested.textContent = `${allCases.filter(c => !c.status || c.status === "Untested" || isRetestStatus(c.status)).length} Pending`;
+    if (DOM.statUntested) DOM.statUntested.textContent = `${allCases.filter(c => isPendingStatus(c.status)).length} Untested / Pending`;
 
     if (filteredCases.length === 0) {
       DOM.testCasesTableBody.innerHTML = "";
@@ -5159,17 +5237,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
     DOM.testCasesTableBody.innerHTML = filteredCases.map(tc => {
       const isChecked = state.selectedTestCaseIds.has(tc.id);
-      const suiteName = suiteMap.get(tc.suiteId) || "General Suite";
+      const suiteName = suiteMap.get(tc.suiteId) || "General";
 
-      let statusClass = isPassStatus(tc.status)
-        ? "badge-passed"
-        : isFailStatus(tc.status)
-          ? "badge-failed"
-          : tc.status === "Blocked"
-            ? "badge-blocked"
-            : isRetestStatus(tc.status)
-              ? "badge-retest"
-              : "badge-untested";
+      const displayStatus = normalizeModalStatus(tc.status);
+      const statusClass = getStatusBadgeClass(displayStatus);
       let prioClass = tc.priority.includes("P0") ? "badge-p0" : tc.priority.includes("P1") ? "badge-p1" : tc.priority.includes("P3") ? "badge-p3" : "badge-p2";
       const tagsHtml = (tc.tags || []).map(t => `<span class="tag-pill">#${t}</span>`).join("");
       const hasMedia = Boolean(tc.mediaUrl || tc.image);
@@ -5179,33 +5250,34 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       const devBadge = tc.assignedDev
         ? `<span class="tag-pill" title="Assigned Developer"><i class="fa-solid fa-code"></i> ${escapeHtml(tc.assignedDev)}</span>`
         : "";
+      const updatedStamp = tc.lastRun || tc.createdAt || "—";
 
       return `
-        <tr data-tc-id="${tc.id}" class="${isChecked ? 'row-selected' : ''}">
+        <tr data-tc-id="${tc.id}" class="${isChecked ? 'row-selected' : ''}" onclick="window.viewTestCaseDetail('${tc.id}')">
           <td class="col-checkbox" onclick="event.stopPropagation()">
             <input type="checkbox" class="nexus-checkbox tc-select-checkbox" data-id="${tc.id}" ${isChecked ? 'checked' : ''}>
           </td>
-          <td class="col-id" onclick="window.viewTestCaseDetail('${tc.id}')">
+          <td class="col-id">
             <span class="test-id-pill">${tc.id}</span>
           </td>
-          <td class="col-title" onclick="window.viewTestCaseDetail('${tc.id}')">
+          <td class="col-title">
             <div class="test-title-cell">
               ${escapeHtml(tc.title)}
               ${mediaBadge}
             </div>
             <div class="test-tags-row">${devBadge}${tagsHtml}</div>
           </td>
-          <td class="col-suite" onclick="window.viewTestCaseDetail('${tc.id}')">
+          <td class="col-suite">
             <span class="text-muted text-xs"><i class="fa-solid fa-folder text-dim"></i> ${escapeHtml(suiteName)}</span>
           </td>
-          <td class="col-priority" onclick="window.viewTestCaseDetail('${tc.id}')">
+          <td class="col-priority">
             <span class="badge ${prioClass}">${tc.priority}</span>
           </td>
-          <td class="col-type" onclick="window.viewTestCaseDetail('${tc.id}')">
-            <span class="badge badge-type">${escapeHtml(tc.type || 'Manual')}</span>
+          <td class="col-status">
+            <span class="badge ${statusClass}"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> ${escapeHtml(displayStatus)}</span>
           </td>
-          <td class="col-status" onclick="window.viewTestCaseDetail('${tc.id}')">
-            <span class="badge ${statusClass}"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> ${escapeHtml(tc.status || 'Untested')}</span>
+          <td class="col-updated">
+            <span class="text-muted text-xs font-mono">${escapeHtml(updatedStamp)}</span>
           </td>
           <td class="col-actions" onclick="event.stopPropagation()">
             <div class="d-flex justify-end align-center gap-1">
@@ -5531,14 +5603,31 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   }
 
+  function stopTestCaseTimestampTicker() {
+    if (state.tcTimestampInterval) {
+      clearInterval(state.tcTimestampInterval);
+      state.tcTimestampInterval = null;
+    }
+  }
+
+  function closeTestCaseModal() {
+    stopTestCaseTimestampTicker();
+    if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none";
+  }
+
   async function openCreateTestCaseModal() {
+    stopTestCaseTimestampTicker();
     if (DOM.testCaseForm) DOM.testCaseForm.reset();
     if (DOM.editTestCaseId) DOM.editTestCaseId.value = "";
     if (DOM.testCaseModalTitle) DOM.testCaseModalTitle.textContent = "New Test Case & Bug Log";
 
-    const nowStamp = new Date().toISOString().replace("T", " ").substring(0, 16);
-    if (DOM.tcGeneratedTimestamp) DOM.tcGeneratedTimestamp.value = nowStamp;
-    if (DOM.tcAutoTimestampText) DOM.tcAutoTimestampText.textContent = nowStamp;
+    const updateLiveClockBadge = () => {
+      const stamp = formatLocalTimestamp(new Date(), true);
+      if (DOM.tcGeneratedTimestamp) DOM.tcGeneratedTimestamp.value = stamp;
+      if (DOM.tcAutoTimestampText) DOM.tcAutoTimestampText.textContent = stamp;
+    };
+    updateLiveClockBadge();
+    state.tcTimestampInterval = setInterval(updateLiveClockBadge, 1000);
 
     const curUser = StorageManager.getCurrentUser();
     if (DOM.tcAutoAuthorText) DOM.tcAutoAuthorText.textContent = curUser ? curUser.name : "QA Tester";
@@ -5573,6 +5662,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   }
 
   window.openEditTestCaseModal = function(id) {
+    stopTestCaseTimestampTicker();
     const tc = StorageManager.getTestCaseById(id);
     if (!tc) return;
     if (DOM.testCaseForm) DOM.testCaseForm.reset();
@@ -5581,7 +5671,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
     if (DOM.tcGeneratedId) DOM.tcGeneratedId.value = tc.id;
     if (DOM.tcAutoIdText) DOM.tcAutoIdText.textContent = tc.id;
-    const stamp = tc.createdAt || tc.lastRun || new Date().toISOString().replace("T", " ").substring(0, 16);
+    const stamp = tc.createdAt || tc.lastRun || formatLocalTimestamp(new Date(), true);
     if (DOM.tcGeneratedTimestamp) DOM.tcGeneratedTimestamp.value = stamp;
     if (DOM.tcAutoTimestampText) DOM.tcAutoTimestampText.textContent = stamp;
     if (DOM.tcAutoAuthorText) DOM.tcAutoAuthorText.textContent = tc.author || "QA Tester";
@@ -6507,30 +6597,34 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   on(DOM.closeAutoInputModalBtn, "click", () => { if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none"; });
   on(DOM.cancelAutoInputModalBtn, "click", () => { if (DOM.autoInputModal) DOM.autoInputModal.style.display = "none"; });
 
-  on(DOM.closeTestCaseModalBtn, "click", () => { if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none"; });
-  on(DOM.cancelTestCaseModalBtn, "click", () => { if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none"; });
+  on(DOM.closeTestCaseModalBtn, "click", closeTestCaseModal);
+  on(DOM.cancelTestCaseModalBtn, "click", closeTestCaseModal);
   on(DOM.deleteTestCaseModalBtn, "click", () => {
     const id = DOM.editTestCaseId ? DOM.editTestCaseId.value : "";
     if (id) {
-      if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none";
+      closeTestCaseModal();
       window.deleteSingleTestCase(id);
     }
   });
 
   function syncLinkedDefectForTestCase(tc) {
     if (!tc) return;
-    const isDefectTrigger = isFailStatus(tc.status) || tc.status === "Blocked" || tc.status === "Ready for Re-Test" || Boolean(tc.assignedDev);
+    const st = normalizeModalStatus(tc.status);
+    const isDefectTrigger = isActiveDefectStatus(st) || st === "Blocked" || Boolean(tc.assignedDev);
     const existingDefect = StorageManager.getDefects().find(d => d.linkedTestCaseId === tc.id);
     const formattedRepro = (tc.steps || [])
       .map(s => `${s.step}. ${s.action}${s.expected ? ` -> ${s.expected}` : ""}`)
       .join("\n");
 
+    const mapTcStatusToDefectStatus = (testStatus) => {
+      if (testStatus === "Ready for Re-Test") return "Fixed - Ready for QA";
+      if (testStatus === "In Dev / Fixing" || testStatus === "Cannot Reproduce" || testStatus === "In Progress") return "In Progress";
+      if (testStatus === "Pass" || testStatus === "Verified & Closed" || testStatus === "Won't Fix / By Design") return "Resolved & Verified";
+      return "Open";
+    };
+
     if (isDefectTrigger) {
-      const defectStatus = isRetestStatus(tc.status)
-        ? "Fixed - Ready for QA"
-        : isPassStatus(tc.status)
-          ? "Resolved & Verified"
-          : "Open";
+      const defectStatus = mapTcStatusToDefectStatus(st);
       const severity = (tc.priority || "").includes("P0") ? "Critical" : (tc.priority || "").includes("P1") ? "Major" : "Medium";
 
       if (existingDefect) {
@@ -6544,7 +6638,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           assignee: tc.assignedDev || existingDefect.assignee || "Unassigned",
           status: defectStatus
         });
-      } else if (isFailStatus(tc.status) || tc.status === "Blocked" || tc.status === "Ready for Re-Test") {
+      } else if (isActiveDefectStatus(st) || st === "Blocked") {
         StorageManager.addDefect({
           summary: tc.title,
           linkedTestCaseId: tc.id,
@@ -6558,7 +6652,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           devNotes: tc.mediaUrl ? `Evidence attached (${tc.mediaType || 'image'}): ${tc.mediaName || tc.id}` : ""
         });
       }
-    } else if (existingDefect && isPassStatus(tc.status)) {
+    } else if (existingDefect && (isPassStatus(st) || st === "Won't Fix / By Design")) {
       StorageManager.updateDefect({
         ...existingDefect,
         status: "Resolved & Verified"
@@ -6587,10 +6681,14 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       });
     }
 
+    const editId = DOM.editTestCaseId ? DOM.editTestCaseId.value : "";
     const explanation = DOM.tcExplanation ? DOM.tcExplanation.value.trim() : "";
     const status = DOM.tcStatus ? DOM.tcStatus.value : "Untested";
     const assignedDev = DOM.tcAssignedDev ? DOM.tcAssignedDev.value.trim() : "";
-    const createdAt = (DOM.tcGeneratedTimestamp && DOM.tcGeneratedTimestamp.value) || new Date().toISOString().replace("T", " ").substring(0, 16);
+    const liveTimestamp = formatLocalTimestamp(new Date(), true);
+    const createdAt = editId
+      ? ((DOM.tcGeneratedTimestamp && DOM.tcGeneratedTimestamp.value) || liveTimestamp)
+      : liveTimestamp;
     const curUser = StorageManager.getCurrentUser();
 
     const testCaseData = {
@@ -6605,7 +6703,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       tags: assignedDev ? [assignedDev.toLowerCase().replace(/\s+/g, "-")] : [],
       steps,
       createdAt,
-      lastRun: createdAt,
+      lastRun: liveTimestamp,
       author: (curUser ? curUser.name : "QA Tester"),
       mediaUrl: state.currentTcMedia?.url || state.currentTcImage || "",
       mediaType: state.currentTcMedia?.mediaType || (state.currentTcImage ? "image" : ""),
@@ -6619,7 +6717,6 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
 
     try {
-      const editId = DOM.editTestCaseId ? DOM.editTestCaseId.value : "";
       let savedTc = null;
       if (editId) {
         testCaseData.id = editId;
@@ -6637,10 +6734,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           await SupabaseManager.syncTestCaseUpsert(savedTc);
         }
         syncLinkedDefectForTestCase(savedTc);
-        showToast(`Saved ${savedTc.id} to Supabase & synced with Dev Portal!`, "success");
+        showToast(`Saved ${savedTc.id} (${liveTimestamp}) to Supabase & synced with Dev Portal!`, "success");
       }
 
-      if (DOM.testCaseModal) DOM.testCaseModal.style.display = "none";
+      closeTestCaseModal();
       renderDashboard();
       renderTestCaseTable();
       renderSuitesSidebar();
@@ -6679,7 +6776,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.viewDetailTitle) DOM.viewDetailTitle.textContent = tc.title;
 
     let prioClass = tc.priority.includes("P0") ? "badge-p0" : tc.priority.includes("P1") ? "badge-p1" : tc.priority.includes("P3") ? "badge-p3" : "badge-p2";
-    let statusClass = isPassStatus(tc.status) ? "badge-passed" : isFailStatus(tc.status) ? "badge-failed" : tc.status === "Blocked" ? "badge-blocked" : isRetestStatus(tc.status) ? "badge-retest" : "badge-untested";
+    let statusClass = getStatusBadgeClass(tc.status);
 
     const stepsRowsHtml = (tc.steps || []).map(s => `
       <tr>
@@ -6803,7 +6900,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   window.markTestCaseStatus = function(testCaseId, newStatus) {
     const tc = StorageManager.getTestCaseById(testCaseId);
     if (!tc) return;
-    const nowStamp = new Date().toISOString().replace("T", " ").substring(0, 16);
+    const nowStamp = formatLocalTimestamp(new Date(), true);
     const updated = StorageManager.updateTestCase({ ...tc, status: newStatus, lastRun: nowStamp });
     syncLinkedDefectForTestCase(updated || { ...tc, status: newStatus });
     renderTestCaseTable();
@@ -6838,11 +6935,11 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (filterSev !== "all") filtered = filtered.filter(d => d.severity === filterSev);
     if (filterStat !== "all") filtered = filtered.filter(d => d.status === filterStat);
 
-    const open = defects.filter(d => d.status === "Open" || d.status === "In Progress");
+    const open = defects.filter(d => d.status === "Open" || d.status === "In Progress" || d.status === "Fail" || d.status === "In Dev / Fixing" || d.status === "Cannot Reproduce" || d.status === "Blocked");
     if (DOM.openBugsCount) DOM.openBugsCount.textContent = open.length;
-    if (DOM.criticalBugsCount) DOM.criticalBugsCount.textContent = open.filter(d => d.severity === "Critical" || d.priority.includes("P0")).length;
-    if (DOM.readyForRetestCount) DOM.readyForRetestCount.textContent = defects.filter(d => d.status === "Fixed - Ready for QA").length;
-    if (DOM.resolvedBugsCount) DOM.resolvedBugsCount.textContent = defects.filter(d => d.status === "Resolved & Verified" || d.status === "Closed").length;
+    if (DOM.criticalBugsCount) DOM.criticalBugsCount.textContent = open.filter(d => d.severity === "Critical" || (d.priority && d.priority.includes("P0"))).length;
+    if (DOM.readyForRetestCount) DOM.readyForRetestCount.textContent = defects.filter(d => d.status === "Fixed - Ready for QA" || d.status === "Ready for Re-Test").length;
+    if (DOM.resolvedBugsCount) DOM.resolvedBugsCount.textContent = defects.filter(d => d.status === "Resolved & Verified" || d.status === "Closed" || d.status === "Verified & Closed" || d.status === "Pass" || d.status === "Won't Fix / By Design").length;
 
     if (filtered.length === 0) {
       DOM.defectsTableBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-4">No defects found matching criteria.</td></tr>`;
@@ -6851,10 +6948,9 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
     DOM.defectsTableBody.innerHTML = filtered.map(d => {
       let sevClass = d.severity === "Critical" ? "badge-p0" : d.severity === "Major" ? "badge-p1" : "badge-p2";
-      let statusBadge = `<span class="badge badge-failed">${d.status}</span>`;
-      if (d.status === "In Progress") statusBadge = `<span class="badge badge-blocked">In Progress</span>`;
-      if (d.status === "Fixed - Ready for QA") statusBadge = `<span class="badge badge-indigo"><i class="fa-solid fa-flask"></i> Ready for QA</span>`;
-      if (d.status === "Resolved & Verified" || d.status === "Closed") statusBadge = `<span class="badge badge-passed">${d.status}</span>`;
+      const mappedBadgeStatus = d.status === "Open" ? "Fail" : d.status === "Fixed - Ready for QA" ? "Ready for Re-Test" : (d.status === "Resolved & Verified" || d.status === "Closed") ? "Verified & Closed" : d.status;
+      const badgeCls = getStatusBadgeClass(mappedBadgeStatus);
+      const statusBadge = `<span class="badge ${badgeCls}">${d.status === "Fixed - Ready for QA" || d.status === "Ready for Re-Test" ? '<i class="fa-solid fa-flask"></i> ' : ''}${escapeHtml(d.status)}</span>`;
 
       return `
         <tr>
@@ -7445,9 +7541,14 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     const suites = StorageManager.getSuites();
     const cases = StorageManager.getTestCases();
 
+    if (suites.length === 0) {
+      DOM.suitesGridCards.innerHTML = `<div class="dashboard-card p-4 text-center text-muted" style="grid-column: 1 / -1;">No modules or test suites created yet in Supabase. Click <strong>Create Suite</strong> above to add one.</div>`;
+      return;
+    }
+
     DOM.suitesGridCards.innerHTML = suites.map(suite => {
       const suiteCases = cases.filter(c => c.suiteId === suite.id);
-      const passed = suiteCases.filter(c => c.status === "Passed").length;
+      const passed = suiteCases.filter(c => isPassStatus(c.status)).length;
       const passRate = suiteCases.length > 0 ? Math.round((passed / suiteCases.length) * 100) : 0;
 
       return `
@@ -7456,7 +7557,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
             <div class="suite-card-icon"><i class="${suite.icon || 'fa-solid fa-folder'}"></i></div>
             <div class="suite-card-info">
               <h3>${escapeHtml(suite.name)}</h3>
-              <p class="suite-card-desc">${escapeHtml(suite.description || 'General test suite')}</p>
+              <p class="suite-card-desc">${escapeHtml(suite.description || 'Test module')}</p>
             </div>
           </div>
           <div class="suite-card-footer">

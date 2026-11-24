@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.10">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.12">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -203,10 +203,6 @@
     <!-- Top Workspace Bar (Fixed permanently at top with Logo on Top-Left) -->
     <header class="topbar">
       <div class="topbar-left">
-        <!-- Mobile Navigation Menu Toggle Button -->
-        <button type="button" class="icon-btn mobile-menu-toggle" id="menuToggleBtn" title="Toggle Navigation Menu" aria-label="Toggle navigation">
-          <i class="fa-solid fa-bars"></i>
-        </button>
         <!-- Fixed Logo on Top-Left (Outside and Above Sidebar) -->
         <div class="brand-logo fixed-top-logo">
           <div class="logo-icon">
@@ -229,13 +225,7 @@
         </div>
       </div>
 
-      <div class="topbar-center">
-        <div class="uiverse-search-wrapper" id="topbarSearchWrapper">
-          <input type="text" name="text" placeholder="Search test cases, bugs, suites... (Press '/')" class="input" id="globalSearchInput" autocomplete="off" />
-        </div>
-      </div>
-
-      <div class="topbar-right">
+      <div class="topbar-right pr-6">
         <div class="theme-toggle-wrapper">
           <label class="theme-switch" title="Toggle Theme">
             <input type="checkbox" class="theme-switch__checkbox" id="themeSwitchCheckbox" />
@@ -559,9 +549,10 @@
 
         <!-- QA VIEW 2: REPOSITORY -->
         <section class="view-panel" id="view-test-cases">
+          <!-- Row 1: Page Header -->
           <div class="view-header">
             <div>
-              <h1 class="view-title">Test Cases & Manual Logs</h1>
+              <h1 class="view-title">Test Cases &amp; Manual Logs</h1>
               <p class="view-subtitle">Author, review, categorize, and log manual test execution results.</p>
             </div>
             <div class="view-actions">
@@ -571,36 +562,42 @@
             </div>
           </div>
 
-          <div class="repository-layout">
-            <aside class="suites-sidebar">
-              <div class="suites-sidebar-header">
-                <h3>Test Suites</h3>
-                <button class="icon-btn-xs" id="addNewSuiteBtn" title="Create New Suite"><i class="fa-solid fa-plus"></i></button>
-              </div>
-              <div class="suites-search">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="suiteSearchInput" placeholder="Filter suites...">
-              </div>
-              <div class="suites-nav-list" id="suiteNavList"></div>
-            </aside>
+          <div class="repository-fullwidth">
+            <!-- Horizontal Suite / Module Pill Bar -->
+            <div class="suite-pill-bar" id="suiteNavList" role="tablist" aria-label="Module &amp; Suite Filters">
+              <!-- Dynamically rendered: All Cases + Supabase Suites + New Suite pill -->
+            </div>
 
             <div class="repository-main">
+              <!-- Row 2: Unified Dark Slate Filter Toolbar -->
               <div class="repo-filter-bar">
-                <div class="uiverse-search-wrapper" style="width: auto;">
-                  <input placeholder="Search by title, ID, tag..." type="text" name="text" class="input" id="testCaseSearchInput" autocomplete="off" />
+                <div class="repo-search-box">
+                  <i class="fa-solid fa-magnifying-glass repo-search-icon"></i>
+                  <input placeholder="Search by title, ID, tag..." type="text" name="text" class="repo-dark-input" id="testCaseSearchInput" autocomplete="off" />
                 </div>
 
                 <div class="filter-group">
-                  <select id="filterStatus" class="nexus-select">
+                  <select id="filterStatus" class="nexus-select repo-dark-select" aria-label="Filter by Status">
                     <option value="all">All Statuses</option>
-                    <option value="Untested">Untested</option>
-                    <option value="Pass">Pass</option>
-                    <option value="Fail">Fail</option>
-                    <option value="Blocked">Blocked</option>
-                    <option value="Ready for Re-Test">Ready for Re-Test</option>
+                    <optgroup label="QA Testing">
+                      <option value="Untested">Untested</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Pass">Pass</option>
+                      <option value="Fail">Fail</option>
+                      <option value="Blocked">Blocked</option>
+                    </optgroup>
+                    <optgroup label="Developer Triage">
+                      <option value="In Dev / Fixing">In Dev / Fixing</option>
+                      <option value="Cannot Reproduce">Cannot Reproduce</option>
+                      <option value="Ready for Re-Test">Ready for Re-Test</option>
+                    </optgroup>
+                    <optgroup label="Resolution">
+                      <option value="Verified &amp; Closed">Verified &amp; Closed</option>
+                      <option value="Won't Fix / By Design">Won't Fix / By Design</option>
+                    </optgroup>
                   </select>
 
-                  <select id="filterPriority" class="nexus-select">
+                  <select id="filterPriority" class="nexus-select repo-dark-select" aria-label="Filter by Priority">
                     <option value="all">All Priorities</option>
                     <option value="P0 - Critical">P0 - Critical</option>
                     <option value="P1 - High">P1 - High</option>
@@ -608,18 +605,9 @@
                     <option value="P3 - Low">P3 - Low</option>
                   </select>
 
-                  <select id="filterType" class="nexus-select">
-                    <option value="all">All Categories</option>
-                    <option value="Functional">Functional</option>
-                    <option value="UI / UX">UI / UX</option>
-                    <option value="Regression">Regression</option>
-                    <option value="Smoke">Smoke</option>
-                    <option value="Integration">Integration</option>
-                    <option value="Security">Security</option>
-                    <option value="Performance">Performance</option>
-                  </select>
-
-                  <button class="btn btn-ghost btn-sm" id="resetFiltersBtn" title="Reset Filters"><i class="fa-solid fa-filter-circle-xmark"></i></button>
+                  <button class="btn btn-ghost btn-sm repo-clear-btn" id="resetFiltersBtn" title="Clear Filters" aria-label="Clear Filters">
+                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                  </button>
                 </div>
               </div>
 
@@ -630,8 +618,8 @@
                   <span>test cases selected</span>
                 </div>
                 <div class="batch-buttons">
-                  <button class="btn btn-success btn-xs" id="batchPassBtn"><i class="fa-solid fa-check"></i> Mark Passed</button>
-                  <button class="btn btn-danger btn-xs" id="batchFailBtn"><i class="fa-solid fa-xmark"></i> Mark Failed</button>
+                  <button class="btn btn-success btn-xs" id="batchPassBtn"><i class="fa-solid fa-check"></i> Mark Pass</button>
+                  <button class="btn btn-danger btn-xs" id="batchFailBtn"><i class="fa-solid fa-xmark"></i> Mark Fail</button>
                   <button class="btn btn-warning btn-xs" id="batchBlockBtn"><i class="fa-solid fa-ban"></i> Mark Blocked</button>
                   <div class="styled-delete-wrapper btn-sm">
                     <button type="button" class="button" id="batchDeleteBtn" title="Delete Selected">
@@ -641,36 +629,41 @@
                 </div>
               </div>
 
-              <div class="table-card">
+              <!-- Full-Width Data Table & Footer Bar -->
+              <div class="table-card repo-table-card">
                 <div class="table-responsive">
-                  <table class="nexus-table">
+                  <table class="nexus-table repo-full-table" id="testCasesTable">
                     <thead>
                       <tr>
-                        <th width="40"><input type="checkbox" id="selectAllCheckbox"></th>
-                        <th width="110">Test ID</th>
+                        <th width="44"><input type="checkbox" id="selectAllCheckbox"></th>
+                        <th width="110" class="sortable" data-sort="id">Test ID</th>
                         <th>Test Case Title</th>
-                        <th width="140">Suite</th>
-                        <th width="110">Priority</th>
-                        <th width="110">Category</th>
-                        <th width="110">Status</th>
-                        <th width="160">Actions</th>
+                        <th width="165">Module / Suite</th>
+                        <th width="135" class="sortable" data-sort="priority">Priority</th>
+                        <th width="165" class="sortable" data-sort="status">Status</th>
+                        <th width="155" class="sortable" data-sort="lastRun">Updated</th>
+                        <th width="120" class="text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody id="testCasesTableBody"></tbody>
                   </table>
                 </div>
 
-                <div class="empty-state" id="testCaseEmptyState" style="display: none;">
+                <div class="empty-state repo-empty-state" id="testCaseEmptyState" style="display: none;">
                   <div class="empty-icon"><i class="fa-solid fa-vials"></i></div>
                   <h3>No test cases found</h3>
-                  <p>Try adjusting your search query, status filters, or create a new test case.</p>
-                  <button class="btn btn-primary btn-sm mt-3" id="emptyCreateBtn"><i class="fa-solid fa-plus"></i> Create New Test Case</button>
+                  <p class="m-0">Try adjusting your search query or filters, or use <strong>+ New Test Case</strong> above to log one.</p>
                 </div>
 
-                <div class="table-footer">
-                  <div class="table-stats">
-                    Showing <span id="showingCount">0</span> of <span id="totalTestsCount">0</span> test cases
-                    (<span class="text-emerald" id="statPassed">0 Passed</span>, <span class="text-rose" id="statFailed">0 Failed</span>, <span class="text-amber" id="statBlocked">0 Blocked</span>, <span id="statUntested">0 Untested</span>)
+                <div class="table-footer repo-table-footer">
+                  <div class="table-footer-left">
+                    Showing <strong id="showingCount">0</strong> of <strong id="totalTestsCount">0</strong> test cases
+                  </div>
+                  <div class="table-footer-counts">
+                    <span class="badge badge-passed text-2xs" id="statPassed">0 Pass / Verified</span>
+                    <span class="badge badge-failed text-2xs" id="statFailed">0 Active Defects / Fail</span>
+                    <span class="badge badge-blocked text-2xs" id="statBlocked">0 Blocked</span>
+                    <span class="badge badge-untested text-2xs" id="statUntested">0 Untested / Pending</span>
                   </div>
                 </div>
               </div>
@@ -725,7 +718,12 @@
                 <option value="all">All Statuses</option>
                 <option value="Open">Open</option>
                 <option value="In Progress">In Progress</option>
+                <option value="In Dev / Fixing">In Dev / Fixing</option>
+                <option value="Cannot Reproduce">Cannot Reproduce</option>
+                <option value="Ready for Re-Test">Ready for Re-Test</option>
                 <option value="Fixed - Ready for QA">Fixed - Ready for QA</option>
+                <option value="Verified &amp; Closed">Verified &amp; Closed</option>
+                <option value="Won't Fix / By Design">Won't Fix / By Design</option>
                 <option value="Resolved & Verified">Resolved & Verified</option>
               </select>
             </div>
@@ -1402,11 +1400,22 @@
               <div class="form-group m-0">
                 <label for="tcStatus">Status</label>
                 <select id="tcStatus" class="nexus-select w-100">
-                  <option value="Untested" selected>Untested</option>
-                  <option value="Pass">Pass</option>
-                  <option value="Fail">Fail</option>
-                  <option value="Blocked">Blocked</option>
-                  <option value="Ready for Re-Test">Ready for Re-Test</option>
+                  <optgroup label="QA Testing">
+                    <option value="Untested" selected>Untested</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Pass">Pass</option>
+                    <option value="Fail">Fail</option>
+                    <option value="Blocked">Blocked</option>
+                  </optgroup>
+                  <optgroup label="Developer Triage">
+                    <option value="In Dev / Fixing">In Dev / Fixing</option>
+                    <option value="Cannot Reproduce">Cannot Reproduce</option>
+                    <option value="Ready for Re-Test">Ready for Re-Test</option>
+                  </optgroup>
+                  <optgroup label="Resolution">
+                    <option value="Verified &amp; Closed">Verified &amp; Closed</option>
+                    <option value="Won't Fix / By Design">Won't Fix / By Design</option>
+                  </optgroup>
                 </select>
               </div>
               <div class="form-group m-0">
@@ -1833,8 +1842,8 @@
         <div class="d-flex align-center gap-2">
           <button type="button" class="btn btn-secondary btn-sm" id="editDetailTestCaseBtn"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
           <button type="button" class="btn btn-warning btn-sm" id="detailBlockedTestCaseBtn" title="Mark as Blocked"><i class="fa-solid fa-ban"></i> Blocked</button>
-          <button type="button" class="btn btn-danger btn-sm" id="detailFailedTestCaseBtn" title="Mark as Failed"><i class="fa-solid fa-xmark"></i> Failed</button>
-          <button type="button" class="btn btn-success btn-sm" id="detailPassedTestCaseBtn" title="Mark as Passed"><i class="fa-solid fa-check"></i> Passed</button>
+          <button type="button" class="btn btn-danger btn-sm" id="detailFailedTestCaseBtn" title="Mark as Fail"><i class="fa-solid fa-xmark"></i> Fail</button>
+          <button type="button" class="btn btn-success btn-sm" id="detailPassedTestCaseBtn" title="Mark as Pass"><i class="fa-solid fa-check"></i> Pass</button>
         </div>
       </div>
     </div>
@@ -2294,10 +2303,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <!-- Scripts -->
-  <script src="js/data.js?v=1.0.5"></script>
-  <script src="js/supabase.js?v=1.0.10"></script>
-  <script src="js/storage.js?v=1.0.14"></script>
+  <script src="js/data.js?v=1.0.6"></script>
+  <script src="js/supabase.js?v=1.0.11"></script>
+  <script src="js/storage.js?v=1.0.16"></script>
   <script src="js/qa-assistant.js?v=1.0.5"></script>
-  <script src="js/app.js?v=1.0.15"></script>
+  <script src="js/app.js?v=1.0.17"></script>
 </body>
 </html>

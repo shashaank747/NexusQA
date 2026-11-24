@@ -272,6 +272,9 @@ const SupabaseManager = {
         suites[idx] = payload.new;
         StorageManager.saveSuites(suites, true);
       }
+    } else if (payload.eventType === "DELETE") {
+      const filtered = suites.filter(s => s.id !== payload.old.id);
+      StorageManager.saveSuites(filtered, true);
     }
   },
 
@@ -456,7 +459,7 @@ const SupabaseManager = {
         this.client.from("nexus_users").select("*")
       ]);
 
-      if (suitesRes.data && suitesRes.data.length > 0) {
+      if (suitesRes.data) {
         StorageManager.saveSuites(suitesRes.data, false);
       }
       if (testCasesRes.data) {
@@ -766,6 +769,21 @@ const SupabaseManager = {
       reader.onerror = () => reject(new Error("Failed to read media file"));
       reader.readAsDataURL(file);
     });
+  },
+
+  async syncSuiteUpsert(suite) {
+    const client = this.getClient();
+    if (client && suite) {
+      try {
+        const { error } = await client.from("nexus_suites").upsert({
+          id: suite.id,
+          name: suite.name,
+          description: suite.description || "",
+          icon: suite.icon || "fa-solid fa-folder"
+        });
+        if (error) console.warn("Supabase suite upsert error:", error);
+      } catch (e) { console.warn("Supabase suite upsert error:", e); }
+    }
   },
 
   async ensureSuiteInSupabase(suiteId) {

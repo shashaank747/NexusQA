@@ -62,8 +62,20 @@ const StorageManager = {
       } catch(e) {}
     }
 
-    if (!localStorage.getItem(STORAGE_KEYS.SUITES)) {
-      localStorage.setItem(STORAGE_KEYS.SUITES, JSON.stringify(SEED_SUITES));
+    const legacySeedSuiteIds = new Set(["suite-auth", "suite-checkout", "suite-api", "suite-search", "suite-security", "suite-perf"]);
+    const rawSuites = localStorage.getItem(STORAGE_KEYS.SUITES);
+    if (rawSuites) {
+      try {
+        const parsedSuites = JSON.parse(rawSuites);
+        if (Array.isArray(parsedSuites)) {
+          const cleaned = parsedSuites.filter(s => !legacySeedSuiteIds.has(s.id));
+          if (cleaned.length !== parsedSuites.length) {
+            localStorage.setItem(STORAGE_KEYS.SUITES, JSON.stringify(cleaned));
+          }
+        }
+      } catch(e) {}
+    } else {
+      localStorage.setItem(STORAGE_KEYS.SUITES, JSON.stringify([]));
     }
 
     // Sanitize & filter out legacy mock users from local storage
@@ -1402,7 +1414,9 @@ const StorageManager = {
       }, 0) + 1;
       testCase.id = `TC-${String(nextNum).padStart(3, "0")}`;
     }
-    const nowStamp = new Date().toISOString().replace("T", " ").substring(0, 16);
+    const d = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    const nowStamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     testCase.createdAt = testCase.createdAt || nowStamp;
     testCase.lastRun = testCase.lastRun || nowStamp;
     const curUser = this.getCurrentUser();
@@ -1483,10 +1497,13 @@ const StorageManager = {
   addSuite(suite) {
     const suites = this.getSuites();
     if (!suite.id) {
-      suite.id = "suite-" + suite.name.toLowerCase().replace(/[^a-z0-9]/g, "-").substring(0, 20);
+      suite.id = "suite-" + suite.name.toLowerCase().replace(/[^a-z0-9]/g, "-").substring(0, 20) + "-" + Date.now().toString(36).slice(-4);
     }
     suites.push(suite);
     this.saveSuites(suites);
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.syncSuiteUpsert) {
+      SupabaseManager.syncSuiteUpsert(suite);
+    }
     return suite;
   },
 

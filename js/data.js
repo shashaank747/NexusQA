@@ -5,44 +5,7 @@
 
 const SEED_USERS = [];
 
-const SEED_SUITES = [
-  {
-    id: "suite-auth",
-    name: "Authentication & Authorization",
-    description: "Login, Registration, OAuth SSO, MFA, Session management and password recovery flows.",
-    icon: "fa-solid fa-lock"
-  },
-  {
-    id: "suite-checkout",
-    name: "Checkout, Cart & Payments",
-    description: "Shopping cart persistence, Stripe/PayPal payment gateway integrations, coupon codes, and tax calculation.",
-    icon: "fa-solid fa-credit-card"
-  },
-  {
-    id: "suite-api",
-    name: "REST API & Microservices",
-    description: "Backend endpoints, rate limiting, JWT token verification, status codes, and GraphQL schema tests.",
-    icon: "fa-solid fa-code"
-  },
-  {
-    id: "suite-search",
-    name: "Search, Catalog & Filtering",
-    description: "Elasticsearch querying, faceted filtering, pagination, sorting algorithms, and product detail rendering.",
-    icon: "fa-solid fa-cart-shopping"
-  },
-  {
-    id: "suite-security",
-    name: "Security & Vulnerability",
-    description: "SQL Injection mitigation, XSS prevention, CSRF token validation, and rate limiter stress tests.",
-    icon: "fa-solid fa-shield-halved"
-  },
-  {
-    id: "suite-perf",
-    name: "Performance & Scalability",
-    description: "Lighthouse core web vitals, concurrent load handling, database response latency, and CDN caching.",
-    icon: "fa-solid fa-gauge-high"
-  }
-];
+const SEED_SUITES = [];
 
 // Controlled Dropdowns Configuration (Strict Controlled Values Architecture)
 const CONTROLLED_DROPDOWNS = {
