@@ -637,7 +637,7 @@ CREATE TABLE IF NOT EXISTS nexus_defects (id TEXT PRIMARY KEY, summary TEXT NOT 
 ALTER PUBLICATION supabase_realtime ADD TABLE nexus_suites, nexus_test_cases, nexus_defects;
 ALTER TABLE nexus_suites ENABLE ROW LEVEL SECURITY; ALTER TABLE nexus_test_cases ENABLE ROW LEVEL SECURITY; ALTER TABLE nexus_defects ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "Anon all" ON nexus_test_cases FOR ALL USING (true); CREATE POLICY "Anon all" ON nexus_defects FOR ALL USING (true);`;
-    
+
     navigator.clipboard.writeText(sqlSchema).then(() => {
       showToast("Copied Supabase SQL Schema to clipboard! Paste in Supabase SQL Editor.");
     });
@@ -874,7 +874,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             showToast(uploaded.storage === "supabase" ? "Avatar uploaded to Supabase Storage! Click Save Profile Details." : "Photo loaded into preview. Click Save Profile Details.", "info");
             return;
           }
-        } catch (err) {}
+        } catch (err) { }
       }
 
       const reader = new FileReader();
@@ -1018,7 +1018,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
       cards.forEach(card => {
         const rect = card.getBoundingClientRect();
-        
+
         // Skip hidden or off-screen elements
         if (rect.width === 0 || rect.height === 0 || rect.bottom < -50 || rect.top > window.innerHeight + 50) {
           return;
@@ -1032,7 +1032,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         if (distFromEdge < PROXIMITY_THRESHOLD) {
           // Proximity factor (1 inside card, decaying smoothly to 0 at edge + threshold)
           const proximity = Math.pow(1 - (distFromEdge / PROXIMITY_THRESHOLD), 1.25);
-          
+
           // Normalized offset from card center (-1 to 1)
           const centerX = rect.left + rect.width / 2;
           const centerY = rect.top + rect.height / 2;
@@ -1048,7 +1048,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
           card.classList.add("is-near");
           card.style.transform = `perspective(850px) translate3d(${transX}px, ${transY}px, ${transZ}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-          
+
           // Radial spotlight reflection coordinates
           card.style.setProperty("--mouse-x", `${(mouseX - rect.left).toFixed(1)}px`);
           card.style.setProperty("--mouse-y", `${(mouseY - rect.top).toFixed(1)}px`);
@@ -1152,7 +1152,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     localStorage.setItem("nexusqa_theme", theme);
   }
 
-  
+
   // Real-Time Topbar Clock
   function initTopbarClock() {
     const clockEl = document.getElementById("topbarClock");
@@ -1282,7 +1282,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }
       if (window.__pendingAuthNotice) {
         showToast(window.__pendingAuthNotice, "error");
-        try { delete window.__pendingAuthNotice; } catch (e) {}
+        try { delete window.__pendingAuthNotice; } catch (e) { }
       }
       setPortal("qa", "dashboard");
     } else {
@@ -1409,7 +1409,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   state.auth5Mode = "login";  // 'login' | 'signup'
   state.resendCooldownInterval = null;
 
-  window.showAuthAlert = function(message) {
+  window.showAuthAlert = function (message) {
     const alertEl = DOM.authInlineAlert || document.getElementById("authInlineAlert");
     const textEl = DOM.authInlineAlertText || document.getElementById("authInlineAlertText");
     if (alertEl && textEl) {
@@ -1421,12 +1421,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   };
 
-  window.hideAuthAlert = function() {
+  window.hideAuthAlert = function () {
     const alertEl = DOM.authInlineAlert || document.getElementById("authInlineAlert");
     if (alertEl) alertEl.style.display = "none";
   };
 
-  window.togglePasswordVisibility = function(inputId, btn) {
+  window.togglePasswordVisibility = function (inputId, btn) {
     const input = document.getElementById(inputId);
     if (!input) return;
     const isPassword = input.type === "password";
@@ -1437,7 +1437,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   };
 
-  window.switchAuthMode = function(mode) {
+  window.switchAuthMode = function (mode) {
     window.hideAuthAlert();
     state.auth5Mode = mode;
     const title = DOM.auth5Title || document.getElementById("auth5Title");
@@ -1460,9 +1460,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   // Backwards-compatible alias
   window.switchTesterAuthMode = window.switchAuthMode;
-  window.setAuth5Role = function() {}; // No-op
+  window.setAuth5Role = function () { }; // No-op
 
-  window.backToAuthForm = function() {
+  window.backToAuthForm = function () {
     const formState = DOM.auth5StateForm || document.getElementById("auth5StateForm");
     const inboxState = DOM.auth5InboxState || document.getElementById("auth5InboxState");
     const pendingState = DOM.testerPendingApprovalView || document.getElementById("testerPendingApprovalView");
@@ -1474,7 +1474,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     window.switchAuthMode(state.auth5Mode || "login");
   };
 
-  window.showInboxState = function(email, otpCode) {
+  window.showInboxState = function (email, otpCode) {
     const formState = DOM.auth5StateForm || document.getElementById("auth5StateForm");
     const inboxState = DOM.auth5InboxState || document.getElementById("auth5InboxState");
     const pendingState = DOM.testerPendingApprovalView || document.getElementById("testerPendingApprovalView");
@@ -1500,7 +1500,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     showToast(`Verification code sent to ${email}: [ ${otpCode} ]`, "info");
   };
 
-  window.showPendingState = function(email) {
+  window.showPendingState = function (email) {
     const formState = DOM.auth5StateForm || document.getElementById("auth5StateForm");
     const inboxState = DOM.auth5InboxState || document.getElementById("auth5InboxState");
     const pendingState = DOM.testerPendingApprovalView || document.getElementById("testerPendingApprovalView");
@@ -1514,7 +1514,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.pendingUserEmailLabel) DOM.pendingUserEmailLabel.textContent = email;
   };
 
-  window.handleOAuthSignIn = function(provider) {
+  window.handleOAuthSignIn = function (provider) {
     const providerName = provider === "github" ? "GitHub Enterprise" : "Google Workspace";
     showToast(`Connecting to ${providerName} SSO...`, "info");
 
@@ -1531,11 +1531,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }, 450);
   };
 
-  window.quickDemoLogin = function(role) {
+  window.quickDemoLogin = function (role) {
     const email = role === "dev" ? "dev@nexusqa.io" : "a@a";
     const emailInput = DOM.testerLoginEmail || document.getElementById("testerLoginEmail");
     if (emailInput) emailInput.value = email;
-    
+
     const submitBtn = DOM.btnTesterLoginSubmit || document.getElementById("btnTesterLoginSubmit");
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -1584,11 +1584,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   }
 
   // Backward compatibility alias methods
-  window.switchAuthTab = function(tab) {
+  window.switchAuthTab = function (tab) {
     window.setAuth5Role(tab);
   };
 
-  window.switchTesterAuthView = function(view) {
+  window.switchTesterAuthView = function (view) {
     if (view === "login") window.switchTesterAuthMode("login");
     else if (view === "signup") window.switchTesterAuthMode("signup");
     else if (view === "otp") window.showInboxState(state.pendingRegistrationEmail || "tester@company.com", state.currentOtpCode);
@@ -1596,8 +1596,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   };
 
   // --- Real Email Client Handlers (Simulated UI popover disabled) ---
-  window.showSimulatedEmail = function() {};
-  window.dismissSimulatedEmail = function() {};
+  window.showSimulatedEmail = function () { };
+  window.dismissSimulatedEmail = function () { };
 
   // --- React Bits <CodeSlots /> State & Controller ---
   const codeSlotsState = {
@@ -1624,7 +1624,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     slots.forEach((slot, idx) => {
       const digitEl = slot.querySelector(".code-slots__digit");
       const char = digits[idx] || "";
-      
+
       if (char) {
         slot.setAttribute("data-filled", "");
         if (digitEl) digitEl.textContent = char;
@@ -1642,10 +1642,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     // Blinking Caret positioning
     if (caret) {
-      const showCaret = codeSlotsState.focused && 
-                        codeSlotsState.status !== "success" && 
-                        codeSlotsState.status !== "error" && 
-                        !digits[codeSlotsState.active];
+      const showCaret = codeSlotsState.focused &&
+        codeSlotsState.status !== "success" &&
+        codeSlotsState.status !== "error" &&
+        !digits[codeSlotsState.active];
       if (showCaret) {
         caret.setAttribute("data-show", "");
         const x = codeSlotsState.active * codeSlotsState.pitch + (codeSlotsState.slotSize / 2) - 1;
@@ -1665,8 +1665,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     // Accessible screen reader announcement
     if (srCount) {
-      srCount.textContent = codeSlotsState.status === "success" 
-        ? "Code accepted" 
+      srCount.textContent = codeSlotsState.status === "success"
+        ? "Code accepted"
         : `${digits.length} of ${codeSlotsState.length} digits entered`;
     }
   }
@@ -1712,7 +1712,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   }
 
-  window.resetCodeSlots = function() {
+  window.resetCodeSlots = function () {
     codeSlotsState.value = "";
     codeSlotsState.active = 0;
     codeSlotsState.status = "idle";
@@ -1721,14 +1721,14 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     renderCodeSlots();
   };
 
-  window.autoFillOtp = function(code) {
+  window.autoFillOtp = function (code) {
     const targetCode = String(code || state.currentOtpCode || "").replace(/\D/g, "").slice(0, 6);
     if (!targetCode) return;
 
     codeSlotsState.status = "idle";
     let cur = "";
     let i = 0;
-    
+
     // Sequential cascade landing animation
     function cascadeFill() {
       if (i < targetCode.length) {
@@ -2054,7 +2054,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   }
 
-  window.quickLoginPersona = function(identifier) {
+  window.quickLoginPersona = function (identifier) {
     const users = StorageManager.getUsers();
     const cleanId = (identifier || "").toLowerCase().trim();
     const user = users.find(u => u.id === identifier || u.email.toLowerCase() === cleanId);
@@ -2077,7 +2077,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       window.location.replace("index.html");
     });
   }
-  
+
   if (DOM.switchUserQuickBtn) {
     DOM.switchUserQuickBtn.addEventListener("click", () => {
       state.explicitLogoutHandled = true;
@@ -2267,8 +2267,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const pendingCount = pending.length;
     const activeCount = activeMembers.length;
     const verifiedUsers = allUsers.filter(u => u.emailVerified === true || u.emailVerified === "true" || u.email_verified === true);
-    const otpVerifiedPercent = allUsers.length > 0 
-      ? Math.round((verifiedUsers.length / allUsers.length) * 100) + "%" 
+    const otpVerifiedPercent = allUsers.length > 0
+      ? Math.round((verifiedUsers.length / allUsers.length) * 100) + "%"
       : "0%";
 
     if (DOM.kpiPendingApprovalsCount) DOM.kpiPendingApprovalsCount.textContent = pendingCount;
@@ -2299,14 +2299,14 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         DOM.pendingApprovalsListContainer.innerHTML = `
           <div class="pending-approval-cards-grid">
             ${pending.map(user => {
-              const isDev = user.role === "dev";
-              const avatarClass = isDev ? "avatar-dev" : "avatar-qa";
-              const roleTitle = escapeHtml(user.roleTitle || (isDev ? (user.devLevel === 'senior' ? 'Senior Developer' : 'Developer') : 'QA Tester'));
-              const roleBadge = isDev
-                ? `<span class="badge badge-ai" style="background: rgba(16, 185, 129, 0.15) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; font-size:11px;"><i class="fa-solid fa-code"></i> ${roleTitle}</span>`
-                : `<span class="badge badge-untested" style="background: rgba(99, 102, 241, 0.15) !important; color: #818cf8 !important; border: 1px solid rgba(99, 102, 241, 0.3) !important; font-size:11px;"><i class="fa-solid fa-vial-circle-check"></i> ${roleTitle}</span>`;
+          const isDev = user.role === "dev";
+          const avatarClass = isDev ? "avatar-dev" : "avatar-qa";
+          const roleTitle = escapeHtml(user.roleTitle || (isDev ? (user.devLevel === 'senior' ? 'Senior Developer' : 'Developer') : 'QA Tester'));
+          const roleBadge = isDev
+            ? `<span class="badge badge-ai" style="background: rgba(16, 185, 129, 0.15) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; font-size:11px;"><i class="fa-solid fa-code"></i> ${roleTitle}</span>`
+            : `<span class="badge badge-untested" style="background: rgba(99, 102, 241, 0.15) !important; color: #818cf8 !important; border: 1px solid rgba(99, 102, 241, 0.3) !important; font-size:11px;"><i class="fa-solid fa-vial-circle-check"></i> ${roleTitle}</span>`;
 
-              return `
+          return `
                 <div class="pending-approval-card" id="pending-card-${user.id}">
                   <div class="pending-req-header">
                     ${renderUserAvatar(user, { size: 38, fontSize: 13 })}
@@ -2335,7 +2335,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                   </div>
                 </div>
               `;
-            }).join("")}
+        }).join("")}
           </div>
         `;
       }
@@ -2377,7 +2377,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           const isDev = u.role === "dev";
           const isSeniorMember = StorageManager.isSeniorDev(u);
           const avatarClass = isDev ? "avatar-dev" : "avatar-qa";
-          
+
           let rolePill = '';
           if (isDev) {
             rolePill = `<span class="badge badge-ai" style="background: rgba(16, 185, 129, 0.15) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important;"><i class="fa-solid fa-code"></i> ${escapeHtml(u.roleTitle || (isSeniorMember ? 'Senior Developer' : 'Developer'))}</span>`;
@@ -2394,7 +2394,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             : `<span class="badge badge-secondary text-xs text-muted">0 Projects</span>`;
 
           const isSelf = currentUser && (currentUser.id === u.id || (currentUser.email && u.email && currentUser.email.toLowerCase() === u.email.toLowerCase()));
-          
+
           const actionCell = isSenior
             ? `<div class="d-flex align-center gap-1">
                 <button class="btn btn-secondary btn-xs" onclick="window.openEditMemberModal('${u.id}')" title="Edit member details"><i class="fa-solid fa-user-pen"></i> Edit</button>
@@ -2434,7 +2434,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   }
 
-  window.openEditMemberModal = function(userId) {
+  window.openEditMemberModal = function (userId) {
     const user = StorageManager.getUsers().find(u => u.id === userId);
     if (!user) {
       showToast("User not found", "error");
@@ -2492,7 +2492,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.editMemberModal) DOM.editMemberModal.style.display = "flex";
   };
 
-  window.deleteMember = async function(userId) {
+  window.deleteMember = async function (userId) {
     const isSenior = StorageManager.isSeniorDev(state.currentUser);
     if (!isSenior) {
       showToast("Permission Denied: Only Senior Developers can remove users.", "error");
@@ -2650,7 +2650,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     });
   }
 
-  window.assignUserDesignation = async function(userId, newDesignation) {
+  window.assignUserDesignation = async function (userId, newDesignation) {
     const currentUser = StorageManager.getCurrentUser() || state.currentUser;
     if (!StorageManager.isSeniorDev(currentUser)) {
       showToast("Access Denied: Only Super Admin can assign designations.", "error");
@@ -2705,7 +2705,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   };
 
-  window.approveTester = async function(userId) {
+  window.approveTester = async function (userId) {
     const currentUser = StorageManager.getCurrentUser() || state.currentUser;
     if (!StorageManager.isSeniorDev(currentUser)) {
       showToast("Access Denied: Only Senior Developers can approve new workspace members.", "error");
@@ -2739,7 +2739,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   };
 
-  window.rejectTester = async function(userId) {
+  window.rejectTester = async function (userId) {
     const currentUser = StorageManager.getCurrentUser() || state.currentUser;
     if (!StorageManager.isSeniorDev(currentUser)) {
       showToast("Access Denied: Only Senior Developers can reject workspace requests.", "error");
@@ -2777,7 +2777,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   };
 
-  const renderApprovalsView = function() {
+  const renderApprovalsView = function () {
     if (typeof renderDevApprovals === "function") renderDevApprovals();
   };
   window.renderDevApprovals = renderDevApprovals;
@@ -2882,7 +2882,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (viewName === "defects") renderDefects();
     if (viewName === "ai-generator") renderAIGeneratorSuiteDropdown();
     if (viewName === "conference") {
-      try { localStorage.setItem("nexusqa_conference_has_new", "false"); } catch(e) {}
+      try { localStorage.setItem("nexusqa_conference_has_new", "false"); } catch (e) { }
       const badge = document.getElementById("conferenceNavBadge") || document.getElementById("devConferenceNavBadge");
       if (badge) badge.style.display = "none";
       renderConference();
@@ -2891,7 +2891,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (viewName === "dev-approvals") {
       renderDevApprovals();
       if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
-        SupabaseManager.fetchUsersFromSupabase().then(() => renderDevApprovals()).catch(() => {});
+        SupabaseManager.fetchUsersFromSupabase().then(() => renderDevApprovals()).catch(() => { });
       }
     }
     if (viewName === "dev-audit") {
@@ -2946,9 +2946,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         <div class="text-xs font-bold text-muted mb-1"><i class="fa-solid fa-photo-film text-cyan"></i> Logged Evidence Attachments (${allMedia.length})</div>
         <div class="d-flex flex-wrap gap-2">
           ${allMedia.map(m => m.fileType === "video"
-            ? `<div class="ticket-media-thumb"><video src="${escapeHtml(m.fileUrl)}" controls muted playsinline style="max-height:120px; border-radius:8px; background:#000;"></video><div class="text-2xs text-muted mt-1">${escapeHtml(m.fileName)}</div></div>`
-            : `<a href="${escapeHtml(m.fileUrl)}" target="_blank" rel="noopener noreferrer" class="ticket-media-thumb"><img src="${escapeHtml(m.fileUrl)}" alt="${escapeHtml(m.fileName)}" style="max-height:90px; border-radius:8px; border:1px solid var(--border-color);"><div class="text-2xs text-muted mt-1">${escapeHtml(m.fileName)}</div></a>`
-          ).join("")}
+      ? `<div class="ticket-media-thumb"><video src="${escapeHtml(m.fileUrl)}" controls muted playsinline style="max-height:120px; border-radius:8px; background:#000;"></video><div class="text-2xs text-muted mt-1">${escapeHtml(m.fileName)}</div></div>`
+      : `<a href="${escapeHtml(m.fileUrl)}" target="_blank" rel="noopener noreferrer" class="ticket-media-thumb"><img src="${escapeHtml(m.fileUrl)}" alt="${escapeHtml(m.fileName)}" style="max-height:90px; border-radius:8px; border:1px solid var(--border-color);"><div class="text-2xs text-muted mt-1">${escapeHtml(m.fileName)}</div></a>`
+    ).join("")}
         </div>
       </div>
     ` : "";
@@ -3319,7 +3319,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   }
 
-  window.jumpToGlobalSearchMatch = function(kind, id) {
+  window.jumpToGlobalSearchMatch = function (kind, id) {
     const dropdown = document.getElementById("globalSearchResultsDropdown");
     if (dropdown) dropdown.style.display = "none";
     closeMobileSearchBar();
@@ -3690,7 +3690,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     showToast("Developer feed refreshed!");
   });
 
-  window.openDevFixModal = function(bugId) {
+  window.openDevFixModal = function (bugId) {
     const defect = StorageManager.getDefectById(bugId);
     if (!defect) return;
 
@@ -3859,7 +3859,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     showToast(`Bug ${bugId} updated to '${status}' & synced with QA!`);
   });
 
-  window.updateTestCaseStatusFromDev = async function(tcId, newStatus) {
+  window.updateTestCaseStatusFromDev = async function (tcId, newStatus) {
     const tc = StorageManager.getTestCaseById(tcId);
     if (!tc) return;
     const oldStatus = tc.status || "Untested";
@@ -3937,13 +3937,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     const visibleFailedTests = state.globalSearchQuery
       ? failedTests.filter(f => {
-          const tc = f.testCase || {};
-          const gq = state.globalSearchQuery;
-          return (tc.id && tc.id.toLowerCase().includes(gq)) ||
-            (tc.title && tc.title.toLowerCase().includes(gq)) ||
-            (f.notes && f.notes.toLowerCase().includes(gq)) ||
-            (f.status && f.status.toLowerCase().includes(gq));
-        })
+        const tc = f.testCase || {};
+        const gq = state.globalSearchQuery;
+        return (tc.id && tc.id.toLowerCase().includes(gq)) ||
+          (tc.title && tc.title.toLowerCase().includes(gq)) ||
+          (f.notes && f.notes.toLowerCase().includes(gq)) ||
+          (f.status && f.status.toLowerCase().includes(gq));
+      })
       : failedTests;
 
     if (DOM.devFailuresContainer) {
@@ -3995,7 +3995,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   }
 
-  window.openDevFixModalForTest = function(tcId) {
+  window.openDevFixModalForTest = function (tcId) {
     const defect = StorageManager.getDefects().find(d => d.linkedTestCaseId === tcId);
     if (defect) {
       window.openDevFixModal(defect.id);
@@ -4019,7 +4019,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   // CONFERENCE ROOM LOGIC (Project Cards & Live QA <-> Dev Real-Time Chat)
   // =========================================================================
 
-  window.openConferenceProject = function(projectId) {
+  window.openConferenceProject = function (projectId) {
     if (!projectId) return;
     state.activeConferenceProjectId = projectId;
     const banner = document.getElementById("conferenceMeetShareBanner");
@@ -4034,12 +4034,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   };
 
-  window.closeConferenceProject = function() {
+  window.closeConferenceProject = function () {
     state.activeConferenceProjectId = null;
     renderConference();
   };
 
-  window.deleteProjectPrompt = function(projectId) {
+  window.deleteProjectPrompt = function (projectId) {
     const currentUser = StorageManager.getCurrentUser() || state.currentUser;
     if (!StorageManager.isSeniorDev(currentUser)) {
       showToast("Access Denied: Project deletion is strictly restricted to Senior Developers only.", "error");
@@ -4057,7 +4057,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       try {
         StorageManager.deleteConferenceProject(projectId, currentUser);
         showToast(`Project "${project.name}" deleted successfully!`, "info");
-        
+
         if (state.activeConferenceProjectId === projectId) {
           window.closeConferenceProject();
         } else {
@@ -4133,7 +4133,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     // Filter by Search Query
     if (state.conferenceProjectSearch && state.conferenceProjectSearch.trim()) {
       const q = state.conferenceProjectSearch.toLowerCase().trim();
-      projects = projects.filter(p => 
+      projects = projects.filter(p =>
         (p.name && p.name.toLowerCase().includes(q)) ||
         (p.description && p.description.toLowerCase().includes(q)) ||
         (p.category && p.category.toLowerCase().includes(q)) ||
@@ -4330,8 +4330,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     container.innerHTML = messages.map(msg => {
       const isDev = msg.senderRole === "dev" || (msg.roleTitle && msg.roleTitle.toLowerCase().includes("dev"));
       const isMe = (currentUser && currentUser.id && msg.senderId === currentUser.id) ||
-                   (currentUser && currentUser.name && msg.senderName === currentUser.name) ||
-                   (currentUser && currentUser.role === msg.senderRole && !msg.senderId);
+        (currentUser && currentUser.name && msg.senderName === currentUser.name) ||
+        (currentUser && currentUser.role === msg.senderRole && !msg.senderId);
 
       const roleClass = isDev ? "role-dev" : "role-qa";
       const roleBadgeText = msg.roleTitle || (isDev ? "Developer" : "QA Tester");
@@ -4408,7 +4408,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     container.scrollTop = container.scrollHeight;
   }
 
-  window.handleConferenceTagClick = function(tagId) {
+  window.handleConferenceTagClick = function (tagId) {
     if (!tagId) return;
     tagId = tagId.toUpperCase();
     if (tagId.startsWith("BUG-")) {
@@ -4539,7 +4539,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     // =========================================================================
     // ALLOTTED PROJECT MEMBERS MODAL (CONFERENCE ROOM)
     // =========================================================================
-    window.openProjectMembersModal = function(projectId) {
+    window.openProjectMembersModal = function (projectId) {
       const pId = projectId || state.activeConferenceProjectId;
       if (!pId) return;
 
@@ -4570,12 +4570,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       if (modal) modal.style.display = "flex";
     };
 
-    window.closeProjectMembersModal = function() {
+    window.closeProjectMembersModal = function () {
       const modal = document.getElementById("projectMembersModal");
       if (modal) modal.style.display = "none";
     };
 
-    window.renderAllottedMembersList = function(projectId) {
+    window.renderAllottedMembersList = function (projectId) {
       const pId = projectId || state.activeConferenceProjectId;
       if (!pId) return;
 
@@ -4730,7 +4730,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     // =========================================================================
     // PROJECT CREATION & MEMBER PICKER MODAL (SENIOR DEV ACCESS)
     // =========================================================================
-    window.openCreateProjectModal = function() {
+    window.openCreateProjectModal = function () {
       const currentUser = StorageManager.getCurrentUser() || state.currentUser;
       if (!StorageManager.isSeniorDev(currentUser)) {
         showToast("Access Denied: Project creation is strictly restricted to Senior Developers only.", "error");
@@ -4765,7 +4765,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       if (modal) modal.style.display = "flex";
     };
 
-    window.renderMemberScrollTrack = function() {
+    window.renderMemberScrollTrack = function () {
       const track = document.getElementById("memberScrollTrack");
       if (!track) return;
 
@@ -4779,7 +4779,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       // Search query
       if (state.memberBarSearchQuery && state.memberBarSearchQuery.trim()) {
         const q = state.memberBarSearchQuery.toLowerCase().trim();
-        users = users.filter(u => 
+        users = users.filter(u =>
           (u.name && u.name.toLowerCase().includes(q)) ||
           (u.roleTitle && u.roleTitle.toLowerCase().includes(q)) ||
           (u.role && u.role.toLowerCase().includes(q)) ||
@@ -4833,7 +4833,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }).join("");
     };
 
-    window.toggleMemberSelection = function(userId) {
+    window.toggleMemberSelection = function (userId) {
       if (!userId) return;
       if (state.createProjectSelectedMemberIds.has(userId)) {
         state.createProjectSelectedMemberIds.delete(userId);
@@ -4844,7 +4844,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       populateProjectHeadSelect();
     };
 
-    window.populateProjectHeadSelect = function() {
+    window.populateProjectHeadSelect = function () {
       const headSelect = document.getElementById("confProjHeadSelect");
       if (!headSelect) return;
 
@@ -5045,7 +5045,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             }
             renderConference();
             showToast("Channel messages cleared.");
-          } catch(err) {
+          } catch (err) {
             showToast(err.message, "error");
           }
         }
@@ -5123,14 +5123,14 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     state.activePrivateChatTargetUserId = null;
     let privateChatTypingTimeout = null;
 
-    window.openPrivateChatModal = function(projectId, targetUserId) {
+    window.openPrivateChatModal = function (projectId, targetUserId) {
       const pId = projectId || state.activeConferenceProjectId || "proj-1";
       const project = StorageManager.getConferenceProjectById(pId);
       if (!project) return;
 
       const allUsers = StorageManager.getUsers();
       const targetUser = allUsers.find(u => u.id === targetUserId) ||
-                         StorageManager.getProjectAllottedUsers(pId).find(u => u.id === targetUserId);
+        StorageManager.getProjectAllottedUsers(pId).find(u => u.id === targetUserId);
       if (!targetUser) {
         showToast("Team member profile not found.", "error");
         return;
@@ -5188,13 +5188,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       setTimeout(() => { if (input) input.focus(); }, 150);
     };
 
-    window.closePrivateChatModal = function() {
+    window.closePrivateChatModal = function () {
       const modal = document.getElementById("privateChatModal");
       if (modal) modal.style.display = "none";
       state.activePrivateChatTargetUserId = null;
     };
 
-    window.renderPrivateChatMessages = function() {
+    window.renderPrivateChatMessages = function () {
       const pId = state.activePrivateChatProjectId;
       const targetUserId = state.activePrivateChatTargetUserId;
       if (!pId || !targetUserId) return;
@@ -5209,7 +5209,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
       if (messages.length === 0) {
         const tUser = StorageManager.getUsers().find(u => u.id === targetUserId) ||
-                      StorageManager.getProjectAllottedUsers(pId).find(u => u.id === targetUserId);
+          StorageManager.getProjectAllottedUsers(pId).find(u => u.id === targetUserId);
         const tName = tUser ? tUser.name : "your teammate";
         container.innerHTML = `
           <div class="empty-private-chat text-center">
@@ -5255,7 +5255,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       container.scrollTop = container.scrollHeight;
     };
 
-    window.sendPrivateMessage = function(customText = null) {
+    window.sendPrivateMessage = function (customText = null) {
       const pId = state.activePrivateChatProjectId;
       const targetUserId = state.activePrivateChatTargetUserId;
       if (!pId || !targetUserId) return;
@@ -5270,7 +5270,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       const curUserId = curUser.id || curUser.email || "cur-user";
 
       const targetUser = StorageManager.getUsers().find(u => u.id === targetUserId) ||
-                         StorageManager.getProjectAllottedUsers(pId).find(u => u.id === targetUserId);
+        StorageManager.getProjectAllottedUsers(pId).find(u => u.id === targetUserId);
 
       // Save user message
       StorageManager.addPrivateMessage({
@@ -5438,7 +5438,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }
     }
 
-    window.copyMeetRoomLink = function(url) {
+    window.copyMeetRoomLink = function (url) {
       if (!url) return;
       try {
         navigator.clipboard.writeText(url);
@@ -5448,7 +5448,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }
     };
 
-    window.launchGoogleMeetFlow = function() {
+    window.launchGoogleMeetFlow = function () {
       window.open("https://meet.google.com/new", "_blank", "noopener,noreferrer");
       if (meetShareBanner) {
         meetShareBanner.style.display = "flex";
@@ -5557,11 +5557,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       "linear-gradient(135deg, #14b8a6, #0d9488)"
     ];
 
-    window.openConferenceMeeting = function(projectId) {
+    window.openConferenceMeeting = function (projectId) {
       window.launchGoogleMeetFlow();
     };
 
-    window.closeConferenceMeeting = function() {
+    window.closeConferenceMeeting = function () {
       state.meetingActive = false;
       clearInterval(state.meetingTimerInterval);
       clearInterval(state.meetingSpeakerInterval);
@@ -5697,7 +5697,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         const link = `https://staging.nexusqa.io/conference/meet/${pId}`;
         try {
           navigator.clipboard.writeText(link);
-        } catch (e) {}
+        } catch (e) { }
         showToast("Meeting link copied to clipboard: " + link, "success");
       });
     }
@@ -5710,7 +5710,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           renderConference();
         } else {
           // Highlight the sidebar pill badge with "New" to represent new message has arrived
-          try { localStorage.setItem("nexusqa_conference_has_new", "true"); } catch(e) {}
+          try { localStorage.setItem("nexusqa_conference_has_new", "true"); } catch (e) { }
           const badge = document.getElementById("conferenceNavBadge") || document.getElementById("devConferenceNavBadge");
           if (badge) {
             badge.style.display = "inline-flex";
@@ -6128,10 +6128,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
 ## Test Suite Summary
 ${StorageManager.getSuites().map(s => {
-  const sCases = cases.filter(c => c.suiteId === s.id);
-  const sPass = sCases.filter(c => c.status === "Passed").length;
-  return `- **${s.name}**: ${sPass}/${sCases.length} Passed (${sCases.length > 0 ? Math.round((sPass/sCases.length)*100) : 0}%)`;
-}).join("\n")}
+      const sCases = cases.filter(c => c.suiteId === s.id);
+      const sPass = sCases.filter(c => c.status === "Passed").length;
+      return `- **${s.name}**: ${sPass}/${sCases.length} Passed (${sCases.length > 0 ? Math.round((sPass / sCases.length) * 100) : 0}%)`;
+    }).join("\n")}
 
 ## Active Defects
 ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.status} (Dev: ${d.assignee || 'Unassigned'})`).join("\n")}
@@ -6247,7 +6247,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
     if (state.searchQuery) {
       const q = state.searchQuery;
-      cases = cases.filter(c => 
+      cases = cases.filter(c =>
         c.id.toLowerCase().includes(q) ||
         c.title.toLowerCase().includes(q) ||
         (c.assignedDev && c.assignedDev.toLowerCase().includes(q)) ||
@@ -6693,7 +6693,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
         if (Array.isArray(liveDevs) && liveDevs.length > 0) {
           renderOpts(liveDevs);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
@@ -6757,7 +6757,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   }
 
-  window.openEditTestCaseModal = function(id) {
+  window.openEditTestCaseModal = function (id) {
     stopTestCaseTimestampTicker();
     const tc = StorageManager.getTestCaseById(id);
     if (!tc) return;
@@ -6867,15 +6867,15 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   function updateSessionBarUI() {
     if (typeof QAAssistant === "undefined") return;
     const session = QAAssistant.getSession();
-    
+
     if (DOM.valTestRef) DOM.valTestRef.textContent = session.test_reference || "Not Set";
     if (DOM.valSide) DOM.valSide.textContent = session.side || "Student";
     if (DOM.valTrainerCount) DOM.valTrainerCount.textContent = session.trainer_question_count !== null ? session.trainer_question_count : "-";
     if (DOM.valStudentCount) DOM.valStudentCount.textContent = session.student_question_count !== null ? session.student_question_count : "-";
 
-    const hasMismatch = session.trainer_question_count !== null && 
-                        session.student_question_count !== null && 
-                        session.trainer_question_count !== session.student_question_count;
+    const hasMismatch = session.trainer_question_count !== null &&
+      session.student_question_count !== null &&
+      session.trainer_question_count !== session.student_question_count;
 
     if (DOM.pillMismatch) {
       DOM.pillMismatch.style.display = hasMismatch ? "inline-flex" : "none";
@@ -6886,7 +6886,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (!DOM.aiChatStream) return;
     const row = document.createElement("div");
     row.className = "ai-message-row user-row";
-    
+
     let imgHtml = "";
     if (imageMeta && imageMeta.data) {
       imgHtml = `
@@ -7032,7 +7032,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
         </div>
       ` : "";
 
-      const stepsListHtml = Array.isArray(rec.steps_to_reproduce) 
+      const stepsListHtml = Array.isArray(rec.steps_to_reproduce)
         ? rec.steps_to_reproduce.map((s, si) => `<div class="text-xs text-muted"><strong>${si + 1}.</strong> ${escapeHtml(s)}</div>`).join("")
         : `<div class="text-xs text-muted">${escapeHtml(rec.steps_to_reproduce || "1. Execute test as defined")}</div>`;
 
@@ -7120,7 +7120,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     const imageToSend = currentAttachedScreenshot;
     appendAiUserBubble(promptText || "(Screenshot attached)", imageToSend);
     DOM.aiTestCasePromptInput.value = "";
-    
+
     // Clear screenshot preview
     currentAttachedScreenshot = null;
     if (DOM.aiEvidencePreviewBar) DOM.aiEvidencePreviewBar.style.display = "none";
@@ -7356,7 +7356,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   // -------------------------------------------------------------
   // Record Actions (Window Exposed Functions)
   // -------------------------------------------------------------
-  window.confirmSaveSingleRecord = function(index) {
+  window.confirmSaveSingleRecord = function (index) {
     const record = stagedQaRecords[index];
     if (!record) return;
 
@@ -7416,13 +7416,13 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     showToast(`✓ Confirmed & Saved ${record.test_case_id} (${record.test_case_type}) to Database!`, "success");
   };
 
-  window.dismissStagedRecord = function(index) {
+  window.dismissStagedRecord = function (index) {
     stagedQaRecords.splice(index, 1);
     renderStagedReviewCards();
     showToast("Record dismissed from review pool", "info");
   };
 
-  window.useExistingBugForRecord = function(index, bugId) {
+  window.useExistingBugForRecord = function (index, bugId) {
     if (stagedQaRecords[index]) {
       stagedQaRecords[index].bug_id = bugId;
       stagedQaRecords[index]._duplicateResolved = true;
@@ -7432,7 +7432,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   };
 
-  window.keepNewBugForRecord = function(index) {
+  window.keepNewBugForRecord = function (index) {
     if (stagedQaRecords[index]) {
       stagedQaRecords[index].bug_id = `BUG-${Math.floor(100 + Math.random() * 900)}`;
       stagedQaRecords[index]._duplicateResolved = true;
@@ -7442,7 +7442,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   };
 
-  window.copySingleRecordTsv = function(index) {
+  window.copySingleRecordTsv = function (index) {
     const record = stagedQaRecords[index];
     if (!record) return;
     const tsv = QAAssistant.exportRecordsToTSV([record]);
@@ -7503,7 +7503,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   // -------------------------------------------------------------
   function populate22ColDropdowns() {
     const dropdowns = QAAssistant.getDropdowns();
-    
+
     function setSelectOptions(id, options) {
       const el = document.getElementById(id);
       if (!el) return;
@@ -7520,7 +7520,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     setSelectOptions("edit_side", dropdowns.side);
   }
 
-  window.editStagedRecord = function(index) {
+  window.editStagedRecord = function (index) {
     const record = stagedQaRecords[index];
     if (!record) return;
 
@@ -7633,7 +7633,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     `).join("");
   }
 
-  window.selectTaskBenchmark = function(taskName) {
+  window.selectTaskBenchmark = function (taskName) {
     const task = QAAssistant.findTaskReference(taskName);
     if (task) {
       QAAssistant.resetSession();
@@ -7910,7 +7910,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   });
 
-  window.deleteSingleTestCase = function(id) {
+  window.deleteSingleTestCase = function (id) {
     if (confirm(`Are you sure you want to delete test case ${id}?`)) {
       StorageManager.deleteTestCase(id);
       state.selectedTestCaseIds.delete(id);
@@ -7921,7 +7921,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   };
 
-  window.viewTestCaseDetail = function(id) {
+  window.viewTestCaseDetail = function (id) {
     let tc = StorageManager.getTestCaseById(id);
     if (!tc || !DOM.testCaseDetailModal) return;
 
@@ -8103,7 +8103,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   on(DOM.closeDetailModalBtn, "click", () => { if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none"; });
 
   // Single test execution & status logging
-  window.markTestCaseStatus = function(testCaseId, newStatus) {
+  window.markTestCaseStatus = function (testCaseId, newStatus) {
     const tc = StorageManager.getTestCaseById(testCaseId);
     if (!tc) return;
     const oldStatus = tc.status || "Untested";
@@ -8126,7 +8126,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     showToast(`Test ${tc.id} marked as ${newStatus}!`, isFailStatus(newStatus) ? "error" : "success");
   };
 
-  window.launchSingleTestRun = function(testCaseId) {
+  window.launchSingleTestRun = function (testCaseId) {
     window.markTestCaseStatus(testCaseId, "Pass");
   };
 
@@ -8142,7 +8142,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
     let filtered = defects;
     if (searchQuery) {
-      filtered = filtered.filter(d => 
+      filtered = filtered.filter(d =>
         d.id.toLowerCase().includes(searchQuery) ||
         d.summary.toLowerCase().includes(searchQuery) ||
         (d.assignee && d.assignee.toLowerCase().includes(searchQuery)) ||
@@ -8267,7 +8267,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     renderDefects();
   });
 
-  window.deleteDefect = function(bugId) {
+  window.deleteDefect = function (bugId) {
     if (confirm(`Delete bug ${bugId}?`)) {
       StorageManager.deleteDefect(bugId);
       renderDefects();
@@ -8356,7 +8356,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
   function stopVoiceListening() {
     if (speechRecognition && isVoiceListening) {
-      try { speechRecognition.stop(); } catch (e) {}
+      try { speechRecognition.stop(); } catch (e) { }
     }
     isVoiceListening = false;
     updateVoiceUI(false);
@@ -8393,10 +8393,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     });
   }
 
-  window.setAiPreset = function(presetKey) {
+  window.setAiPreset = function (presetKey) {
     const promptEl = DOM.aiStoryPrompt || document.getElementById("aiStoryPrompt");
     if (!promptEl) return;
-    
+
     if (presetKey === "checkout") {
       promptEl.value = "I tested the Stripe checkout flow: First I added a $120 item to cart, applied promo coupon 'CYBER30', and verified 30% discount deducted. Then entered test card 4242 4242, clicked Pay $84, and verified Stripe 3D Secure modal triggered and success confirmation receipt rendered.";
     } else if (presetKey === "oauth") {
@@ -8491,13 +8491,13 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (!DOM.aiChatHistory) return;
     const msgDiv = document.createElement("div");
     msgDiv.className = `chat-message chat-msg-${sender}`;
-    
-    const avatarHtml = sender === "user" 
+
+    const avatarHtml = sender === "user"
       ? `<div class="chat-msg-avatar chat-avatar-user"><i class="fa-solid fa-user"></i></div>`
       : `<div class="chat-msg-avatar"><i class="fa-solid fa-robot"></i></div>`;
-    
+
     const bodyContent = isHtml ? content : `<p class="mb-0">${escapeHtml(content).replace(/\n/g, "<br>")}</p>`;
-    
+
     msgDiv.innerHTML = `
       ${avatarHtml}
       <div class="chat-msg-bubble">
@@ -8512,7 +8512,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     const rawSteps = [];
     // Check if text has numbered items (e.g. 1. step, 2. step) or line breaks
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    
+
     if (lines.length > 1) {
       lines.forEach((line, idx) => {
         const cleanLine = line.replace(/^\d+[\.\)]\s*/, "").trim();
@@ -8534,8 +8534,8 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       sentences.forEach((sent) => {
         const parts = sent.split(/\s*→\s*|\s*verify\s+|\s*verified\s+|\s*expected\s*:\s*|\s*and confirmed\s+/i);
         const action = parts[0].replace(/^(first|then|after that|next|finally)\s*/i, "").trim();
-        const expected = parts[1] 
-          ? parts[1].trim() 
+        const expected = parts[1]
+          ? parts[1].trim()
           : `System handles ${action.substring(0, 40)} correctly without error.`;
         if (action.length > 2) {
           rawSteps.push({ step: rawSteps.length + 1, action, expected });
@@ -8726,18 +8726,18 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     document.body.removeChild(tempTextArea);
   }
 
-  window.copyGeneratedAITestsToExcel = function() {
+  window.copyGeneratedAITestsToExcel = function () {
     copyTestsToExcelTsv(state.generatedAITests);
   };
 
-  window.copySingleAITestToExcel = function(index) {
+  window.copySingleAITestToExcel = function (index) {
     const tc = state.generatedAITests[index];
     if (tc) {
       copyTestsToExcelTsv([tc]);
     }
   };
 
-  window.saveSingleAITest = function(index) {
+  window.saveSingleAITest = function (index) {
     const testCase = state.generatedAITests[index];
     if (testCase) {
       const added = StorageManager.addTestCase(testCase);
@@ -8753,7 +8753,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   };
 
-  window.saveAllGeneratedAITests = function() {
+  window.saveAllGeneratedAITests = function () {
     if (!state.generatedAITests || state.generatedAITests.length === 0) return;
     state.generatedAITests.forEach(t => StorageManager.addTestCase(t));
     showToast(`Saved all ${state.generatedAITests.length} test cases to database!`, "success");
@@ -8835,12 +8835,12 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     }
   }
 
-  window.viewSuiteTests = function(suiteId) {
+  window.viewSuiteTests = function (suiteId) {
     state.selectedSuiteId = suiteId;
     switchView("test-cases");
   };
 
-  window.openCreateSuiteModal = function() {
+  window.openCreateSuiteModal = function () {
     if (DOM.suiteForm) DOM.suiteForm.reset();
     const editIdEl = document.getElementById("editSuiteId");
     const titleEl = document.getElementById("suiteModalTitle");
@@ -8850,7 +8850,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.newSuiteName) setTimeout(() => DOM.newSuiteName.focus(), 50);
   };
 
-  window.openEditSuiteModal = function(suiteId) {
+  window.openEditSuiteModal = function (suiteId) {
     const suite = StorageManager.getSuites().find(s => s.id === suiteId);
     if (!suite) return;
     if (DOM.suiteForm) DOM.suiteForm.reset();
@@ -8865,7 +8865,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.newSuiteName) setTimeout(() => DOM.newSuiteName.focus(), 50);
   };
 
-  window.confirmDeleteSuite = async function(suiteId) {
+  window.confirmDeleteSuite = async function (suiteId) {
     const suite = StorageManager.getSuites().find(s => s.id === suiteId);
     if (!suite) return;
     const confirmed = confirm(`Delete suite '${suite.name}'? Any linked test cases will remain unassigned.`);

@@ -83,8 +83,8 @@ export function SuitesFolderGrid({
                 width={230}
                 height={165}
                 radius={14}
-                spread={190}
-                lift={26}
+                spread={150}
+                lift={20}
                 tilt={8}
                 flapAngle={34}
                 restAngle={16}
