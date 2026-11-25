@@ -2205,6 +2205,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   // DEVELOPER HUB: TESTER ACCESS APPROVALS
   // =========================================================================
   function updateDevApprovalsBadge() {
+    if (!StorageManager.isSuperAdmin()) return;
     const pending = StorageManager.getPendingTesterRequests();
     if (DOM.devPendingApprovalsBadge) {
       DOM.devPendingApprovalsBadge.textContent = pending.length;
@@ -2270,6 +2271,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   }
 
   function renderDevApprovals() {
+    if (!StorageManager.isSuperAdmin()) {
+      showToast("Employee Directory is restricted to Super Admin only.", "error");
+      switchView("dev-dashboard");
+      return;
+    }
     const allUsers = StorageManager.getUsers();
     const pending = allUsers.filter(u => u.status === "pending_approval");
     const activeMembers = allUsers.filter(u => u.status === "active");
@@ -2799,7 +2805,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (state.currentPortal === "dev") {
       renderDevDashboard();
       if (state.currentView === "dev-test-cases") renderDevTestCasesView();
-      if (state.currentView === "dev-approvals") renderDevApprovals();
       if (state.currentView === "dev-kanban") renderDevKanban();
       if (state.currentView === "dev-failures") renderDevFailures();
     } else {
@@ -2839,7 +2844,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       conference: "Dev & Tester Conference Room",
       "dev-dashboard": "Dev Defect Command Center",
       "dev-test-cases": "QA Test Cases & Specs",
-      "dev-approvals": "Employees & Access Control",
       "dev-audit": "Audit & Activity Trail",
       "dev-kanban": "Bug Triage Kanban",
       "dev-failures": "Failed Test Diagnostics",
@@ -2910,12 +2914,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             renderDevTestCasesView();
           })
           .catch(() => { });
-      }
-    }
-    if (viewName === "dev-approvals") {
-      renderDevApprovals();
-      if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
-        SupabaseManager.fetchUsersFromSupabase().then(() => renderDevApprovals()).catch(() => { });
       }
     }
     if (viewName === "dev-audit") {

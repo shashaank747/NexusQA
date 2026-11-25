@@ -909,6 +909,12 @@ const StorageManager = {
     return true;
   },
 
+  isSuperAdmin(user) {
+    const u = user || this.getCurrentUser();
+    if (!u) return false;
+    return u.role === "super_admin" || u.role === "admin";
+  },
+
   updateUser(userId, updatedFields) {
     const users = this.getUsers();
     const index = users.findIndex(u => u.id === userId);

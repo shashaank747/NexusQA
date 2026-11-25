@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -306,9 +306,6 @@
               <li class="rail-nav-item" data-view="dev-test-cases" title="QA Test Cases &amp; Specs">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-clipboard-list text-cyan"></i></button>
               </li>
-              <li class="rail-nav-item" data-view="dev-approvals" title="Employees">
-                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-users text-amber"></i></button>
-              </li>
               <li class="rail-nav-item" data-view="dev-audit" id="devAuditRailItem" title="Audit &amp; Activity Trail">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-clock-rotate-left text-indigo"></i></button>
               </li>
@@ -352,13 +349,6 @@
                   <a href="javascript:void(0)" class="nav-link">
                     <i class="fa-solid fa-laptop-code"></i>
                     <span>Dev Defect Dashboard</span>
-                  </a>
-                </li>
-                <li class="nav-item" data-view="dev-approvals">
-                  <a href="javascript:void(0)" class="nav-link">
-                    <i class="fa-solid fa-users text-amber"></i>
-                    <span>Employees</span>
-                    <span class="nav-badge badge-danger" id="devPendingApprovalsBadge">0</span>
                   </a>
                 </li>
                 <li class="nav-item" data-view="dev-audit" id="devAuditNavItem">
@@ -435,15 +425,6 @@
               </div>
             </div>
 
-          <!-- Pending Tester Approvals Alert Banner for Devs -->
-          <div class="dev-approval-alert-banner" id="devApprovalAlertBanner" style="display: none;">
-            <div class="d-flex align-center gap-2">
-              <i class="fa-solid fa-user-shield text-amber"></i>
-              <span><strong id="devApprovalAlertCount">1 Member</strong> has verified their email via OTP and is <strong>waiting for Developer Approval</strong> to enter the workspace!</span>
-            </div>
-            <button class="btn btn-secondary btn-xs" id="btnGoToApprovals"><i class="fa-solid fa-user-check"></i> Review & Approve Now</button>
-          </div>
-
           <div class="kpi-grid">
             <div class="kpi-card card-glow-rose">
               <div class="kpi-header">
@@ -513,99 +494,6 @@
               </div>
               <div class="card-body p-0">
                 <div class="dev-pr-feed" id="devRecentPrFeed"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- DEVELOPER VIEW: EMPLOYEES & ACCESS CONTROL -->
-        <section class="view-panel" id="view-dev-approvals">
-          <div class="view-header">
-            <div>
-              <div class="dev-header-badge"><i class="fa-solid fa-users"></i> Employees & Access Control</div>
-              <h1 class="view-title">Employee Directory & Access Approvals</h1>
-              <p class="view-subtitle">Manage team roster, edit tester & developer member details, and authorize pending access requests in real time.</p>
-            </div>
-            <div class="view-actions">
-              <button class="btn btn-outline btn-sm" id="btnOpenAuditFromApprovals"><i class="fa-solid fa-clock-rotate-left text-indigo"></i> Audit Trail</button>
-              <button class="btn btn-secondary btn-sm" id="refreshApprovalsBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Requests</button>
-            </div>
-          </div>
-
-          <!-- Approvals KPI summary -->
-          <div class="kpi-grid mb-4">
-            <div class="kpi-card card-glow-amber">
-              <div class="kpi-header">
-                <span class="kpi-title">Pending Approvals</span>
-                <span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-clock-rotate-left"></i></span>
-              </div>
-              <div class="kpi-body">
-                <span class="kpi-value text-amber" id="kpiPendingApprovalsCount">0</span>
-                <span class="kpi-trend trend-neutral">Awaiting Dev Signoff</span>
-              </div>
-            </div>
-
-            <div class="kpi-card card-glow-emerald">
-              <div class="kpi-header">
-                <span class="kpi-title">Active Workspace Members</span>
-                <span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-user-check"></i></span>
-              </div>
-              <div class="kpi-body">
-                <span class="kpi-value text-emerald" id="kpiActiveTestersCount">2</span>
-                <span class="kpi-trend trend-up">Authorized Access</span>
-              </div>
-            </div>
-
-            <div class="kpi-card card-glow-cyan">
-              <div class="kpi-header">
-                <span class="kpi-title">Email OTP Verified</span>
-                <span class="kpi-icon-badge icon-cyan"><i class="fa-solid fa-envelope-circle-check"></i></span>
-              </div>
-              <div class="kpi-body">
-                <span class="kpi-value text-cyan" id="kpiOtpVerifiedCount">100%</span>
-                <span class="kpi-trend trend-up">Security Guaranteed</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pending Requests Container -->
-          <div class="dashboard-card mb-4" id="pendingApprovalsCard">
-            <div class="card-header">
-              <div class="card-title-group">
-                <h3><i class="fa-solid fa-user-clock text-amber"></i> Pending Workspace Authorization Requests</h3>
-                <p class="card-subtitle">Members who completed email OTP verification and require Administrator authorization</p>
-              </div>
-            </div>
-            <div class="card-body p-0">
-              <div id="pendingApprovalsListContainer"></div>
-            </div>
-          </div>
-
-          <!-- Authorized Team Roster -->
-          <div class="dashboard-card">
-            <div class="card-header">
-              <div class="card-title-group">
-                <h3><i class="fa-solid fa-users text-primary"></i> Team Roster & Access Management</h3>
-                <p class="card-subtitle">Manage workspace authorization, roles, and profiles for all active developers and QA testers</p>
-              </div>
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="nexus-table" id="teamRosterTable">
-                  <thead id="teamRosterThead">
-                    <tr>
-                      <th>Team Member</th>
-                      <th>Email</th>
-                      <th>Specialty / Role</th>
-                      <th>Assigned Projects</th>
-                      <th class="senior-dev-col">OTP Status</th>
-                      <th class="senior-dev-col">Workspace Access</th>
-                      <th class="senior-dev-col">Approved By</th>
-                      <th class="senior-dev-col" width="160">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="authorizedTestersTableBody"></tbody>
-                </table>
               </div>
             </div>
           </div>
@@ -848,7 +736,7 @@
             <div class="card-header d-flex justify-between align-center flex-wrap gap-2">
               <div class="card-title-group">
                 <h3><i class="fa-solid fa-table-list text-cyan"></i> All Synchronized QA Test Cases</h3>
-                <p class="card-subtitle">Showing <strong id="devTcShowingCount">0</strong> of <strong id="devTcTotalCount">0</strong> test cases — click any row to inspect details &amp; update Dev Triage</p>
+                <p class="card-subtitle">Showing <strong id="devTcShowingCount">0</strong> of <strong id="devTcTotalCount">0</strong> test cases â€” click any row to inspect details &amp; update Dev Triage</p>
               </div>
               <span class="badge badge-info text-xs"><i class="fa-solid fa-bolt"></i> Supabase Realtime</span>
             </div>
@@ -1029,7 +917,7 @@
                   <span class="badge badge-primary"><i class="fa-solid fa-satellite-dish"></i> Live Conference Hub</span>
                   <span class="badge badge-passed" id="conferenceLiveStatus"><i class="fa-solid fa-circle status-dot-online"></i> Cross-Portal Sync</span>
                 </div>
-                <h1 class="view-title">Dev ↔ QA Conference Projects</h1>
+                <h1 class="view-title">Dev â†” QA Conference Projects</h1>
                 <p class="view-subtitle">Select a project channel to collaborate on bug triage, repro steps, and hotfix verification in real time.</p>
               </div>
               <div class="view-actions">
@@ -1144,11 +1032,11 @@
               <!-- Quick Action Suggestion Chips -->
               <div class="conference-quick-chips">
                 <span class="chips-label"><i class="fa-solid fa-bolt text-amber"></i> Quick Prompts:</span>
-                <button type="button" class="quick-chip" data-text="🚨 Critical blocker identified! Please inspect high-priority defect.">🚨 Critical blocker</button>
-                <button type="button" class="quick-chip" data-text="🔍 Repro steps confirmed: cleared cache &amp; re-tested on staging.">🔍 Repro steps confirmed</button>
-                <button type="button" class="quick-chip" data-text="💻 Dev: Hotfix pushed to branch. Ready for QA re-test.">💻 Fix deployed</button>
-                <button type="button" class="quick-chip" data-text="✅ Test passed in current build. Closing defect ticket.">✅ Verified &amp; passed</button>
-                <button type="button" class="quick-chip" data-text="📸 Requesting HAR log trace / full screenshot for investigation.">📸 Requesting logs</button>
+                <button type="button" class="quick-chip" data-text="ðŸš¨ Critical blocker identified! Please inspect high-priority defect.">ðŸš¨ Critical blocker</button>
+                <button type="button" class="quick-chip" data-text="ðŸ” Repro steps confirmed: cleared cache &amp; re-tested on staging.">ðŸ” Repro steps confirmed</button>
+                <button type="button" class="quick-chip" data-text="ðŸ’» Dev: Hotfix pushed to branch. Ready for QA re-test.">ðŸ’» Fix deployed</button>
+                <button type="button" class="quick-chip" data-text="âœ… Test passed in current build. Closing defect ticket.">âœ… Verified &amp; passed</button>
+                <button type="button" class="quick-chip" data-text="ðŸ“¸ Requesting HAR log trace / full screenshot for investigation.">ðŸ“¸ Requesting logs</button>
               </div>
 
               <!-- Message Input Area -->
@@ -1535,7 +1423,7 @@
               <label for="confProjHeadSelect" class="font-semibold m-0">
                 <i class="fa-solid fa-crown text-amber mr-1"></i> Head of the Project
               </label>
-              <span class="badge badge-version text-2xs">Optional — Not Compulsory</span>
+              <span class="badge badge-version text-2xs">Optional â€” Not Compulsory</span>
             </div>
             <select id="confProjHeadSelect" class="nexus-select w-100">
               <option value="">-- None / No Project Head (Optional) --</option>
@@ -1627,7 +1515,7 @@
               <span class="badge badge-passed text-2xs"><i class="fa-solid fa-circle status-dot-online mr-1"></i> Online</span>
             </div>
             <p class="modal-subtitle text-xs text-muted m-0" id="privateChatHeaderSubtitle">
-              <i class="fa-solid fa-lock text-emerald mr-1"></i> Private 1-on-1 • <span id="privateChatProjectName"><span class="font-mono text-primary font-bold">#payments-engine</span> <span class="text-muted">(E-Commerce Checkout &amp; Payments)</span></span>
+              <i class="fa-solid fa-lock text-emerald mr-1"></i> Private 1-on-1 â€¢ <span id="privateChatProjectName"><span class="font-mono text-primary font-bold">#payments-engine</span> <span class="text-muted">(E-Commerce Checkout &amp; Payments)</span></span>
             </p>
           </div>
         </div>
@@ -1664,10 +1552,10 @@
         <!-- Quick Suggestion Chips -->
         <div class="private-chat-quick-chips">
           <span class="text-2xs text-muted font-bold"><i class="fa-solid fa-bolt text-amber mr-1"></i> Quick:</span>
-          <button type="button" class="private-quick-chip" data-text="🚨 Critical blocker identified! Can you check the logs on staging?">🚨 Critical blocker</button>
-          <button type="button" class="private-quick-chip" data-text="🔍 Need clarification on the expected behavior for this scenario.">🔍 Expected behavior</button>
-          <button type="button" class="private-quick-chip" data-text="💻 Fix pushed to branch? Let me know when ready for QA re-test.">💻 Ready for QA?</button>
-          <button type="button" class="private-quick-chip" data-text="✅ Test verified and passed in the latest build! Thank you.">✅ Verified &amp; passed</button>
+          <button type="button" class="private-quick-chip" data-text="ðŸš¨ Critical blocker identified! Can you check the logs on staging?">ðŸš¨ Critical blocker</button>
+          <button type="button" class="private-quick-chip" data-text="ðŸ” Need clarification on the expected behavior for this scenario.">ðŸ” Expected behavior</button>
+          <button type="button" class="private-quick-chip" data-text="ðŸ’» Fix pushed to branch? Let me know when ready for QA re-test.">ðŸ’» Ready for QA?</button>
+          <button type="button" class="private-quick-chip" data-text="âœ… Test verified and passed in the latest build! Thank you.">âœ… Verified &amp; passed</button>
         </div>
 
         <!-- Input Area -->
@@ -1720,7 +1608,7 @@
         <!-- Optional Screen Share Area -->
         <div class="meeting-screenshare-stage" id="meetingScreenShareStage" style="display: none;">
           <div class="screenshare-header">
-            <span><i class="fa-solid fa-desktop text-cyan mr-1"></i> Live Screen Presentation — <strong id="screensharePresenter">Marcus Vance</strong></span>
+            <span><i class="fa-solid fa-desktop text-cyan mr-1"></i> Live Screen Presentation â€” <strong id="screensharePresenter">Marcus Vance</strong></span>
             <button type="button" class="btn btn-xs btn-ghost" id="stopScreenShareBtn">Stop Presenting</button>
           </div>
           <div class="screenshare-content">
@@ -1793,8 +1681,8 @@
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.6"></script>
   <script src="js/supabase.js?v=1.0.18"></script>
-  <script src="js/storage.js?v=1.0.20"></script>
+  <script src="js/storage.js?v=1.0.21"></script>
   <script src="js/nexus-widgets-bundle.js?v=1.0.1"></script>
-  <script src="js/app.js?v=1.0.34"></script>
+  <script src="js/app.js?v=1.0.35"></script>
 </body>
 </html>
