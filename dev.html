@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.24">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.26">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -876,19 +876,17 @@
                   </div>
                 </div>
 
-                <!-- Designation & Department -->
+                <!-- Designation (Read-Only, Assigned by Super Admin) & Department -->
                 <div class="form-row mb-3">
                   <div class="form-group flex-1">
-                    <label for="profileDesignationSelect" class="form-label font-semibold">Designation <span class="text-rose">*</span></label>
+                    <label for="profileDesignationReadonly" class="form-label font-semibold">
+                      Designation <i class="fa-solid fa-lock text-xs text-muted ml-1" title="Assigned by Super Admin"></i>
+                    </label>
                     <div class="input-with-icon">
-                      <i class="fa-solid fa-briefcase input-icon"></i>
-                      <select id="profileDesignationSelect" class="nexus-select w-100 pl-5">
-                        <option value="Senior Developer">Senior Developer</option>
-                        <option value="Junior Developer">Junior Developer</option>
-                        <option value="Senior Tester">Senior Tester</option>
-                        <option value="Junior Tester">Junior Tester</option>
-                      </select>
+                      <i class="fa-solid fa-lock input-icon text-muted"></i>
+                      <input type="text" id="profileDesignationReadonly" class="nexus-input pl-5 profile-readonly-designation" value="Pending Admin Assignment" readonly aria-readonly="true">
                     </div>
+                    <span class="text-xs text-muted d-block mt-1"><i class="fa-solid fa-shield-halved text-primary"></i> Assigned by Super Admin</span>
                   </div>
                   <div class="form-group flex-1">
                     <label for="profileDepartmentInput" class="form-label font-semibold">Department</label>
@@ -1755,8 +1753,8 @@
   
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.6"></script>
-  <script src="js/supabase.js?v=1.0.15"></script>
+  <script src="js/supabase.js?v=1.0.16"></script>
   <script src="js/storage.js?v=1.0.19"></script>
-  <script src="js/app.js?v=1.0.24"></script>
+  <script src="js/app.js?v=1.0.26"></script>
 </body>
 </html>

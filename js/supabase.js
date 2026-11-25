@@ -459,6 +459,7 @@ const SupabaseManager = {
     const base = this.mapUserToBaseDB(u);
     return {
       ...base,
+      designation: u.designation !== undefined ? u.designation : (u.roleTitle || null),
       full_name: u.fullName || u.name || "",
       avatar_url: u.avatarUrl || u.photo || "",
       phone: u.phone || "",
@@ -474,6 +475,9 @@ const SupabaseManager = {
     const displayName = row.full_name || row.name;
     const avatarUrl = row.avatar_url !== undefined ? row.avatar_url : (existingLocal?.avatarUrl || existingLocal?.photo || "");
     const hasExtendedPresence = row.is_online !== undefined;
+    const assignedDesig = row.designation !== undefined
+      ? (row.designation || "")
+      : (["Senior Developer", "Junior Developer", "Senior Tester", "Junior Tester"].includes(row.role_title) ? row.role_title : (existingLocal?.designation || ""));
     return {
       id: row.id,
       name: displayName,
@@ -481,7 +485,8 @@ const SupabaseManager = {
       email: row.email,
       username: row.username || row.email,
       role: row.role || "qa",
-      roleTitle: row.role_title || (row.role === "dev" ? "Senior Developer" : "QA Tester"),
+      designation: assignedDesig,
+      roleTitle: assignedDesig || row.role_title || (row.role === "dev" ? "Senior Developer" : "QA Tester"),
       avatar: row.avatar || (displayName ? displayName.slice(0, 2).toUpperCase() : "QA"),
       avatarUrl: avatarUrl,
       photo: avatarUrl || row.photo || "",
@@ -888,6 +893,7 @@ const SupabaseManager = {
     if (updates.email !== undefined) { dbPayload.email = updates.email.trim(); corePayload.email = dbPayload.email; }
     if (updates.username !== undefined) { dbPayload.username = updates.username.trim(); corePayload.username = dbPayload.username; }
     if (updates.role !== undefined) { dbPayload.role = updates.role; corePayload.role = updates.role; }
+    if (updates.designation !== undefined) { dbPayload.designation = updates.designation || null; }
     if (updates.roleTitle !== undefined) { dbPayload.role_title = updates.roleTitle; corePayload.role_title = updates.roleTitle; }
     if (updates.role_title !== undefined) { dbPayload.role_title = updates.role_title; corePayload.role_title = updates.role_title; }
     if (updates.avatar !== undefined) { dbPayload.avatar = updates.avatar; corePayload.avatar = updates.avatar; }

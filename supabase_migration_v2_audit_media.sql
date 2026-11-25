@@ -7,6 +7,7 @@
 -- 1. Upgrade nexus_users (Full Profile & Session Timestamps)
 ALTER TABLE public.nexus_users
   ADD COLUMN IF NOT EXISTS full_name TEXT,
+  ADD COLUMN IF NOT EXISTS designation TEXT,
   ADD COLUMN IF NOT EXISTS avatar_url TEXT,
   ADD COLUMN IF NOT EXISTS phone TEXT,
   ADD COLUMN IF NOT EXISTS department TEXT,

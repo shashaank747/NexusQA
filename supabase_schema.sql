@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.nexus_users (
   username TEXT,
   role TEXT DEFAULT 'qa',
   role_title TEXT DEFAULT 'QA Tester',
+  designation TEXT,
   avatar TEXT DEFAULT 'QA',
   avatar_url TEXT,
   color TEXT DEFAULT '#6366f1',

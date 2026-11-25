@@ -476,7 +476,7 @@ document.addEventListener("DOMContentLoaded", () => {
     profilePhoneError: document.getElementById("profilePhoneError"),
     profilePhoneValid: document.getElementById("profilePhoneValid"),
     profilePhoneHint: document.getElementById("profilePhoneHint"),
-    profileDesignationSelect: document.getElementById("profileDesignationSelect"),
+    profileDesignationReadonly: document.getElementById("profileDesignationReadonly"),
     profileDepartmentInput: document.getElementById("profileDepartmentInput"),
     profileBioInput: document.getElementById("profileBioInput"),
     saveProfileBtn: document.getElementById("saveProfileBtn"),
@@ -715,14 +715,34 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   }
 
+  const ASSIGNABLE_DESIGNATIONS = ["Senior Developer", "Junior Developer", "Senior Tester", "Junior Tester"];
+
+  function getUserAssignedDesignation(user) {
+    if (!user) return "Pending Admin Assignment";
+    if (user.designation && String(user.designation).trim()) return String(user.designation).trim();
+    if (ASSIGNABLE_DESIGNATIONS.includes(user.roleTitle)) return user.roleTitle;
+    return "Pending Admin Assignment";
+  }
+
+  function renderAdminDesignationSelectHtml(user) {
+    const rawDesig = (user && user.designation && String(user.designation).trim())
+      ? String(user.designation).trim()
+      : (user && ASSIGNABLE_DESIGNATIONS.includes(user.roleTitle) ? user.roleTitle : "");
+    const optionsHtml = [
+      `<option value="" ${!rawDesig ? "selected" : ""}>Pending Admin Assignment</option>`,
+      ...ASSIGNABLE_DESIGNATIONS.map(opt => `<option value="${opt}" ${rawDesig === opt ? "selected" : ""}>${opt}</option>`)
+    ].join("");
+    return `<select class="nexus-select admin-designation-select" data-user-id="${escapeHtml(user.id)}" onchange="window.assignUserDesignation('${escapeHtml(user.id)}', this.value)" title="Assign Designation (Super Admin)">${optionsHtml}</select>`;
+  }
+
   function updateProfilePreviewBadge() {
     const name = DOM.profileNameInput ? DOM.profileNameInput.value.trim() || "User Name" : "User Name";
     const email = DOM.profileEmailInput ? DOM.profileEmailInput.value.trim() || "user@nexusqa.io" : "user@nexusqa.io";
     const phone = DOM.profilePhoneInput ? DOM.profilePhoneInput.value.trim() || "9876543210" : "9876543210";
-    const designation = DOM.profileDesignationSelect ? DOM.profileDesignationSelect.value : "Senior Developer";
+    const user = state.currentUser || {};
+    const designation = getUserAssignedDesignation(user);
     const department = DOM.profileDepartmentInput ? DOM.profileDepartmentInput.value.trim() : "";
     const bio = DOM.profileBioInput ? DOM.profileBioInput.value.trim() : "";
-    const user = state.currentUser || {};
 
     if (DOM.profileFormHeaderName) DOM.profileFormHeaderName.textContent = name;
     if (DOM.previewCardName) DOM.previewCardName.textContent = name;
@@ -743,8 +763,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         DOM.previewCardDesignationBadge.className = "badge badge-ai";
       } else if (designation === "Senior Tester") {
         DOM.previewCardDesignationBadge.className = "badge badge-version";
-      } else {
+      } else if (designation === "Junior Tester") {
         DOM.previewCardDesignationBadge.className = "badge badge-untested";
+      } else {
+        DOM.previewCardDesignationBadge.className = "badge badge-blocked";
       }
     }
 
@@ -767,22 +789,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.profilePhoneInput) DOM.profilePhoneInput.value = user.phone || "";
     if (DOM.profileDepartmentInput) DOM.profileDepartmentInput.value = user.department || "";
     if (DOM.profileBioInput) DOM.profileBioInput.value = user.bio || "";
-
-    if (DOM.profileDesignationSelect) {
-      const desig = user.roleTitle || "";
-      if (["Senior Developer", "Junior Developer", "Senior Tester", "Junior Tester"].includes(desig)) {
-        DOM.profileDesignationSelect.value = desig;
-      } else {
-        const isDev = user.role === "dev";
-        const isSenior = isDev 
-          ? StorageManager.isSeniorDev(user) 
-          : (desig.toLowerCase().includes("lead") || desig.toLowerCase().includes("senior"));
-        if (isDev) {
-          DOM.profileDesignationSelect.value = isSenior ? "Senior Developer" : "Junior Developer";
-        } else {
-          DOM.profileDesignationSelect.value = isSenior ? "Senior Tester" : "Junior Tester";
-        }
-      }
+    if (DOM.profileDesignationReadonly) {
+      DOM.profileDesignationReadonly.value = getUserAssignedDesignation(user);
     }
 
     renderProfilePhotoPreview(user.photo || "");
@@ -807,12 +815,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   if (DOM.profileEmailInput) {
     DOM.profileEmailInput.addEventListener("input", () => {
-      updateProfilePreviewBadge();
-    });
-  }
-
-  if (DOM.profileDesignationSelect) {
-    DOM.profileDesignationSelect.addEventListener("change", () => {
       updateProfilePreviewBadge();
     });
   }
@@ -896,7 +898,6 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const name = DOM.profileNameInput ? DOM.profileNameInput.value.trim() : "";
     const email = DOM.profileEmailInput ? DOM.profileEmailInput.value.trim() : "";
     const phone = DOM.profilePhoneInput ? DOM.profilePhoneInput.value.trim() : "";
-    const designation = DOM.profileDesignationSelect ? DOM.profileDesignationSelect.value : "Senior Developer";
     const department = DOM.profileDepartmentInput ? DOM.profileDepartmentInput.value.trim() : "";
     const bio = DOM.profileBioInput ? DOM.profileBioInput.value.trim() : "";
 
@@ -924,12 +925,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       return;
     }
 
-    const isDev = designation.includes("Developer");
-    const isSenior = designation.includes("Senior");
-    const role = isDev ? "dev" : "qa";
-    const devLevel = isSenior ? "senior" : "junior";
     const photoVal = state.tempProfilePhoto !== undefined ? state.tempProfilePhoto : (user.avatarUrl || user.photo || "");
 
+    // Self-service profile update excludes designation/role so only Super Admin can assign designation
     const updated = StorageManager.updateUser(user.id, {
       name,
       fullName: name,
@@ -938,10 +936,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       department,
       bio,
       photo: photoVal,
-      avatarUrl: photoVal,
-      role,
-      devLevel,
-      roleTitle: designation
+      avatarUrl: photoVal
     });
 
     if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
@@ -953,9 +948,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           phone: phoneClean,
           department,
           bio,
-          avatarUrl: photoVal,
-          role,
-          roleTitle: designation
+          avatarUrl: photoVal
         });
       } catch (err) {
         console.warn("Supabase profile update fallback:", err);
@@ -966,7 +959,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       action_type: "profile_updated",
       target_type: "profile",
       target_id: user.id,
-      details: { fullName: name, department, roleTitle: designation }
+      details: { fullName: name, department }
     });
 
     if (updated) {
@@ -2115,6 +2108,18 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }
     }
 
+    if (msg.type === "USER_UPDATED" && msg.payload?.user) {
+      const updatedRemote = msg.payload.user;
+      if (state.currentUser && state.currentUser.id === updatedRemote.id) {
+        state.currentUser = updatedRemote;
+        StorageManager.setCurrentUser(updatedRemote);
+        updateUserProfileUI();
+        populateProfileForm();
+      }
+      updateDevApprovalsBadge();
+      if (typeof renderDevApprovals === "function") renderDevApprovals();
+    }
+
     if (msg.type === "TESTER_APPROVAL_REQUESTED" || msg.type === "USERS_UPDATED") {
       updateDevApprovalsBadge();
       if (typeof renderDevApprovals === "function") {
@@ -2278,7 +2283,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                     <div class="pending-req-meta">
                       <h4>${escapeHtml(user.name)}</h4>
                       <span class="req-email">${escapeHtml(user.email)}</span>
-                      <div class="mt-1">${roleBadge}</div>
+                      <div class="mt-1 d-flex align-center gap-2 flex-wrap">
+                        ${roleBadge}
+                        ${isSenior ? renderAdminDesignationSelectHtml(user) : ''}
+                      </div>
                     </div>
                   </div>
 
@@ -2376,7 +2384,12 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                 </div>
               </td>
               <td><span class="font-mono text-xs text-muted">${escapeHtml(u.email)}</span></td>
-              <td>${rolePill}</td>
+              <td>
+                <div class="d-flex align-center gap-2 flex-wrap">
+                  ${rolePill}
+                  ${isSenior ? renderAdminDesignationSelectHtml(u) : ''}
+                </div>
+              </td>
               <td>${projectBadge}</td>
               ${isSenior ? `
                 <td><span class="badge badge-passed"><i class="fa-solid fa-check"></i> ${u.emailVerified !== false ? '100% Verified' : 'Pending OTP'}</span></td>
@@ -2606,6 +2619,61 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       editMemberRemovePhotoBtn.style.display = "none";
     });
   }
+
+  window.assignUserDesignation = async function(userId, newDesignation) {
+    const currentUser = StorageManager.getCurrentUser() || state.currentUser;
+    if (!StorageManager.isSeniorDev(currentUser)) {
+      showToast("Access Denied: Only Super Admin can assign designations.", "error");
+      renderDevApprovals();
+      return;
+    }
+
+    const targetUser = StorageManager.getUsers().find(u => u.id === userId);
+    if (!targetUser) return;
+
+    const cleanDesig = String(newDesignation || "").trim();
+    const prevDesig = getUserAssignedDesignation(targetUser);
+    if ((targetUser.designation || "") === cleanDesig && prevDesig === (cleanDesig || "Pending Admin Assignment")) return;
+
+    const nextFields = {
+      designation: cleanDesig,
+      ...(cleanDesig ? { roleTitle: cleanDesig } : {})
+    };
+    const updatedUser = StorageManager.updateUser(userId, nextFields);
+
+    try {
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+        await SupabaseManager.updateUserInSupabase(userId, nextFields);
+      }
+      await logUserActivity({
+        action_type: "designation_updated",
+        target_type: "user",
+        target_id: userId,
+        old_value: prevDesig,
+        new_value: cleanDesig || "Pending Admin Assignment",
+        details: {
+          targetName: targetUser.name || "",
+          assignedBy: (currentUser && currentUser.name) || "Super Admin",
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      if (state.currentUser && state.currentUser.id === userId && updatedUser) {
+        state.currentUser = updatedUser;
+        StorageManager.setCurrentUser(updatedUser);
+        updateUserProfileUI();
+        populateProfileForm();
+      } else {
+        updateProfilePreviewBadge();
+      }
+      renderDevApprovals();
+      showToast(`Assigned designation "${cleanDesig || 'Pending Admin Assignment'}" to ${targetUser.name}!`, "success");
+    } catch (err) {
+      console.error("Failed to assign designation:", err);
+      showToast("Failed to save designation to Supabase: " + (err.message || err), "error");
+      renderDevApprovals();
+    }
+  };
 
   window.approveTester = async function(userId) {
     const currentUser = StorageManager.getCurrentUser() || state.currentUser;
@@ -3398,17 +3466,32 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   function showToast(message, type = "success") {
     const toast = document.createElement("div");
     toast.className = `toast toast-${type}`;
-    let icon = type === "error" ? "fa-circle-xmark" : type === "info" ? "fa-circle-info" : "fa-circle-check";
-    toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
-    if (DOM.toastContainer) DOM.toastContainer.appendChild(toast);
+    const icon = type === "error" ? "fa-circle-xmark" : type === "info" ? "fa-circle-info" : "fa-circle-check";
+    toast.innerHTML = `<i class="fa-solid ${icon}"></i><span class="toast-message">${escapeHtml(String(message || ""))}</span><button type="button" class="toast-close-btn" aria-label="Close notification">&times;</button>`;
+
+    const container = DOM.toastContainer || document.getElementById("toastContainer");
+    if (container) container.appendChild(toast);
     else document.body.appendChild(toast);
-    setTimeout(() => {
+
+    let dismissed = false;
+    const dismissToast = () => {
+      if (dismissed) return;
+      dismissed = true;
       toast.style.opacity = "0";
-      toast.style.transform = "translateY(-24px) scale(0.94)";
-      toast.style.transition = "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)";
-      setTimeout(() => toast.remove(), 260);
-    }, 3400);
+      toast.style.transform = "translateY(16px) scale(0.96)";
+      setTimeout(() => toast.remove(), 240);
+    };
+
+    const autoTimer = setTimeout(dismissToast, 3500);
+    const closeBtn = toast.querySelector(".toast-close-btn");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => {
+        clearTimeout(autoTimer);
+        dismissToast();
+      });
+    }
   }
+  window.showToast = showToast;
 
   function checkRetestBanner() {
     const defects = StorageManager.getDefects();

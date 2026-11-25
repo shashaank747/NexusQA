@@ -702,9 +702,10 @@
   </div>
 
   <!-- Toast Notification element -->
-  <div id="toast" class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm shadow-2xl transition-all transform translate-y-16 opacity-0 pointer-events-none">
+  <div id="toast" class="fixed bottom-4 left-4 right-4 md:left-auto md:bottom-5 md:right-5 md:max-w-sm z-50 flex items-center gap-3 px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm shadow-2xl transition-all transform translate-y-16 opacity-0 pointer-events-none">
     <span id="toastIcon" class="text-emerald-400">✓</span>
-    <span id="toastMsg" class="text-neutral-200 text-xs font-medium">Notification message</span>
+    <span id="toastMsg" class="text-neutral-200 text-xs font-medium flex-1">Notification message</span>
+    <button type="button" id="toastCloseBtn" class="text-neutral-400 hover:text-white text-sm leading-none px-1 cursor-pointer" aria-label="Close notification">&times;</button>
   </div>
 
   <!-- Supabase & Storage SDKs -->
@@ -1422,10 +1423,18 @@
      * Toast notification utility
      */
     let toastTimeout;
+    function hideToastNow() {
+      const toast = document.getElementById('toast');
+      if (!toast) return;
+      clearTimeout(toastTimeout);
+      toast.classList.remove('translate-y-0', 'opacity-100');
+      toast.classList.add('translate-y-16', 'opacity-0', 'pointer-events-none');
+    }
     function showToast(message, type = 'success') {
       const toast = document.getElementById('toast');
       const toastMsg = document.getElementById('toastMsg');
       const toastIcon = document.getElementById('toastIcon');
+      const toastCloseBtn = document.getElementById('toastCloseBtn');
 
       if (!toast) return;
 
@@ -1443,13 +1452,15 @@
         toastIcon.className = 'text-indigo-400 font-bold';
       }
 
+      if (toastCloseBtn && !toastCloseBtn.dataset.bound) {
+        toastCloseBtn.dataset.bound = '1';
+        toastCloseBtn.addEventListener('click', hideToastNow);
+      }
+
       toast.classList.remove('translate-y-16', 'opacity-0', 'pointer-events-none');
       toast.classList.add('translate-y-0', 'opacity-100');
 
-      toastTimeout = setTimeout(() => {
-        toast.classList.remove('translate-y-0', 'opacity-100');
-        toast.classList.add('translate-y-16', 'opacity-0', 'pointer-events-none');
-      }, 3500);
+      toastTimeout = setTimeout(hideToastNow, 3500);
     }
 
     // Check if coming back with an authentication error notice
