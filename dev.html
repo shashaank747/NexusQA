@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.13">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.15">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -220,13 +220,19 @@
         </div>
       </div>
 
-      <div class="topbar-center">
-        <div class="uiverse-search-wrapper" id="topbarSearchWrapper">
-          <input type="text" name="text" placeholder="Search bugs, test cases, branches, PRs (Press '/')" class="input" id="globalSearchInput" autocomplete="off" />
+      <div class="topbar-center topbar-global-search flex-1 max-w-md mx-4">
+        <div class="global-search-bar topbar-search-flex" id="topbarSearchWrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="globalSearchInput" class="topbar-search-input" placeholder="Search test cases, defects, IDs, or suites..." autocomplete="off" />
+          <span class="search-shortcut" id="globalSearchShortcut">/</span>
+          <button type="button" class="topbar-search-clear" id="globalSearchClearBtn" title="Clear search" style="display: none;">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+          <div class="global-search-dropdown" id="globalSearchResultsDropdown" style="display: none;"></div>
         </div>
       </div>
 
-      <div class="topbar-right">
+      <div class="topbar-right pr-6">
         <button class="btn btn-primary btn-sm" id="createQuickBtn">
           <i class="fa-solid fa-plus"></i>
           <span id="createQuickBtnLabel">New Bug Ticket</span>
@@ -300,6 +306,9 @@
               <li class="rail-nav-item" data-view="dev-approvals" title="Employees">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-users text-amber"></i></button>
               </li>
+              <li class="rail-nav-item" data-view="dev-audit" id="devAuditRailItem" title="Audit &amp; Activity Trail">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-clock-rotate-left text-indigo"></i></button>
+              </li>
               <li class="rail-nav-item" data-view="dev-kanban" title="Bug Triage Kanban">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-table-columns"></i></button>
               </li>
@@ -347,6 +356,13 @@
                     <i class="fa-solid fa-users text-amber"></i>
                     <span>Employees</span>
                     <span class="nav-badge badge-danger" id="devPendingApprovalsBadge">0</span>
+                  </a>
+                </li>
+                <li class="nav-item" data-view="dev-audit" id="devAuditNavItem">
+                  <a href="javascript:void(0)" class="nav-link">
+                    <i class="fa-solid fa-clock-rotate-left text-indigo"></i>
+                    <span>Audit &amp; Activity Trail</span>
+                    <span class="nav-badge badge-version" id="devAuditCountBadge">0</span>
                   </a>
                 </li>
                 <li class="nav-item" data-view="dev-kanban">
@@ -495,6 +511,7 @@
               <p class="view-subtitle">Manage team roster, edit tester & developer member details, and authorize pending access requests in real time.</p>
             </div>
             <div class="view-actions">
+              <button class="btn btn-outline btn-sm" id="btnOpenAuditFromApprovals"><i class="fa-solid fa-clock-rotate-left text-indigo"></i> Audit Trail</button>
               <button class="btn btn-secondary btn-sm" id="refreshApprovalsBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Requests</button>
             </div>
           </div>
@@ -572,6 +589,126 @@
                     </tr>
                   </thead>
                   <tbody id="authorizedTestersTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SUPER ADMIN VIEW: AUDIT & ACTIVITY TRAIL -->
+        <section class="view-panel" id="view-dev-audit">
+          <div class="view-header">
+            <div>
+              <div class="dev-header-badge"><i class="fa-solid fa-shield-halved"></i> Super Admin Observability</div>
+              <h1 class="view-title">Audit &amp; Activity Trail</h1>
+              <p class="view-subtitle">Real-time chronological log of user logins, logouts, views, button clicks, ticket status transitions, and uploaded media.</p>
+            </div>
+            <div class="view-actions">
+              <button class="btn btn-secondary btn-sm" id="refreshAuditLogsBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Logs</button>
+            </div>
+          </div>
+
+          <!-- Audit KPI Cards -->
+          <div class="kpi-grid mb-4">
+            <div class="kpi-card card-glow-indigo">
+              <div class="kpi-header">
+                <span class="kpi-title">Total Activity Events</span>
+                <span class="kpi-icon-badge icon-indigo"><i class="fa-solid fa-list-check"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value" id="auditTotalEventsCount">0</span>
+                <span class="kpi-trend trend-neutral">Tracked Actions</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-emerald">
+              <div class="kpi-header">
+                <span class="kpi-title">Online Members Now</span>
+                <span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-signal"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-emerald" id="auditOnlineUsersCount">0</span>
+                <span class="kpi-trend trend-up">Live Presence</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-amber">
+              <div class="kpi-header">
+                <span class="kpi-title">Status Transitions</span>
+                <span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-code-branch"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-amber" id="auditStatusChangesCount">0</span>
+                <span class="kpi-trend trend-neutral">QA &amp; Dev Lifecycle</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-glow-cyan">
+              <div class="kpi-header">
+                <span class="kpi-title">Media Evidence Files</span>
+                <span class="kpi-icon-badge icon-cyan"><i class="fa-solid fa-photo-film"></i></span>
+              </div>
+              <div class="kpi-body">
+                <span class="kpi-value text-cyan" id="auditMediaCount">0</span>
+                <span class="kpi-trend trend-up">nexus-evidence</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live User Presence Strip -->
+          <div class="dashboard-card mb-4">
+            <div class="card-header">
+              <div class="card-title-group">
+                <h3><i class="fa-solid fa-user-clock text-emerald"></i> Team Session Presence</h3>
+                <p class="card-subtitle">Live online status, last login timestamp, and last logout timestamp from nexus_users</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="audit-presence-grid" id="auditPresenceGrid"></div>
+            </div>
+          </div>
+
+          <!-- Audit Filter Bar + Chronological Log Table -->
+          <div class="dashboard-card">
+            <div class="card-header flex-wrap gap-2">
+              <div class="card-title-group">
+                <h3><i class="fa-solid fa-clock-rotate-left text-primary"></i> Chronological Event Stream</h3>
+                <p class="card-subtitle">Every login, logout, navigation, click, ticket view, status update, and media upload</p>
+              </div>
+              <div class="d-flex align-center gap-2 flex-wrap">
+                <input type="text" id="auditSearchInput" class="nexus-input" style="min-width: 220px;" placeholder="Search user, ticket ID, details...">
+                <select id="auditActionFilter" class="nexus-select" style="width: auto;">
+                  <option value="all">All Actions</option>
+                  <option value="login">Login</option>
+                  <option value="logout">Logout</option>
+                  <option value="page_view">Page View</option>
+                  <option value="button_click">Button Click</option>
+                  <option value="test_case_created">Test Case Created</option>
+                  <option value="test_case_viewed">Test Case Viewed</option>
+                  <option value="status_changed">Status Changed</option>
+                  <option value="marked_fixed">Marked Fixed</option>
+                  <option value="media_uploaded">Media Uploaded</option>
+                  <option value="profile_updated">Profile Updated</option>
+                </select>
+                <select id="auditUserFilter" class="nexus-select" style="width: auto;">
+                  <option value="all">All Users</option>
+                </select>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="nexus-table" id="auditLogsTable">
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th>
+                      <th>User</th>
+                      <th>Action</th>
+                      <th>Target</th>
+                      <th>Change (Old &rarr; New)</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody id="auditLogsTableBody"></tbody>
                 </table>
               </div>
             </div>
@@ -729,18 +866,33 @@
                   </div>
                 </div>
 
-                <!-- Designation -->
-                <div class="form-group mb-4">
-                  <label for="profileDesignationSelect" class="form-label font-semibold">Designation <span class="text-rose">*</span></label>
-                  <div class="input-with-icon">
-                    <i class="fa-solid fa-briefcase input-icon"></i>
-                    <select id="profileDesignationSelect" class="nexus-select w-100 pl-5">
-                      <option value="Senior Developer">Senior Developer</option>
-                      <option value="Junior Developer">Junior Developer</option>
-                      <option value="Senior Tester">Senior Tester</option>
-                      <option value="Junior Tester">Junior Tester</option>
-                    </select>
+                <!-- Designation & Department -->
+                <div class="form-row mb-3">
+                  <div class="form-group flex-1">
+                    <label for="profileDesignationSelect" class="form-label font-semibold">Designation <span class="text-rose">*</span></label>
+                    <div class="input-with-icon">
+                      <i class="fa-solid fa-briefcase input-icon"></i>
+                      <select id="profileDesignationSelect" class="nexus-select w-100 pl-5">
+                        <option value="Senior Developer">Senior Developer</option>
+                        <option value="Junior Developer">Junior Developer</option>
+                        <option value="Senior Tester">Senior Tester</option>
+                        <option value="Junior Tester">Junior Tester</option>
+                      </select>
+                    </div>
                   </div>
+                  <div class="form-group flex-1">
+                    <label for="profileDepartmentInput" class="form-label font-semibold">Department</label>
+                    <div class="input-with-icon">
+                      <i class="fa-solid fa-building input-icon"></i>
+                      <input type="text" id="profileDepartmentInput" class="nexus-input pl-5" placeholder="e.g. Engineering / Quality Assurance">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bio -->
+                <div class="form-group mb-4">
+                  <label for="profileBioInput" class="form-label font-semibold">Bio / Focus Areas</label>
+                  <textarea id="profileBioInput" class="nexus-textarea" rows="2" placeholder="Describe your role, architecture focus, or specialties..."></textarea>
                 </div>
 
                 <!-- Save Action -->
@@ -794,8 +946,24 @@
                       <span class="detail-val font-mono" id="previewCardPhone">9876543210</span>
                     </div>
                     <div class="id-card-detail-item">
+                      <span class="detail-label"><i class="fa-solid fa-building"></i> Department</span>
+                      <span class="detail-val" id="previewCardDepartment">—</span>
+                    </div>
+                    <div class="id-card-detail-item">
                       <span class="detail-label"><i class="fa-solid fa-id-badge"></i> User ID</span>
                       <span class="detail-val font-mono text-muted" id="previewCardUserId">user-dev-1</span>
+                    </div>
+                    <div class="id-card-detail-item">
+                      <span class="detail-label"><i class="fa-solid fa-right-to-bracket"></i> Last Login</span>
+                      <span class="detail-val font-mono text-xs" id="previewCardLastLogin">—</span>
+                    </div>
+                    <div class="id-card-detail-item">
+                      <span class="detail-label"><i class="fa-solid fa-right-from-bracket"></i> Last Logout</span>
+                      <span class="detail-val font-mono text-xs" id="previewCardLastLogout">—</span>
+                    </div>
+                    <div class="id-card-detail-item" style="align-items:flex-start;">
+                      <span class="detail-label"><i class="fa-solid fa-quote-left"></i> Bio</span>
+                      <span class="detail-val text-xs text-muted" id="previewCardBio">—</span>
                     </div>
                   </div>
                 </div>
@@ -1124,6 +1292,8 @@
               <input type="text" id="devFixAssigneeSelect" class="nexus-input" value="Senior Developer">
             </div>
           </div>
+
+          <div id="devFixHistoryTimeline" class="mt-3 pt-3 border-top"></div>
         </form>
       </div>
       <div class="modal-footer">
@@ -1571,8 +1741,8 @@
   
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.6"></script>
-  <script src="js/supabase.js?v=1.0.12"></script>
-  <script src="js/storage.js?v=1.0.17"></script>
-  <script src="js/app.js?v=1.0.18"></script>
+  <script src="js/supabase.js?v=1.0.13"></script>
+  <script src="js/storage.js?v=1.0.18"></script>
+  <script src="js/app.js?v=1.0.20"></script>
 </body>
 </html>

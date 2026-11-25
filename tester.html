@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.13">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.15">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -222,6 +222,18 @@
           <div class="clock-pulse-dot"></div>
           <span class="clock-time font-mono" id="topbarClockTime">--:--:--</span>
           <span class="clock-date" id="topbarClockDate">---, --- --</span>
+        </div>
+      </div>
+
+      <div class="topbar-center topbar-global-search flex-1 max-w-md mx-4">
+        <div class="global-search-bar topbar-search-flex" id="topbarSearchWrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="globalSearchInput" class="topbar-search-input" placeholder="Search test cases, defects, IDs, or suites..." autocomplete="off" />
+          <span class="search-shortcut" id="globalSearchShortcut">/</span>
+          <button type="button" class="topbar-search-clear" id="globalSearchClearBtn" title="Clear search" style="display: none;">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+          <div class="global-search-dropdown" id="globalSearchResultsDropdown" style="display: none;"></div>
         </div>
       </div>
 
@@ -1073,18 +1085,33 @@
                   </div>
                 </div>
 
-                <!-- Designation -->
-                <div class="form-group mb-4">
-                  <label for="profileDesignationSelect" class="form-label font-semibold">Designation <span class="text-rose">*</span></label>
-                  <div class="input-with-icon">
-                    <i class="fa-solid fa-briefcase input-icon"></i>
-                    <select id="profileDesignationSelect" class="nexus-select w-100 pl-5">
-                      <option value="Senior Developer">Senior Developer</option>
-                      <option value="Junior Developer">Junior Developer</option>
-                      <option value="Senior Tester">Senior Tester</option>
-                      <option value="Junior Tester">Junior Tester</option>
-                    </select>
+                <!-- Designation & Department -->
+                <div class="form-row mb-3">
+                  <div class="form-group flex-1">
+                    <label for="profileDesignationSelect" class="form-label font-semibold">Designation <span class="text-rose">*</span></label>
+                    <div class="input-with-icon">
+                      <i class="fa-solid fa-briefcase input-icon"></i>
+                      <select id="profileDesignationSelect" class="nexus-select w-100 pl-5">
+                        <option value="Senior Developer">Senior Developer</option>
+                        <option value="Junior Developer">Junior Developer</option>
+                        <option value="Senior Tester">Senior Tester</option>
+                        <option value="Junior Tester">Junior Tester</option>
+                      </select>
+                    </div>
                   </div>
+                  <div class="form-group flex-1">
+                    <label for="profileDepartmentInput" class="form-label font-semibold">Department</label>
+                    <div class="input-with-icon">
+                      <i class="fa-solid fa-building input-icon"></i>
+                      <input type="text" id="profileDepartmentInput" class="nexus-input pl-5" placeholder="e.g. Quality Assurance / Engineering">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bio -->
+                <div class="form-group mb-4">
+                  <label for="profileBioInput" class="form-label font-semibold">Bio / Focus Areas</label>
+                  <textarea id="profileBioInput" class="nexus-textarea" rows="2" placeholder="Describe your role, testing focus, or team specialties..."></textarea>
                 </div>
 
                 <!-- Save Action -->
@@ -1138,8 +1165,24 @@
                       <span class="detail-val font-mono" id="previewCardPhone">9876543210</span>
                     </div>
                     <div class="id-card-detail-item">
+                      <span class="detail-label"><i class="fa-solid fa-building"></i> Department</span>
+                      <span class="detail-val" id="previewCardDepartment">—</span>
+                    </div>
+                    <div class="id-card-detail-item">
                       <span class="detail-label"><i class="fa-solid fa-id-badge"></i> User ID</span>
                       <span class="detail-val font-mono text-muted" id="previewCardUserId">user-qa-a</span>
+                    </div>
+                    <div class="id-card-detail-item">
+                      <span class="detail-label"><i class="fa-solid fa-right-to-bracket"></i> Last Login</span>
+                      <span class="detail-val font-mono text-xs" id="previewCardLastLogin">—</span>
+                    </div>
+                    <div class="id-card-detail-item">
+                      <span class="detail-label"><i class="fa-solid fa-right-from-bracket"></i> Last Logout</span>
+                      <span class="detail-val font-mono text-xs" id="previewCardLastLogout">—</span>
+                    </div>
+                    <div class="id-card-detail-item" style="align-items:flex-start;">
+                      <span class="detail-label"><i class="fa-solid fa-quote-left"></i> Bio</span>
+                      <span class="detail-val text-xs text-muted" id="previewCardBio">—</span>
                     </div>
                   </div>
                 </div>
@@ -2326,9 +2369,9 @@
   
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.6"></script>
-  <script src="js/supabase.js?v=1.0.12"></script>
-  <script src="js/storage.js?v=1.0.17"></script>
+  <script src="js/supabase.js?v=1.0.13"></script>
+  <script src="js/storage.js?v=1.0.18"></script>
   <script src="js/qa-assistant.js?v=1.0.5"></script>
-  <script src="js/app.js?v=1.0.18"></script>
+  <script src="js/app.js?v=1.0.20"></script>
 </body>
 </html>

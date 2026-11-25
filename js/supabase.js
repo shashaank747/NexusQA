@@ -165,6 +165,12 @@ const SupabaseManager = {
       .on("postgres_changes", { event: "*", schema: "public", table: "nexus_conference_messages" }, (payload) => {
         this.handleRemoteConferenceMessageChange(payload);
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "nexus_activity_logs" }, (payload) => {
+        this.handleRemoteActivityLogChange(payload);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "nexus_media_attachments" }, (payload) => {
+        this.handleRemoteMediaAttachmentChange(payload);
+      })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           console.log("⚡ Supabase Realtime Channel Connected!");
@@ -337,12 +343,102 @@ const SupabaseManager = {
   },
 
   // -------------------------------------------------------------
-  // Data Mappers (DB <-> Client)
+  // Data Mappers & Schema-Resilient Helpers (DB <-> Client)
   // -------------------------------------------------------------
-  mapUserToDB(u) {
+  _missingTables: new Set(),
+  _baseOnlyTables: new Set(),
+  _missingStorageBuckets: new Set(),
+
+  isSchemaError(error) {
+    if (!error) return false;
+    const code = String(error.code || "");
+    const msg = String(error.message || "");
+    return code === "PGRST204" || code === "PGRST205" || msg.includes("schema cache") || msg.includes("column");
+  },
+
+  markTableStateFromError(tableName, error) {
+    if (!error) return;
+    const code = String(error.code || "");
+    const msg = String(error.message || "");
+    if (code === "PGRST205" || msg.includes(`public.${tableName}`) || msg.includes(`'${tableName}'`)) {
+      this._missingTables.add(tableName);
+    } else if (code === "PGRST204" || msg.includes("column")) {
+      this._baseOnlyTables.add(tableName);
+    }
+  },
+
+  async upsertWithSchemaFallback(tableName, extendedPayload, basePayload = null) {
+    const client = this.getClient();
+    if (!client) return { ok: false, error: "Supabase client unavailable" };
+    if (this._missingTables.has(tableName)) return { ok: false, missingTable: true };
+    try {
+      if (this._baseOnlyTables.has(tableName) && basePayload) {
+        const retry = await client.from(tableName).upsert(basePayload);
+        return retry.error ? { ok: false, error: retry.error } : { ok: true, usedBaseFallback: true };
+      }
+      const { error } = await client.from(tableName).upsert(extendedPayload);
+      if (!error) return { ok: true };
+      this.markTableStateFromError(tableName, error);
+      if (basePayload && this.isSchemaError(error)) {
+        const retry = await client.from(tableName).upsert(basePayload);
+        if (!retry.error) return { ok: true, usedBaseFallback: true };
+        return { ok: false, error: retry.error };
+      }
+      return { ok: false, error };
+    } catch (e) {
+      return { ok: false, error: e };
+    }
+  },
+
+  handleRemoteActivityLogChange(payload) {
+    if (typeof StorageManager === "undefined" || !StorageManager.mergeRemoteActivityLogs) return;
+    if (payload.eventType === "INSERT" && payload.new) {
+      StorageManager.mergeRemoteActivityLogs([this.mapActivityLogFromDB(payload.new)]);
+    }
+  },
+
+  handleRemoteMediaAttachmentChange(payload) {
+    if (typeof StorageManager === "undefined" || !StorageManager.mergeRemoteMediaAttachments) return;
+    if ((payload.eventType === "INSERT" || payload.eventType === "UPDATE") && payload.new) {
+      StorageManager.mergeRemoteMediaAttachments([this.mapMediaAttachmentFromDB(payload.new)]);
+    }
+  },
+
+  mapActivityLogFromDB(row) {
+    return {
+      id: row.id,
+      userId: row.user_id || "",
+      username: row.username || "Unknown",
+      userRole: row.user_role || "qa",
+      actionType: row.action_type || "activity",
+      targetType: row.target_type || "",
+      targetId: row.target_id || "",
+      oldValue: row.old_value ?? "",
+      newValue: row.new_value ?? "",
+      details: row.details || {},
+      createdAt: row.created_at || new Date().toISOString()
+    };
+  },
+
+  mapMediaAttachmentFromDB(row) {
+    return {
+      id: row.id,
+      testCaseId: row.test_case_id || "",
+      defectId: row.defect_id || "",
+      uploadedBy: row.uploaded_by || "",
+      uploaderName: row.uploader_name || "Team Member",
+      fileName: row.file_name || "evidence",
+      fileType: row.file_type || "image",
+      fileUrl: row.file_url || "",
+      fileSizeBytes: row.file_size_bytes || 0,
+      createdAt: row.created_at || new Date().toISOString()
+    };
+  },
+
+  mapUserToBaseDB(u) {
     return {
       id: u.id,
-      name: u.name,
+      name: u.fullName || u.name,
       email: u.email,
       username: u.username || u.email,
       role: u.role || "qa",
@@ -355,35 +451,77 @@ const SupabaseManager = {
     };
   },
 
-  mapUserFromDB(row) {
+  mapUserToDB(u) {
+    const base = this.mapUserToBaseDB(u);
+    return {
+      ...base,
+      full_name: u.fullName || u.name || "",
+      avatar_url: u.avatarUrl || u.photo || "",
+      phone: u.phone || "",
+      department: u.department || "",
+      bio: u.bio || "",
+      last_login_at: u.lastLoginAt || null,
+      last_logout_at: u.lastLogoutAt || null,
+      is_online: Boolean(u.isOnline)
+    };
+  },
+
+  mapUserFromDB(row, existingLocal = null) {
+    const displayName = row.full_name || row.name;
+    const avatarUrl = row.avatar_url !== undefined ? row.avatar_url : (existingLocal?.avatarUrl || existingLocal?.photo || "");
+    const hasExtendedPresence = row.is_online !== undefined;
     return {
       id: row.id,
-      name: row.name,
+      name: displayName,
+      fullName: displayName,
       email: row.email,
       username: row.username || row.email,
       role: row.role || "qa",
       roleTitle: row.role_title || (row.role === "dev" ? "Senior Developer" : "QA Tester"),
-      avatar: row.avatar || (row.name ? row.name.slice(0, 2).toUpperCase() : "QA"),
+      avatar: row.avatar || (displayName ? displayName.slice(0, 2).toUpperCase() : "QA"),
+      avatarUrl: avatarUrl,
+      photo: avatarUrl || row.photo || "",
       color: row.color || (row.role === "dev" ? "#10b981" : "#6366f1"),
+      phone: row.phone !== undefined ? (row.phone || "") : (existingLocal?.phone || ""),
+      department: row.department !== undefined ? (row.department || "") : (existingLocal?.department || ""),
+      bio: row.bio !== undefined ? (row.bio || "") : (existingLocal?.bio || ""),
       status: row.status || "active",
       emailVerified: row.email_verified !== false,
+      isOnline: hasExtendedPresence ? Boolean(row.is_online) : Boolean(existingLocal?.isOnline),
+      lastLoginAt: row.last_login_at !== undefined ? (row.last_login_at || "") : (existingLocal?.lastLoginAt || ""),
+      lastLogoutAt: row.last_logout_at !== undefined ? (row.last_logout_at || "") : (existingLocal?.lastLogoutAt || ""),
       createdAt: row.created_at || new Date().toISOString()
     };
   },
 
-  mapTestCaseToDB(tc) {
+  mapTestCaseToBaseDB(tc) {
     const stepsArray = Array.isArray(tc.steps) ? tc.steps : [];
-    const hasMeta = Boolean(tc.assignedDev || tc.mediaUrl || tc.image || tc.mediaType || tc.mediaName || tc.explanation || tc.createdAt);
+    const mediaUrls = Array.isArray(tc.mediaUrls) && tc.mediaUrls.length > 0
+      ? tc.mediaUrls
+      : ((tc.mediaUrl || tc.image) ? [tc.mediaUrl || tc.image] : []);
+    const hasMeta = Boolean(
+      tc.assignedDev || tc.assignedTo || tc.mediaUrl || tc.image || tc.mediaType || tc.mediaName ||
+      tc.explanation || tc.createdAt || tc.createdBy || tc.lastViewedByDevId || tc.fixedByDevId || tc.verifiedByTesterId ||
+      mediaUrls.length > 0
+    );
     const stepsPayload = hasMeta
       ? {
           items: stepsArray,
           _meta: {
             explanation: tc.explanation || tc.preconditions || "",
-            assignedDev: tc.assignedDev || "",
-            mediaUrl: tc.mediaUrl || tc.image || "",
+            assignedDev: tc.assignedDev || tc.assignedTo || "",
+            mediaUrl: tc.mediaUrl || tc.image || mediaUrls[0] || "",
+            mediaUrls,
             mediaType: tc.mediaType || (tc.image ? "image" : ""),
             mediaName: tc.mediaName || "",
-            createdAt: tc.createdAt || tc.lastRun || ""
+            createdAt: tc.createdAt || tc.lastRun || "",
+            createdBy: tc.createdBy || tc.author || "",
+            lastViewedByDevId: tc.lastViewedByDevId || "",
+            lastViewedByDevAt: tc.lastViewedByDevAt || "",
+            fixedByDevId: tc.fixedByDevId || "",
+            fixedAt: tc.fixedAt || "",
+            verifiedByTesterId: tc.verifiedByTesterId || "",
+            verifiedAt: tc.verifiedAt || ""
           }
         }
       : stepsArray;
@@ -404,12 +542,38 @@ const SupabaseManager = {
     };
   },
 
+  mapTestCaseToDB(tc) {
+    const base = this.mapTestCaseToBaseDB(tc);
+    const stepsArray = Array.isArray(tc.steps) ? tc.steps : [];
+    const reproText = tc.stepsToReproduce || stepsArray.map(s => `${s.step}. ${s.action}${s.expected ? ` -> ${s.expected}` : ""}`).join("\n");
+    const mediaUrls = Array.isArray(tc.mediaUrls) && tc.mediaUrls.length > 0
+      ? tc.mediaUrls
+      : ((tc.mediaUrl || tc.image) ? [tc.mediaUrl || tc.image] : []);
+
+    return {
+      ...base,
+      created_by: tc.createdBy || tc.author || "",
+      assigned_to: tc.assignedTo || tc.assignedDev || "",
+      steps_to_reproduce: reproText,
+      media_urls: mediaUrls,
+      last_viewed_by_dev_id: tc.lastViewedByDevId || null,
+      last_viewed_by_dev_at: tc.lastViewedByDevAt || null,
+      fixed_by_dev_id: tc.fixedByDevId || null,
+      fixed_at: tc.fixedAt || null,
+      verified_by_tester_id: tc.verifiedByTesterId || null,
+      verified_at: tc.verifiedAt || null
+    };
+  },
+
   mapTestCaseFromDB(row) {
     const rawSteps = row.steps;
     const isWrapped = rawSteps && !Array.isArray(rawSteps) && Array.isArray(rawSteps.items);
     const stepsArr = isWrapped ? rawSteps.items : (Array.isArray(rawSteps) ? rawSteps : []);
     const meta = (isWrapped && rawSteps._meta) ? rawSteps._meta : {};
-    const mediaUrl = meta.mediaUrl || "";
+    const mediaUrls = Array.isArray(row.media_urls) && row.media_urls.length > 0
+      ? row.media_urls
+      : (Array.isArray(meta.mediaUrls) ? meta.mediaUrls : []);
+    const mediaUrl = meta.mediaUrl || mediaUrls[0] || "";
     const mediaType = meta.mediaType || "";
 
     return {
@@ -420,21 +584,31 @@ const SupabaseManager = {
       type: row.type || "Manual",
       status: row.status || "Untested",
       author: row.author,
+      createdBy: row.created_by || meta.createdBy || row.author || "",
+      assignedDev: row.assigned_to || meta.assignedDev || "",
+      assignedTo: row.assigned_to || meta.assignedDev || "",
+      stepsToReproduce: row.steps_to_reproduce || "",
       lastRun: row.last_run,
       createdAt: meta.createdAt || (row.created_at ? row.created_at.substring(0, 16).replace("T", " ") : ""),
       preconditions: row.preconditions || meta.explanation || "",
       explanation: meta.explanation || row.preconditions || "",
-      assignedDev: meta.assignedDev || "",
       mediaUrl,
+      mediaUrls,
       mediaType,
       mediaName: meta.mediaName || "",
       image: mediaType === "video" ? "" : mediaUrl,
+      lastViewedByDevId: row.last_viewed_by_dev_id || meta.lastViewedByDevId || "",
+      lastViewedByDevAt: row.last_viewed_by_dev_at || meta.lastViewedByDevAt || "",
+      fixedByDevId: row.fixed_by_dev_id || meta.fixedByDevId || "",
+      fixedAt: row.fixed_at || meta.fixedAt || "",
+      verifiedByTesterId: row.verified_by_tester_id || meta.verifiedByTesterId || "",
+      verifiedAt: row.verified_at || meta.verifiedAt || "",
       tags: row.tags || [],
       steps: stepsArr
     };
   },
 
-  mapDefectToDB(d) {
+  mapDefectToBaseDB(d) {
     return {
       id: d.id,
       title: d.summary || d.title || "Defect",
@@ -453,22 +627,56 @@ const SupabaseManager = {
     };
   },
 
+  mapDefectToDB(d) {
+    const base = this.mapDefectToBaseDB(d);
+    const mediaUrls = Array.isArray(d.mediaUrls) && d.mediaUrls.length > 0
+      ? d.mediaUrls
+      : (d.mediaUrl ? [d.mediaUrl] : []);
+    return {
+      ...base,
+      suite_id: d.suiteId || null,
+      created_by: d.createdBy || d.reportedBy || d.reporter || "",
+      assigned_to: d.assignedTo || d.assignee || null,
+      steps_to_reproduce: d.stepsToReproduce || d.reproSteps || d.repro_steps || null,
+      media_urls: mediaUrls,
+      last_viewed_by_dev_id: d.lastViewedByDevId || null,
+      last_viewed_by_dev_at: d.lastViewedByDevAt || null,
+      fixed_by_dev_id: d.fixedByDevId || null,
+      fixed_at: d.fixedAt || null,
+      verified_by_tester_id: d.verifiedByTesterId || null,
+      verified_at: d.verifiedAt || null
+    };
+  },
+
   mapDefectFromDB(row) {
+    const mediaUrls = Array.isArray(row.media_urls) ? row.media_urls : [];
     return {
       id: row.id,
       title: row.title,
       summary: row.title || row.summary || "Defect",
       linkedTestCaseId: row.linked_test_id || row.linked_test_case_id,
+      suiteId: row.suite_id || null,
       severity: row.severity,
       priority: row.priority,
-      assignee: row.assignee,
+      assignee: row.assignee || row.assigned_to,
+      assignedTo: row.assigned_to || row.assignee,
       reportedBy: row.reporter || row.reported_by,
+      createdBy: row.created_by || row.reporter || "",
       status: row.status,
       description: row.description,
-      reproSteps: row.repro_steps || "",
+      reproSteps: row.repro_steps || row.steps_to_reproduce || "",
+      stepsToReproduce: row.steps_to_reproduce || row.repro_steps || "",
+      mediaUrls,
+      mediaUrl: mediaUrls[0] || "",
       devNotes: row.notes || row.dev_notes,
       prLink: row.dev_pr || row.pr_link,
       gitBranch: row.dev_branch || row.git_branch,
+      lastViewedByDevId: row.last_viewed_by_dev_id || "",
+      lastViewedByDevAt: row.last_viewed_by_dev_at || "",
+      fixedByDevId: row.fixed_by_dev_id || "",
+      fixedAt: row.fixed_at || "",
+      verifiedByTesterId: row.verified_by_tester_id || "",
+      verifiedAt: row.verified_at || "",
       createdAt: row.created_at ? row.created_at.substring(0, 16).replace("T", " ") : "",
       updatedAt: row.updated_at ? row.updated_at.substring(0, 16).replace("T", " ") : ""
     };
@@ -529,13 +737,19 @@ const SupabaseManager = {
         StorageManager.saveDefects(mapped, false);
       }
       if (usersRes.data) {
-        const mapped = usersRes.data.map(u => this.mapUserFromDB(u));
+        const existingLocal = typeof StorageManager !== "undefined" ? StorageManager.getUsers() : [];
+        const localById = new Map(existingLocal.map(u => [u.id, u]));
+        const mapped = usersRes.data.map(u => this.mapUserFromDB(u, localById.get(u.id)));
         // Exclusively save Supabase database users - DO NOT merge, fallback, or seed dummy users
         StorageManager.saveUsers(mapped, true);
       }
 
-      // Also pull conference channel messages if nexus_conference_messages table exists
-      await this.fetchConferenceMessagesFromSupabase().catch(() => []);
+      // Also pull conference channel messages, activity logs, and media attachments if tables exist
+      await Promise.all([
+        this.fetchConferenceMessagesFromSupabase().catch(() => []),
+        this.fetchActivityLogsFromSupabase({ limit: 300 }).catch(() => []),
+        this.fetchMediaAttachmentsFromSupabase().catch(() => [])
+      ]);
 
       return true;
     } catch (err) {
@@ -585,7 +799,8 @@ const SupabaseManager = {
     if (!client || !usersList || usersList.length === 0) return;
     try {
       const payload = usersList.map(u => this.mapUserToDB(u));
-      await client.from("nexus_users").upsert(payload);
+      const basePayload = usersList.map(u => this.mapUserToBaseDB(u));
+      await this.upsertWithSchemaFallback("nexus_users", payload, basePayload);
     } catch (e) {
       console.warn("Error syncing users to Supabase:", e);
     }
@@ -611,7 +826,9 @@ const SupabaseManager = {
         throw error;
       }
 
-      const mapped = (data || []).map(u => this.mapUserFromDB(u));
+      const existingLocal = typeof StorageManager !== "undefined" ? StorageManager.getUsers() : [];
+      const localById = new Map(existingLocal.map(u => [u.id, u]));
+      const mapped = (data || []).map(u => this.mapUserFromDB(u, localById.get(u.id)));
       // Exclusively save users from Supabase — do not merge or fallback to dummy users
       if (typeof StorageManager !== "undefined") {
         StorageManager.saveUsers(mapped, true);
@@ -633,36 +850,79 @@ const SupabaseManager = {
     const dbPayload = {
       updated_at: new Date().toISOString()
     };
-    if (updates.name !== undefined) {
-      dbPayload.name = updates.name.trim();
-      const parts = updates.name.trim().split(/\s+/);
-      dbPayload.avatar = parts.length > 1
-        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-        : updates.name.trim().substring(0, 2).toUpperCase();
+    const corePayload = {
+      updated_at: dbPayload.updated_at
+    };
+    if (updates.name !== undefined || updates.fullName !== undefined) {
+      const cleanName = (updates.fullName || updates.name || "").trim();
+      if (cleanName) {
+        dbPayload.name = cleanName;
+        dbPayload.full_name = cleanName;
+        corePayload.name = cleanName;
+        const parts = cleanName.split(/\s+/);
+        const av = parts.length > 1
+          ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+          : cleanName.substring(0, 2).toUpperCase();
+        dbPayload.avatar = av;
+        corePayload.avatar = av;
+      }
     }
-    if (updates.email !== undefined) dbPayload.email = updates.email.trim();
-    if (updates.username !== undefined) dbPayload.username = updates.username.trim();
-    if (updates.role !== undefined) dbPayload.role = updates.role;
-    if (updates.roleTitle !== undefined) dbPayload.role_title = updates.roleTitle;
-    if (updates.role_title !== undefined) dbPayload.role_title = updates.role_title;
-    if (updates.avatar !== undefined) dbPayload.avatar = updates.avatar;
-    if (updates.color !== undefined) dbPayload.color = updates.color;
-    if (updates.status !== undefined) dbPayload.status = updates.status;
-    if (updates.emailVerified !== undefined) dbPayload.email_verified = updates.emailVerified !== false;
-    if (updates.email_verified !== undefined) dbPayload.email_verified = updates.email_verified !== false;
-
-    const { data, error } = await client
-      .from("nexus_users")
-      .update(dbPayload)
-      .eq("id", userId)
-      .select();
-
-    if (error) {
-      console.error("Supabase user update error:", error);
-      throw error;
+    if (updates.email !== undefined) { dbPayload.email = updates.email.trim(); corePayload.email = dbPayload.email; }
+    if (updates.username !== undefined) { dbPayload.username = updates.username.trim(); corePayload.username = dbPayload.username; }
+    if (updates.role !== undefined) { dbPayload.role = updates.role; corePayload.role = updates.role; }
+    if (updates.roleTitle !== undefined) { dbPayload.role_title = updates.roleTitle; corePayload.role_title = updates.roleTitle; }
+    if (updates.role_title !== undefined) { dbPayload.role_title = updates.role_title; corePayload.role_title = updates.role_title; }
+    if (updates.avatar !== undefined) { dbPayload.avatar = updates.avatar; corePayload.avatar = updates.avatar; }
+    if (updates.color !== undefined) { dbPayload.color = updates.color; corePayload.color = updates.color; }
+    if (updates.status !== undefined) { dbPayload.status = updates.status; corePayload.status = updates.status; }
+    if (updates.emailVerified !== undefined) { dbPayload.email_verified = updates.emailVerified !== false; corePayload.email_verified = dbPayload.email_verified; }
+    if (updates.email_verified !== undefined) { dbPayload.email_verified = updates.email_verified !== false; corePayload.email_verified = dbPayload.email_verified; }
+    if (updates.avatarUrl !== undefined || updates.avatar_url !== undefined || updates.photo !== undefined) {
+      dbPayload.avatar_url = updates.avatarUrl ?? updates.avatar_url ?? updates.photo ?? "";
+    }
+    if (updates.phone !== undefined) dbPayload.phone = String(updates.phone || "").trim();
+    if (updates.department !== undefined) dbPayload.department = String(updates.department || "").trim();
+    if (updates.bio !== undefined) dbPayload.bio = String(updates.bio || "").trim();
+    if (updates.lastLoginAt !== undefined || updates.last_login_at !== undefined) {
+      dbPayload.last_login_at = updates.lastLoginAt ?? updates.last_login_at;
+    }
+    if (updates.lastLogoutAt !== undefined || updates.last_logout_at !== undefined) {
+      dbPayload.last_logout_at = updates.lastLogoutAt ?? updates.last_logout_at;
+    }
+    if (updates.isOnline !== undefined || updates.is_online !== undefined) {
+      dbPayload.is_online = Boolean(updates.isOnline ?? updates.is_online);
     }
 
-    const updated = data && data[0] ? this.mapUserFromDB(data[0]) : null;
+    let res;
+    if (this._baseOnlyTables.has("nexus_users")) {
+      res = Object.keys(corePayload).length > 1
+        ? await client.from("nexus_users").update(corePayload).eq("id", userId).select()
+        : { data: [], error: null };
+    } else {
+      res = await client
+        .from("nexus_users")
+        .update(dbPayload)
+        .eq("id", userId)
+        .select();
+
+      if (res.error && this.isSchemaError(res.error)) {
+        this.markTableStateFromError("nexus_users", res.error);
+        if (Object.keys(corePayload).length > 1) {
+          res = await client
+            .from("nexus_users")
+            .update(corePayload)
+            .eq("id", userId)
+            .select();
+        }
+      }
+    }
+
+    if (res.error) {
+      console.error("Supabase user update error:", res.error);
+      throw res.error;
+    }
+
+    const updated = res.data && res.data[0] ? this.mapUserFromDB(res.data[0]) : null;
     if (updated && typeof StorageManager !== "undefined" && StorageManager.updateUserLocally) {
       StorageManager.updateUserLocally(updated);
     }
@@ -717,9 +977,7 @@ const SupabaseManager = {
     const client = this.getClient();
     if (client && user) {
       try {
-        const payload = this.mapUserToDB(user);
-        const { error } = await client.from("nexus_users").upsert(payload);
-        if (error) console.warn("Supabase user upsert error:", error);
+        await this.upsertWithSchemaFallback("nexus_users", this.mapUserToDB(user), this.mapUserToBaseDB(user));
       } catch (e) { console.warn("Supabase user upsert error:", e); }
     }
   },
@@ -778,28 +1036,53 @@ const SupabaseManager = {
     return users.filter(u => u.role === "dev" && u.status === "active");
   },
 
-  async uploadEvidenceMedia(file, testCaseId = "TC-001") {
+  async uploadEvidenceMedia(file, testCaseId = "TC-001", defectId = "", folder = "test-cases") {
     if (!file) return null;
     const isVideo = (file.type || "").startsWith("video/");
     const mediaType = isVideo ? "video" : "image";
-    const fileName = file.name || (isVideo ? `${testCaseId}-recording.webm` : `${testCaseId}-screenshot.png`);
-    const safeName = `${testCaseId}-${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const fileName = file.name || (isVideo ? `${testCaseId || defectId || "evidence"}-recording.webm` : `${testCaseId || defectId || "evidence"}-screenshot.png`);
+    const safeName = `${testCaseId || defectId || "media"}-${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const objectPath = `${folder}/${safeName}`;
+    const fileSizeBytes = Number(file.size || 0);
 
+    let result = null;
     const client = this.getClient();
     if (client) {
       try {
-        const { data: buckets } = await client.storage.listBuckets();
-        if (Array.isArray(buckets) && buckets.length > 0) {
-          const preferred = buckets.find(b => /evidence|media|attach|nexus/i.test(b.name)) || buckets[0];
-          const bucketName = preferred.name;
+        const candidateBuckets = ["nexus-evidence"];
+        try {
+          const { data: buckets } = await client.storage.listBuckets();
+          if (Array.isArray(buckets)) {
+            buckets.forEach(b => {
+              if (b && b.name && !candidateBuckets.includes(b.name)) {
+                candidateBuckets.push(b.name);
+              }
+            });
+          }
+        } catch (e) {}
+
+        for (const bucketName of candidateBuckets) {
+          if (this._missingStorageBuckets.has(bucketName)) continue;
           const { data, error } = await client.storage
             .from(bucketName)
-            .upload(`test-cases/${safeName}`, file, { contentType: file.type || undefined, upsert: true });
+            .upload(objectPath, file, { contentType: file.type || undefined, upsert: true });
 
-          if (!error && data) {
+          if (error) {
+            if (String(error.message || "").toLowerCase().includes("not found")) {
+              this._missingStorageBuckets.add(bucketName);
+            }
+          } else if (data) {
             const { data: pub } = client.storage.from(bucketName).getPublicUrl(data.path);
             if (pub && pub.publicUrl) {
-              return { url: pub.publicUrl, storage: "supabase", bucket: bucketName, mediaType, mediaName: fileName };
+              result = {
+                url: pub.publicUrl,
+                storage: "supabase",
+                bucket: bucketName,
+                mediaType,
+                mediaName: fileName,
+                fileSizeBytes
+              };
+              break;
             }
           }
         }
@@ -808,28 +1091,45 @@ const SupabaseManager = {
       }
     }
 
-    return new Promise((resolve, reject) => {
-      if (isVideo && file.size > 4 * 1024 * 1024) {
-        resolve({
-          url: URL.createObjectURL(file),
-          storage: "session-preview",
-          mediaType: "video",
-          mediaName: fileName
-        });
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        resolve({
-          url: evt.target.result,
-          storage: "embedded",
-          mediaType,
-          mediaName: fileName
-        });
-      };
-      reader.onerror = () => reject(new Error("Failed to read media file"));
-      reader.readAsDataURL(file);
-    });
+    if (!result) {
+      result = await new Promise((resolve, reject) => {
+        if (isVideo && file.size > 4 * 1024 * 1024) {
+          resolve({
+            url: URL.createObjectURL(file),
+            storage: "session-preview",
+            mediaType: "video",
+            mediaName: fileName,
+            fileSizeBytes
+          });
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          resolve({
+            url: evt.target.result,
+            storage: "embedded",
+            mediaType,
+            mediaName: fileName,
+            fileSizeBytes
+          });
+        };
+        reader.onerror = () => reject(new Error("Failed to read media file"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (result && result.url && folder !== "avatars") {
+      await this.saveMediaAttachmentRecord({
+        testCaseId: testCaseId || "",
+        defectId: defectId || "",
+        fileName: result.mediaName,
+        fileType: result.mediaType,
+        fileUrl: result.url,
+        fileSizeBytes: result.fileSizeBytes
+      }).catch(() => {});
+    }
+
+    return result;
   },
 
   async syncSuiteUpsert(suite) {
@@ -873,12 +1173,15 @@ const SupabaseManager = {
         if (testCase.suiteId) {
           await this.ensureSuiteInSupabase(testCase.suiteId);
         }
-        const { error } = await client.from("nexus_test_cases").upsert(this.mapTestCaseToDB(testCase));
-        if (error) {
-          console.warn("Supabase testcase upsert error:", error);
-          return { ok: false, error };
+        const res = await this.upsertWithSchemaFallback(
+          "nexus_test_cases",
+          this.mapTestCaseToDB(testCase),
+          this.mapTestCaseToBaseDB(testCase)
+        );
+        if (!res.ok) {
+          console.warn("Supabase testcase upsert error:", res.error);
         }
-        return { ok: true };
+        return res;
       } catch (e) {
         console.warn("Supabase testcase upsert error:", e);
         return { ok: false, error: e };
@@ -896,11 +1199,19 @@ const SupabaseManager = {
   },
 
   async syncDefectUpsert(defect) {
-    if (this.client && this.isConnected) {
+    const client = this.getClient();
+    if (client && defect) {
       try {
-        await this.client.from("nexus_defects").upsert(this.mapDefectToDB(defect));
+        const res = await this.upsertWithSchemaFallback(
+          "nexus_defects",
+          this.mapDefectToDB(defect),
+          this.mapDefectToBaseDB(defect)
+        );
+        if (!res.ok) console.warn("Supabase defect upsert error:", res.error);
+        return res;
       } catch (e) { console.warn("Supabase defect upsert error:", e); }
     }
+    return { ok: false };
   },
 
   async syncDefectDelete(defectId) {
@@ -921,7 +1232,7 @@ const SupabaseManager = {
 
   async fetchConferenceMessagesFromSupabase(projectId = null) {
     const client = this.getClient();
-    if (!client) return [];
+    if (!client || this._missingTables.has("nexus_conference_messages")) return [];
     try {
       let query = client
         .from("nexus_conference_messages")
@@ -932,10 +1243,7 @@ const SupabaseManager = {
       }
       const { data, error } = await query;
       if (error) {
-        if (error.code === "PGRST205" || String(error.message || "").includes("nexus_conference_messages")) {
-          return [];
-        }
-        console.warn("Supabase fetch conference messages warning:", error.message);
+        this.markTableStateFromError("nexus_conference_messages", error);
         return [];
       }
       const mapped = (data || []).map(row => this.mapConferenceMessageFromDB(row));
@@ -985,6 +1293,223 @@ const SupabaseManager = {
     } catch (e) {
       console.warn("Supabase clear conference messages warning:", e);
       return false;
+    }
+  },
+
+  // -------------------------------------------------------------
+  // User Presence, Activity Audit Logs & Media Attachments Registry
+  // -------------------------------------------------------------
+  async updateUserPresence(user, isOnline, { keepalive = false, loginAt = null, logoutAt = null } = {}) {
+    if (!user || !user.id || this._baseOnlyTables.has("nexus_users")) return;
+    const nowIso = new Date().toISOString();
+    const payload = {
+      is_online: Boolean(isOnline),
+      updated_at: nowIso
+    };
+    if (isOnline) {
+      payload.last_login_at = loginAt || nowIso;
+    } else {
+      payload.last_logout_at = logoutAt || nowIso;
+    }
+
+    if (keepalive && typeof fetch === "function") {
+      try {
+        const cfg = this.getConfig();
+        if (cfg.url && cfg.anonKey) {
+          fetch(`${cfg.url}/rest/v1/nexus_users?id=eq.${encodeURIComponent(user.id)}`, {
+            method: "PATCH",
+            keepalive: true,
+            headers: {
+              "Content-Type": "application/json",
+              apikey: cfg.anonKey,
+              Authorization: `Bearer ${cfg.anonKey}`,
+              Prefer: "return=minimal"
+            },
+            body: JSON.stringify(payload)
+          }).catch(() => {});
+        }
+        return;
+      } catch (e) {}
+    }
+
+    const client = this.getClient();
+    if (!client) return;
+    try {
+      const { error } = await client.from("nexus_users").update(payload).eq("id", user.id);
+      if (error) this.markTableStateFromError("nexus_users", error);
+    } catch (e) {}
+  },
+
+  async logActivity({ action_type, target_type = "", target_id = "", old_value = "", new_value = "", details = {} } = {}, options = {}) {
+    const curUser = options.userOverride || (typeof StorageManager !== "undefined" ? StorageManager.getCurrentUser() : null);
+    const userId = curUser ? (curUser.id || curUser.username || "") : "anonymous";
+    const username = curUser ? (curUser.name || curUser.username || curUser.email || "Unknown") : "Anonymous";
+    const userRole = curUser ? (curUser.role || "qa") : "guest";
+    const nowIso = new Date().toISOString();
+
+    const localEntry = {
+      userId,
+      username,
+      userRole,
+      actionType: action_type || "activity",
+      targetType: target_type || "",
+      targetId: target_id || "",
+      oldValue: old_value !== undefined && old_value !== null ? String(old_value) : "",
+      newValue: new_value !== undefined && new_value !== null ? String(new_value) : "",
+      details: details || {},
+      createdAt: nowIso
+    };
+
+    if (typeof StorageManager !== "undefined" && StorageManager.addActivityLog) {
+      StorageManager.addActivityLog(localEntry);
+    }
+
+    if (this._missingTables.has("nexus_activity_logs")) {
+      return { ok: false, missingTable: true, local: localEntry };
+    }
+
+    const dbPayload = {
+      user_id: localEntry.userId,
+      username: localEntry.username,
+      user_role: localEntry.userRole,
+      action_type: localEntry.actionType,
+      target_type: localEntry.targetType,
+      target_id: localEntry.targetId,
+      old_value: localEntry.oldValue,
+      new_value: localEntry.newValue,
+      details: localEntry.details
+    };
+
+    if (options.keepalive && typeof fetch === "function") {
+      try {
+        const cfg = this.getConfig();
+        if (cfg.url && cfg.anonKey) {
+          fetch(`${cfg.url}/rest/v1/nexus_activity_logs`, {
+            method: "POST",
+            keepalive: true,
+            headers: {
+              "Content-Type": "application/json",
+              apikey: cfg.anonKey,
+              Authorization: `Bearer ${cfg.anonKey}`,
+              Prefer: "return=minimal"
+            },
+            body: JSON.stringify(dbPayload)
+          }).catch(() => {});
+        }
+        return { ok: true, local: localEntry };
+      } catch (e) {}
+    }
+
+    const client = this.getClient();
+    if (!client) return { ok: false, local: localEntry };
+    try {
+      const { error } = await client.from("nexus_activity_logs").insert(dbPayload);
+      if (error) {
+        this.markTableStateFromError("nexus_activity_logs", error);
+        return { ok: false, missingTable: this.isSchemaError(error), error, local: localEntry };
+      }
+      return { ok: true, local: localEntry };
+    } catch (e) {
+      return { ok: false, error: e, local: localEntry };
+    }
+  },
+
+  async fetchActivityLogsFromSupabase({ userId = null, actionType = null, targetId = null, limit = 250 } = {}) {
+    const client = this.getClient();
+    if (!client || this._missingTables.has("nexus_activity_logs")) return [];
+    try {
+      let query = client
+        .from("nexus_activity_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (userId && userId !== "all") query = query.eq("user_id", userId);
+      if (actionType && actionType !== "all") query = query.eq("action_type", actionType);
+      if (targetId) query = query.eq("target_id", targetId);
+
+      const { data, error } = await query;
+      if (error) {
+        this.markTableStateFromError("nexus_activity_logs", error);
+        return [];
+      }
+      const mapped = (data || []).map(row => this.mapActivityLogFromDB(row));
+      if (typeof StorageManager !== "undefined" && StorageManager.mergeRemoteActivityLogs) {
+        StorageManager.mergeRemoteActivityLogs(mapped);
+      }
+      return mapped;
+    } catch (e) {
+      return [];
+    }
+  },
+
+  async saveMediaAttachmentRecord({ testCaseId = "", defectId = "", fileName = "", fileType = "image", fileUrl = "", fileSizeBytes = 0 } = {}) {
+    if (!fileUrl) return null;
+    const curUser = typeof StorageManager !== "undefined" ? StorageManager.getCurrentUser() : null;
+    const uploadedBy = curUser ? (curUser.id || curUser.username || "") : "anonymous";
+    const uploaderName = curUser ? (curUser.name || curUser.username || "Team Member") : "Team Member";
+
+    let savedLocal = null;
+    if (typeof StorageManager !== "undefined" && StorageManager.addMediaAttachment) {
+      savedLocal = StorageManager.addMediaAttachment({
+        testCaseId,
+        defectId,
+        uploadedBy,
+        uploaderName,
+        fileName,
+        fileType,
+        fileUrl,
+        fileSizeBytes
+      });
+    }
+
+    const client = this.getClient();
+    if (client && !this._missingTables.has("nexus_media_attachments")) {
+      try {
+        const { error } = await client.from("nexus_media_attachments").insert({
+          test_case_id: testCaseId || null,
+          defect_id: defectId || null,
+          uploaded_by: uploadedBy,
+          uploader_name: uploaderName,
+          file_name: fileName || "evidence",
+          file_type: fileType || "image",
+          file_url: fileUrl,
+          file_size_bytes: Number(fileSizeBytes || 0)
+        });
+        if (error) {
+          this.markTableStateFromError("nexus_media_attachments", error);
+          if (!this.isSchemaError(error)) {
+            console.warn("Supabase media attachment insert warning:", error.message);
+          }
+        }
+      } catch (e) {}
+    }
+
+    return savedLocal;
+  },
+
+  async fetchMediaAttachmentsFromSupabase({ testCaseId = null, defectId = null } = {}) {
+    const client = this.getClient();
+    if (!client || this._missingTables.has("nexus_media_attachments")) return [];
+    try {
+      let query = client
+        .from("nexus_media_attachments")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(300);
+      if (testCaseId) query = query.eq("test_case_id", testCaseId);
+      if (defectId) query = query.eq("defect_id", defectId);
+      const { data, error } = await query;
+      if (error) {
+        this.markTableStateFromError("nexus_media_attachments", error);
+        return [];
+      }
+      const mapped = (data || []).map(row => this.mapMediaAttachmentFromDB(row));
+      if (typeof StorageManager !== "undefined" && StorageManager.mergeRemoteMediaAttachments) {
+        StorageManager.mergeRemoteMediaAttachments(mapped);
+      }
+      return mapped;
+    } catch (e) {
+      return [];
     }
   }
 };

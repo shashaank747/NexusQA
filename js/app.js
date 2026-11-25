@@ -475,6 +475,8 @@ document.addEventListener("DOMContentLoaded", () => {
     profilePhoneValid: document.getElementById("profilePhoneValid"),
     profilePhoneHint: document.getElementById("profilePhoneHint"),
     profileDesignationSelect: document.getElementById("profileDesignationSelect"),
+    profileDepartmentInput: document.getElementById("profileDepartmentInput"),
+    profileBioInput: document.getElementById("profileBioInput"),
     saveProfileBtn: document.getElementById("saveProfileBtn"),
     resetProfileFormBtn: document.getElementById("resetProfileFormBtn"),
     previewAccessBadge: document.getElementById("previewAccessBadge"),
@@ -485,12 +487,70 @@ document.addEventListener("DOMContentLoaded", () => {
     previewCardDesignationBadge: document.getElementById("previewCardDesignationBadge"),
     previewCardEmail: document.getElementById("previewCardEmail"),
     previewCardPhone: document.getElementById("previewCardPhone"),
+    previewCardDepartment: document.getElementById("previewCardDepartment"),
+    previewCardLastLogin: document.getElementById("previewCardLastLogin"),
+    previewCardLastLogout: document.getElementById("previewCardLastLogout"),
+    previewCardBio: document.getElementById("previewCardBio"),
     userProfileToggle: document.getElementById("userProfileToggle")
   };
 
   // Safe Event Listener Helper
   function on(el, event, handler) {
     if (el) el.addEventListener(event, handler);
+  }
+
+  // Reusable User Activity & Audit Logging Utility
+  function logUserActivity({ action_type, target_type = "", target_id = "", old_value = "", new_value = "", details = {} } = {}, options = {}) {
+    const payload = {
+      action_type: action_type || "activity",
+      target_type,
+      target_id,
+      old_value,
+      new_value,
+      details
+    };
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.logActivity) {
+      return SupabaseManager.logActivity(payload, options);
+    }
+    if (typeof StorageManager !== "undefined" && StorageManager.addActivityLog) {
+      const cur = StorageManager.getCurrentUser();
+      return Promise.resolve({
+        ok: true,
+        local: StorageManager.addActivityLog({
+          userId: cur ? cur.id : "anonymous",
+          username: cur ? cur.name : "Anonymous",
+          userRole: cur ? cur.role : "qa",
+          actionType: payload.action_type,
+          targetType: payload.target_type,
+          targetId: payload.target_id,
+          oldValue: payload.old_value,
+          newValue: payload.new_value,
+          details: payload.details
+        })
+      });
+    }
+    return Promise.resolve({ ok: false });
+  }
+  window.logUserActivity = logUserActivity;
+
+  function applyLifecycleOwnershipFields(targetObj, oldStatus, newStatus, actorUser = null) {
+    if (!targetObj) return targetObj;
+    const actor = actorUser || StorageManager.getCurrentUser() || state.currentUser;
+    const actorId = actor ? (actor.id || actor.name || "") : "";
+    const nowIso = new Date().toISOString();
+    const normNew = normalizeModalStatus(newStatus || targetObj.status || "");
+
+    if (normNew === "Ready for Re-Test" || newStatus === "Fixed - Ready for QA" || normNew === "In Dev / Fixing") {
+      if (normNew === "Ready for Re-Test" || newStatus === "Fixed - Ready for QA") {
+        targetObj.fixedByDevId = actorId || targetObj.fixedByDevId || "";
+        targetObj.fixedAt = nowIso;
+      }
+    }
+    if (normNew === "Verified & Closed" || (normNew === "Pass" && actor && actor.role !== "dev")) {
+      targetObj.verifiedByTesterId = actorId || targetObj.verifiedByTesterId || "";
+      targetObj.verifiedAt = nowIso;
+    }
+    return targetObj;
   }
 
   // =========================================================================
@@ -642,11 +702,24 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   }
 
+  function formatAuditDateTime(isoOrStamp) {
+    if (!isoOrStamp) return "—";
+    try {
+      const d = new Date(isoOrStamp);
+      if (isNaN(d.getTime())) return String(isoOrStamp);
+      return d.toLocaleString([], { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    } catch (e) {
+      return String(isoOrStamp);
+    }
+  }
+
   function updateProfilePreviewBadge() {
     const name = DOM.profileNameInput ? DOM.profileNameInput.value.trim() || "User Name" : "User Name";
     const email = DOM.profileEmailInput ? DOM.profileEmailInput.value.trim() || "user@nexusqa.io" : "user@nexusqa.io";
     const phone = DOM.profilePhoneInput ? DOM.profilePhoneInput.value.trim() || "9876543210" : "9876543210";
     const designation = DOM.profileDesignationSelect ? DOM.profileDesignationSelect.value : "Senior Developer";
+    const department = DOM.profileDepartmentInput ? DOM.profileDepartmentInput.value.trim() : "";
+    const bio = DOM.profileBioInput ? DOM.profileBioInput.value.trim() : "";
     const user = state.currentUser || {};
 
     if (DOM.profileFormHeaderName) DOM.profileFormHeaderName.textContent = name;
@@ -654,6 +727,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.previewCardEmail) DOM.previewCardEmail.textContent = email;
     if (DOM.previewCardPhone) DOM.previewCardPhone.textContent = phone;
     if (DOM.previewCardUserId) DOM.previewCardUserId.textContent = user.id || "user-current";
+    if (DOM.previewCardDepartment) DOM.previewCardDepartment.textContent = department || user.department || "—";
+    if (DOM.previewCardBio) DOM.previewCardBio.textContent = bio || user.bio || "—";
+    if (DOM.previewCardLastLogin) DOM.previewCardLastLogin.textContent = formatAuditDateTime(user.lastLoginAt);
+    if (DOM.previewCardLastLogout) DOM.previewCardLastLogout.textContent = formatAuditDateTime(user.lastLogoutAt);
 
     // Designation badge styling
     if (DOM.previewCardDesignationBadge) {
@@ -681,11 +758,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const user = state.currentUser;
     if (!user) return;
 
-    state.tempProfilePhoto = user.photo || "";
+    state.tempProfilePhoto = user.avatarUrl || user.photo || "";
 
-    if (DOM.profileNameInput) DOM.profileNameInput.value = user.name || "";
+    if (DOM.profileNameInput) DOM.profileNameInput.value = user.fullName || user.name || "";
     if (DOM.profileEmailInput) DOM.profileEmailInput.value = user.email || "";
-    if (DOM.profilePhoneInput) DOM.profilePhoneInput.value = user.phone || "9876543210";
+    if (DOM.profilePhoneInput) DOM.profilePhoneInput.value = user.phone || "";
+    if (DOM.profileDepartmentInput) DOM.profileDepartmentInput.value = user.department || "";
+    if (DOM.profileBioInput) DOM.profileBioInput.value = user.bio || "";
 
     if (DOM.profileDesignationSelect) {
       const desig = user.roleTitle || "";
@@ -736,15 +815,40 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     });
   }
 
-  // Photo Upload Handler
+  if (DOM.profileDepartmentInput) {
+    DOM.profileDepartmentInput.addEventListener("input", () => {
+      updateProfilePreviewBadge();
+    });
+  }
+
+  if (DOM.profileBioInput) {
+    DOM.profileBioInput.addEventListener("input", () => {
+      updateProfilePreviewBadge();
+    });
+  }
+
+  // Photo Upload Handler (uploads to nexus-evidence/avatars when bucket exists, else embedded DataURL)
   if (DOM.profilePhotoInput) {
-    DOM.profilePhotoInput.addEventListener("change", (e) => {
+    DOM.profilePhotoInput.addEventListener("change", async (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
 
-      if (file.size > 2 * 1024 * 1024) {
-        showToast("Image size exceeds 2MB limit. Please upload a smaller photo.", "error");
+      if (file.size > 4 * 1024 * 1024) {
+        showToast("Image size exceeds 4MB limit. Please upload a smaller photo.", "error");
         return;
+      }
+
+      const cur = state.currentUser || { id: "avatar" };
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.uploadEvidenceMedia) {
+        try {
+          const uploaded = await SupabaseManager.uploadEvidenceMedia(file, cur.id || "avatar", "", "avatars");
+          if (uploaded && uploaded.url) {
+            state.tempProfilePhoto = uploaded.url;
+            renderProfilePhotoPreview(uploaded.url);
+            showToast(uploaded.storage === "supabase" ? "Avatar uploaded to Supabase Storage! Click Save Profile Details." : "Photo loaded into preview. Click Save Profile Details.", "info");
+            return;
+          }
+        } catch (err) {}
       }
 
       const reader = new FileReader();
@@ -779,8 +883,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     });
   }
 
-  // Save Profile Handler with strict 10-digit validation
-  on(DOM.saveProfileBtn, "click", () => {
+  // Save Profile Handler with strict 10-digit validation + Supabase nexus_users sync
+  on(DOM.saveProfileBtn, "click", async () => {
     const user = state.currentUser;
     if (!user) {
       showToast("No active user logged in", "error");
@@ -791,6 +895,8 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const email = DOM.profileEmailInput ? DOM.profileEmailInput.value.trim() : "";
     const phone = DOM.profilePhoneInput ? DOM.profilePhoneInput.value.trim() : "";
     const designation = DOM.profileDesignationSelect ? DOM.profileDesignationSelect.value : "Senior Developer";
+    const department = DOM.profileDepartmentInput ? DOM.profileDepartmentInput.value.trim() : "";
+    const bio = DOM.profileBioInput ? DOM.profileBioInput.value.trim() : "";
 
     if (!name) {
       showToast("Please enter your full name.", "error");
@@ -805,9 +911,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       return;
     }
 
-    // Phone number validation: exactly 10 digits
+    // Phone number validation: optional or 10 digits if entered
     const phoneClean = phone.replace(/\D/g, "");
-    if (!/^\d{10}$/.test(phoneClean)) {
+    if (phoneClean.length > 0 && !/^\d{10}$/.test(phoneClean)) {
       showToast("Phone number must contain exactly 10 numbers.", "error");
       if (DOM.profilePhoneInput) {
         DOM.profilePhoneInput.focus();
@@ -820,15 +926,45 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const isSenior = designation.includes("Senior");
     const role = isDev ? "dev" : "qa";
     const devLevel = isSenior ? "senior" : "junior";
+    const photoVal = state.tempProfilePhoto !== undefined ? state.tempProfilePhoto : (user.avatarUrl || user.photo || "");
 
     const updated = StorageManager.updateUser(user.id, {
       name,
+      fullName: name,
       email,
       phone: phoneClean,
-      photo: state.tempProfilePhoto !== undefined ? state.tempProfilePhoto : (user.photo || ""),
+      department,
+      bio,
+      photo: photoVal,
+      avatarUrl: photoVal,
       role,
       devLevel,
       roleTitle: designation
+    });
+
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+      try {
+        await SupabaseManager.updateUserInSupabase(user.id, {
+          name,
+          fullName: name,
+          email,
+          phone: phoneClean,
+          department,
+          bio,
+          avatarUrl: photoVal,
+          role,
+          roleTitle: designation
+        });
+      } catch (err) {
+        console.warn("Supabase profile update fallback:", err);
+      }
+    }
+
+    logUserActivity({
+      action_type: "profile_updated",
+      target_type: "profile",
+      target_id: user.id,
+      details: { fullName: name, department, roleTitle: designation }
     });
 
     if (updated) {
@@ -836,7 +972,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       StorageManager.setCurrentUser(updated);
       updateUserProfileUI();
       populateProfileForm();
-      showToast("Profile details updated successfully!", "success");
+      showToast("Profile details saved to Supabase!", "success");
 
       if (typeof renderDevApprovals === "function") {
         renderDevApprovals();
@@ -1137,6 +1273,19 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       return;
     }
     if (DOM.authGateOverlay) DOM.authGateOverlay.style.display = "none";
+
+    if (state.currentUser && !state.sessionPresenceMarked) {
+      state.sessionPresenceMarked = true;
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.updateUserPresence) {
+        SupabaseManager.updateUserPresence(state.currentUser, true);
+      }
+    }
+
+    const auditNavItem = document.getElementById("devAuditNavItem");
+    const auditRailItem = document.getElementById("devAuditRailItem");
+    const showAudit = role === "dev" && StorageManager.isSeniorDev(state.currentUser);
+    if (auditNavItem) auditNavItem.style.display = showAudit ? "" : "none";
+    if (auditRailItem) auditRailItem.style.display = showAudit ? "" : "none";
 
     if (role === "dev") {
       if (DOM.pillDevPortalBtn) DOM.pillDevPortalBtn.classList.add("active");
@@ -1898,6 +2047,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   if (DOM.logoutBtn) {
     DOM.logoutBtn.addEventListener("click", () => {
+      state.explicitLogoutHandled = true;
       StorageManager.logout();
       window.location.replace("index.html");
     });
@@ -1905,15 +2055,63 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   
   if (DOM.switchUserQuickBtn) {
     DOM.switchUserQuickBtn.addEventListener("click", () => {
+      state.explicitLogoutHandled = true;
       StorageManager.logout();
       window.location.replace("index.html");
     });
+  }
+
+  // Record tab close / page unload presence & logout activity
+  if (document.body.classList.contains("page-tester") || document.body.classList.contains("page-dev")) {
+    window.addEventListener("pagehide", () => {
+      if (state.explicitLogoutHandled) return;
+      const cur = StorageManager.getCurrentUser();
+      if (!cur || !cur.id) return;
+      const nowIso = new Date().toISOString();
+      if (typeof SupabaseManager !== "undefined") {
+        if (SupabaseManager.updateUserPresence) {
+          SupabaseManager.updateUserPresence(cur, false, { keepalive: true, logoutAt: nowIso });
+        }
+        if (SupabaseManager.logActivity) {
+          SupabaseManager.logActivity({
+            action_type: "logout",
+            target_type: "session",
+            target_id: cur.id,
+            old_value: "online",
+            new_value: "offline",
+            details: { reason: "tab_close", timestamp: nowIso }
+          }, { keepalive: true, userOverride: cur });
+        }
+      }
+    });
+
+    // Global delegated click tracking for major workspace buttons
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("button.btn, button.suite-pill-btn, button.quick-chip, button.rail-nav-btn, button.meet-share-submit-btn");
+      if (!btn || btn.id === "logoutBtn" || btn.id === "switchUserQuickBtn") return;
+      const btnId = btn.id || "";
+      const label = (btn.getAttribute("title") || btn.textContent || "").replace(/\s+/g, " ").trim().slice(0, 60);
+      if (!btnId && !label) return;
+      logUserActivity({
+        action_type: "button_click",
+        target_type: "button",
+        target_id: btnId || label,
+        new_value: label,
+        details: { view: state.currentView || "", buttonId: btnId }
+      });
+    }, { capture: true });
   }
 
   // Real-time listener
   StorageManager.subscribe((msg) => {
     renderActiveView();
     updateDevApprovalsBadge();
+
+    if (msg.type === "ACTIVITY_LOGS_UPDATED" || msg.type === "MEDIA_ATTACHMENTS_UPDATED") {
+      if (state.currentView === "dev-audit" && typeof renderDevAuditView === "function") {
+        renderDevAuditView();
+      }
+    }
 
     if (msg.type === "TESTER_APPROVAL_REQUESTED" || msg.type === "USERS_UPDATED") {
       updateDevApprovalsBadge();
@@ -2529,6 +2727,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       conference: "Dev & Tester Conference Room",
       "dev-dashboard": "Dev Defect Command Center",
       "dev-approvals": "Employees & Access Control",
+      "dev-audit": "Audit & Activity Trail",
       "dev-kanban": "Bug Triage Kanban",
       "dev-failures": "Failed Test Diagnostics",
       settings: "My Profile & Account",
@@ -2595,10 +2794,248 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         SupabaseManager.fetchUsersFromSupabase().then(() => renderDevApprovals()).catch(() => {});
       }
     }
+    if (viewName === "dev-audit") {
+      renderDevAuditView();
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+        Promise.all([
+          SupabaseManager.fetchActivityLogsFromSupabase({ limit: 300 }).catch(() => []),
+          SupabaseManager.fetchMediaAttachmentsFromSupabase().catch(() => []),
+          SupabaseManager.fetchUsersFromSupabase().catch(() => [])
+        ]).then(() => renderDevAuditView());
+      }
+    }
     if (viewName === "dev-kanban") renderDevKanban();
     if (viewName === "dev-failures") renderDevFailures();
     if (viewName === "settings") populateProfileForm();
+
+    logUserActivity({
+      action_type: "page_view",
+      target_type: "route",
+      target_id: viewName,
+      new_value: titles[viewName] || viewName,
+      details: { portal: state.currentPortal || "qa" }
+    });
   }
+
+  function formatTicketHistoryHtml(ticketIds = [], primaryObj = null) {
+    const idSet = new Set((ticketIds || []).filter(Boolean));
+    const logs = StorageManager.getActivityLogs().filter(l => idSet.has(l.targetId) || (l.details && idSet.has(l.details.linkedTestCaseId)));
+    const allMedia = StorageManager.getMediaAttachments().filter(m => idSet.has(m.testCaseId) || idSet.has(m.defectId));
+
+    const ownerParts = [];
+    if (primaryObj) {
+      if (primaryObj.createdBy || primaryObj.author || primaryObj.reportedBy) {
+        ownerParts.push(`<span class="ticket-owner-chip"><i class="fa-solid fa-user-plus text-primary"></i> Created: <strong>${escapeHtml(primaryObj.createdBy || primaryObj.author || primaryObj.reportedBy)}</strong></span>`);
+      }
+      if (primaryObj.assignedTo || primaryObj.assignedDev || primaryObj.assignee) {
+        ownerParts.push(`<span class="ticket-owner-chip"><i class="fa-solid fa-user-check text-cyan"></i> Assigned: <strong>${escapeHtml(primaryObj.assignedTo || primaryObj.assignedDev || primaryObj.assignee)}</strong></span>`);
+      }
+      if (primaryObj.lastViewedByDevId) {
+        ownerParts.push(`<span class="ticket-owner-chip"><i class="fa-solid fa-eye text-amber"></i> Last Dev View: <strong>${escapeHtml(primaryObj.lastViewedByDevId)}</strong> (${escapeHtml(formatAuditDateTime(primaryObj.lastViewedByDevAt))})</span>`);
+      }
+      if (primaryObj.fixedByDevId) {
+        ownerParts.push(`<span class="ticket-owner-chip"><i class="fa-solid fa-wrench text-emerald"></i> Fixed By: <strong>${escapeHtml(primaryObj.fixedByDevId)}</strong> (${escapeHtml(formatAuditDateTime(primaryObj.fixedAt))})</span>`);
+      }
+      if (primaryObj.verifiedByTesterId) {
+        ownerParts.push(`<span class="ticket-owner-chip"><i class="fa-solid fa-shield-check text-emerald"></i> Verified By: <strong>${escapeHtml(primaryObj.verifiedByTesterId)}</strong> (${escapeHtml(formatAuditDateTime(primaryObj.verifiedAt))})</span>`);
+      }
+    }
+
+    const mediaGalleryHtml = allMedia.length > 0 ? `
+      <div class="mt-2 mb-2">
+        <div class="text-xs font-bold text-muted mb-1"><i class="fa-solid fa-photo-film text-cyan"></i> Logged Evidence Attachments (${allMedia.length})</div>
+        <div class="d-flex flex-wrap gap-2">
+          ${allMedia.map(m => m.fileType === "video"
+            ? `<div class="ticket-media-thumb"><video src="${escapeHtml(m.fileUrl)}" controls muted playsinline style="max-height:120px; border-radius:8px; background:#000;"></video><div class="text-2xs text-muted mt-1">${escapeHtml(m.fileName)}</div></div>`
+            : `<a href="${escapeHtml(m.fileUrl)}" target="_blank" rel="noopener noreferrer" class="ticket-media-thumb"><img src="${escapeHtml(m.fileUrl)}" alt="${escapeHtml(m.fileName)}" style="max-height:90px; border-radius:8px; border:1px solid var(--border-color);"><div class="text-2xs text-muted mt-1">${escapeHtml(m.fileName)}</div></a>`
+          ).join("")}
+        </div>
+      </div>
+    ` : "";
+
+    const timelineItemsHtml = logs.length > 0 ? logs.slice(0, 25).map(l => {
+      const transition = (l.oldValue || l.newValue)
+        ? `<span class="font-mono text-2xs">${l.oldValue ? `<span class="text-muted">${escapeHtml(l.oldValue)}</span> &rarr; ` : ""}<strong class="text-cyan">${escapeHtml(l.newValue || "")}</strong></span>`
+        : "";
+      return `
+        <div class="ticket-history-item">
+          <div class="ticket-history-dot"></div>
+          <div class="flex-1">
+            <div class="d-flex justify-between align-center flex-wrap gap-1">
+              <span class="text-xs"><strong>${escapeHtml(l.username)}</strong> <span class="badge badge-version text-2xs">${escapeHtml(l.actionType)}</span> ${transition}</span>
+              <span class="text-2xs text-muted font-mono">${escapeHtml(formatAuditDateTime(l.createdAt))}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("") : `<div class="text-xs text-muted">No recorded audit events for this ticket yet.</div>`;
+
+    return `
+      <div class="ticket-history-box mt-3">
+        <label class="console-label"><i class="fa-solid fa-timeline text-primary"></i> Lifecycle Ownership &amp; History Timeline</label>
+        ${ownerParts.length > 0 ? `<div class="ticket-ownership-grid mb-2">${ownerParts.join("")}</div>` : ""}
+        ${mediaGalleryHtml}
+        <div class="ticket-history-list">${timelineItemsHtml}</div>
+      </div>
+    `;
+  }
+
+  function renderDevAuditView() {
+    const viewEl = document.getElementById("view-dev-audit");
+    if (!viewEl) return;
+
+    const allLogs = StorageManager.getActivityLogs();
+    const curSessionUser = StorageManager.getCurrentUser() || state.currentUser;
+    const allUsers = StorageManager.getUsers().map(u => {
+      if (curSessionUser && u.id === curSessionUser.id) {
+        return {
+          ...u,
+          isOnline: true,
+          lastLoginAt: u.lastLoginAt || curSessionUser.lastLoginAt || new Date().toISOString()
+        };
+      }
+      return u;
+    });
+    const allMedia = StorageManager.getMediaAttachments();
+
+    const totalEl = document.getElementById("auditTotalEventsCount");
+    const onlineEl = document.getElementById("auditOnlineUsersCount");
+    const statusEl = document.getElementById("auditStatusChangesCount");
+    const mediaEl = document.getElementById("auditMediaCount");
+    const navBadge = document.getElementById("devAuditCountBadge");
+
+    const onlineCount = allUsers.filter(u => u.isOnline).length;
+    const statusChangeCount = allLogs.filter(l => l.actionType === "status_changed" || l.actionType === "marked_fixed").length;
+
+    if (totalEl) totalEl.textContent = allLogs.length;
+    if (onlineEl) onlineEl.textContent = onlineCount;
+    if (statusEl) statusEl.textContent = statusChangeCount;
+    if (mediaEl) mediaEl.textContent = allMedia.length;
+    if (navBadge) navBadge.textContent = allLogs.length;
+
+    // Presence strip
+    const presenceGrid = document.getElementById("auditPresenceGrid");
+    if (presenceGrid) {
+      if (allUsers.length === 0) {
+        presenceGrid.innerHTML = `<div class="text-xs text-muted">No team users synced from Supabase yet.</div>`;
+      } else {
+        presenceGrid.innerHTML = allUsers.map(u => `
+          <div class="audit-presence-card ${u.isOnline ? "is-online" : ""}">
+            <div class="d-flex align-center justify-between gap-2 mb-1">
+              <div class="d-flex align-center gap-2">
+                ${renderUserAvatar(u, { size: 28, fontSize: 11 })}
+                <div>
+                  <div class="text-xs font-bold">${escapeHtml(u.fullName || u.name)}</div>
+                  <div class="text-2xs text-muted">${escapeHtml(u.roleTitle || u.role)}</div>
+                </div>
+              </div>
+              <span class="badge ${u.isOnline ? "badge-passed" : "badge-untested"} text-2xs">
+                <i class="fa-solid fa-circle" style="font-size:6px;"></i> ${u.isOnline ? "Online" : "Offline"}
+              </span>
+            </div>
+            <div class="text-2xs text-muted mt-1">Login: <span class="font-mono">${escapeHtml(formatAuditDateTime(u.lastLoginAt))}</span></div>
+            <div class="text-2xs text-muted">Logout: <span class="font-mono">${escapeHtml(formatAuditDateTime(u.lastLogoutAt))}</span></div>
+          </div>
+        `).join("");
+      }
+    }
+
+    // Populate user filter dropdown
+    const userFilterEl = document.getElementById("auditUserFilter");
+    if (userFilterEl) {
+      const prevVal = userFilterEl.value || "all";
+      const opts = ['<option value="all">All Users</option>'];
+      allUsers.forEach(u => {
+        opts.push(`<option value="${escapeHtml(u.id)}">${escapeHtml(u.fullName || u.name)} (${escapeHtml(u.role)})</option>`);
+      });
+      userFilterEl.innerHTML = opts.join("");
+      if (Array.from(userFilterEl.options).some(o => o.value === prevVal)) {
+        userFilterEl.value = prevVal;
+      }
+    }
+
+    const searchQ = (document.getElementById("auditSearchInput")?.value || "").trim().toLowerCase();
+    const actionF = document.getElementById("auditActionFilter")?.value || "all";
+    const userF = document.getElementById("auditUserFilter")?.value || "all";
+
+    let filtered = allLogs;
+    if (actionF !== "all") filtered = filtered.filter(l => l.actionType === actionF);
+    if (userF !== "all") filtered = filtered.filter(l => l.userId === userF);
+    if (searchQ) {
+      filtered = filtered.filter(l =>
+        (l.username || "").toLowerCase().includes(searchQ) ||
+        (l.actionType || "").toLowerCase().includes(searchQ) ||
+        (l.targetId || "").toLowerCase().includes(searchQ) ||
+        (l.targetType || "").toLowerCase().includes(searchQ) ||
+        (l.oldValue || "").toLowerCase().includes(searchQ) ||
+        (l.newValue || "").toLowerCase().includes(searchQ) ||
+        JSON.stringify(l.details || {}).toLowerCase().includes(searchQ)
+      );
+    }
+
+    const tbody = document.getElementById("auditLogsTableBody");
+    if (!tbody) return;
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted p-4">No activity events match your current filters.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.slice(0, 200).map(l => {
+      const actionCls = l.actionType === "login" || l.actionType === "marked_fixed"
+        ? "badge-passed"
+        : l.actionType === "logout"
+          ? "badge-blocked"
+          : l.actionType === "status_changed"
+            ? "badge-indigo"
+            : l.actionType === "media_uploaded"
+              ? "badge-version"
+              : "badge-untested";
+      const changeHtml = (l.oldValue || l.newValue)
+        ? `<span class="font-mono text-xs">${l.oldValue ? `<span class="text-muted">${escapeHtml(l.oldValue)}</span> &rarr; ` : ""}<strong>${escapeHtml(l.newValue || "")}</strong></span>`
+        : `<span class="text-dim text-xs">—</span>`;
+      const detailsStr = l.details && typeof l.details === "object"
+        ? Object.entries(l.details).filter(([, v]) => v !== "" && v !== null && v !== undefined).map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join(" • ")
+        : String(l.details || "");
+
+      return `
+        <tr>
+          <td class="font-mono text-xs">${escapeHtml(formatAuditDateTime(l.createdAt))}</td>
+          <td>
+            <div class="text-xs font-bold">${escapeHtml(l.username)}</div>
+            <div class="text-2xs text-muted">${escapeHtml(l.userRole)}</div>
+          </td>
+          <td><span class="badge ${actionCls} audit-action-pill">${escapeHtml(l.actionType)}</span></td>
+          <td class="font-mono text-xs">${l.targetType ? `<span class="text-muted">${escapeHtml(l.targetType)}:</span> ` : ""}<strong>${escapeHtml(l.targetId || "—")}</strong></td>
+          <td>${changeHtml}</td>
+          <td class="text-xs text-muted" style="max-width: 280px; word-break: break-word;">${escapeHtml(detailsStr || "—")}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+  window.renderDevAuditView = renderDevAuditView;
+
+  const btnOpenAuditFromApprovals = document.getElementById("btnOpenAuditFromApprovals");
+  if (btnOpenAuditFromApprovals) btnOpenAuditFromApprovals.addEventListener("click", () => switchView("dev-audit"));
+  const refreshAuditLogsBtn = document.getElementById("refreshAuditLogsBtn");
+  if (refreshAuditLogsBtn) {
+    refreshAuditLogsBtn.addEventListener("click", async () => {
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+        await Promise.all([
+          SupabaseManager.fetchActivityLogsFromSupabase({ limit: 300 }).catch(() => []),
+          SupabaseManager.fetchMediaAttachmentsFromSupabase().catch(() => []),
+          SupabaseManager.fetchUsersFromSupabase().catch(() => [])
+        ]);
+      }
+      renderDevAuditView();
+      showToast("Audit & Activity Trail refreshed!");
+    });
+  }
+  const auditSearchInputEl = document.getElementById("auditSearchInput");
+  if (auditSearchInputEl) auditSearchInputEl.addEventListener("input", () => renderDevAuditView());
+  const auditActionFilterEl = document.getElementById("auditActionFilter");
+  if (auditActionFilterEl) auditActionFilterEl.addEventListener("change", () => renderDevAuditView());
+  const auditUserFilterEl = document.getElementById("auditUserFilter");
+  if (auditUserFilterEl) auditUserFilterEl.addEventListener("change", () => renderDevAuditView());
 
   document.querySelectorAll(".sidebar-nav .nav-item, .sidebar-primary-rail .rail-nav-item").forEach(item => {
     item.addEventListener("click", () => {
@@ -2661,17 +3098,232 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   });
 
-  on(DOM.globalSearchInput, "input", (e) => {
-    const val = e.target.value.trim();
-    if (val) {
+  function computeGlobalSearchMatches(rawQuery) {
+    const q = (rawQuery || "").trim().toLowerCase();
+    if (!q) return { testCases: [], defects: [], suites: [] };
+    const suites = StorageManager.getSuites();
+    const suiteNameById = new Map(suites.map(s => [s.id, s.name || ""]));
+
+    const testCases = StorageManager.getTestCases().filter(tc =>
+      (tc.id && tc.id.toLowerCase().includes(q)) ||
+      (tc.title && tc.title.toLowerCase().includes(q)) ||
+      (tc.explanation && tc.explanation.toLowerCase().includes(q)) ||
+      (tc.preconditions && tc.preconditions.toLowerCase().includes(q)) ||
+      (tc.status && tc.status.toLowerCase().includes(q)) ||
+      (tc.priority && tc.priority.toLowerCase().includes(q)) ||
+      (tc.assignedDev && tc.assignedDev.toLowerCase().includes(q)) ||
+      (tc.suiteId && (suiteNameById.get(tc.suiteId) || "").toLowerCase().includes(q))
+    );
+
+    const defects = StorageManager.getDefects().filter(d =>
+      (d.id && d.id.toLowerCase().includes(q)) ||
+      (d.summary && d.summary.toLowerCase().includes(q)) ||
+      (d.description && d.description.toLowerCase().includes(q)) ||
+      (d.linkedTestCaseId && d.linkedTestCaseId.toLowerCase().includes(q)) ||
+      (d.assignee && d.assignee.toLowerCase().includes(q)) ||
+      (d.gitBranch && d.gitBranch.toLowerCase().includes(q)) ||
+      (d.prLink && d.prLink.toLowerCase().includes(q)) ||
+      (d.status && d.status.toLowerCase().includes(q))
+    );
+
+    const matchingSuites = suites.filter(s =>
+      (s.id && s.id.toLowerCase().includes(q)) ||
+      (s.name && s.name.toLowerCase().includes(q)) ||
+      (s.description && s.description.toLowerCase().includes(q))
+    );
+
+    return { testCases, defects, suites: matchingSuites };
+  }
+
+  function applyGlobalSearchToActiveView(rawQuery) {
+    const q = (rawQuery || "").trim().toLowerCase();
+    state.globalSearchQuery = q;
+
+    if (state.currentView === "test-cases") {
+      if (DOM.testCaseSearchInput) DOM.testCaseSearchInput.value = rawQuery.trim();
+      state.searchQuery = q;
+      renderTestCaseTable();
+    } else if (state.currentView === "defects") {
+      if (DOM.bugSearchInput) DOM.bugSearchInput.value = rawQuery.trim();
+      renderDefects();
+    } else if (state.currentView === "suites") {
+      renderSuitesView();
+    } else if (state.currentView === "dev-kanban") {
+      renderDevKanban();
+    } else if (state.currentView === "dev-failures") {
+      renderDevFailures();
+    } else if (state.currentView === "dev-audit") {
+      const auditSearchEl = document.getElementById("auditSearchInput");
+      if (auditSearchEl) auditSearchEl.value = rawQuery.trim();
+      renderDevAuditView();
+    }
+  }
+
+  window.jumpToGlobalSearchMatch = function(kind, id) {
+    const dropdown = document.getElementById("globalSearchResultsDropdown");
+    if (dropdown) dropdown.style.display = "none";
+
+    if (kind === "test_case") {
+      if (state.currentPortal === "dev") {
+        if (state.currentView !== "dev-failures") switchView("dev-failures");
+      } else {
+        if (state.currentView !== "test-cases") switchView("test-cases");
+      }
+      if (typeof window.viewTestCaseDetail === "function") {
+        window.viewTestCaseDetail(id);
+      }
+    } else if (kind === "defect") {
       if (state.currentPortal === "dev") {
         if (state.currentView !== "dev-kanban") switchView("dev-kanban");
       } else {
-        if (state.currentView !== "test-cases") switchView("test-cases");
-        if (DOM.testCaseSearchInput) DOM.testCaseSearchInput.value = val;
-        state.searchQuery = val.toLowerCase();
-        renderTestCaseTable();
+        if (state.currentView !== "defects") switchView("defects");
       }
+      if (typeof window.openDevFixModal === "function") {
+        window.openDevFixModal(id);
+      }
+    } else if (kind === "suite") {
+      state.selectedSuiteId = id;
+      if (state.currentPortal === "dev") {
+        switchView("dev-failures");
+      } else {
+        switchView("test-cases");
+      }
+    }
+  };
+
+  function renderGlobalSearchDropdown(rawQuery) {
+    const dropdown = document.getElementById("globalSearchResultsDropdown");
+    if (!dropdown) return;
+    const trimmed = (rawQuery || "").trim();
+    if (!trimmed) {
+      dropdown.style.display = "none";
+      dropdown.innerHTML = "";
+      return;
+    }
+
+    const { testCases, defects, suites } = computeGlobalSearchMatches(trimmed);
+    const total = testCases.length + defects.length + suites.length;
+
+    if (total === 0) {
+      dropdown.innerHTML = `<div class="p-3 text-xs text-muted text-center">No matching test cases, defects, or suites for "<strong>${escapeHtml(trimmed)}</strong>"</div>`;
+      dropdown.style.display = "block";
+      return;
+    }
+
+    let html = "";
+    if (testCases.length > 0) {
+      html += `<div class="gs-group-label">Test Cases (${testCases.length})</div>`;
+      html += testCases.slice(0, 5).map(tc => `
+        <button type="button" class="gs-result-item" onclick="window.jumpToGlobalSearchMatch('test_case', '${escapeHtml(tc.id)}')">
+          <span class="gs-result-main">
+            <span class="test-id-pill">${escapeHtml(tc.id)}</span>
+            <span class="gs-result-title">${escapeHtml(tc.title)}</span>
+          </span>
+          <span class="badge ${getStatusBadgeClass(tc.status)} text-2xs">${escapeHtml(tc.status || 'Untested')}</span>
+        </button>
+      `).join("");
+    }
+    if (defects.length > 0) {
+      html += `<div class="gs-group-label">Defects (${defects.length})</div>`;
+      html += defects.slice(0, 5).map(d => `
+        <button type="button" class="gs-result-item" onclick="window.jumpToGlobalSearchMatch('defect', '${escapeHtml(d.id)}')">
+          <span class="gs-result-main">
+            <span class="font-mono text-xs text-rose font-bold">${escapeHtml(d.id)}</span>
+            <span class="gs-result-title">${escapeHtml(d.summary)}</span>
+          </span>
+          <span class="badge badge-danger text-2xs">${escapeHtml(d.status || 'Open')}</span>
+        </button>
+      `).join("");
+    }
+    if (suites.length > 0) {
+      html += `<div class="gs-group-label">Suites &amp; Modules (${suites.length})</div>`;
+      html += suites.slice(0, 4).map(s => `
+        <button type="button" class="gs-result-item" onclick="window.jumpToGlobalSearchMatch('suite', '${escapeHtml(s.id)}')">
+          <span class="gs-result-main">
+            <i class="${escapeHtml(s.icon || 'fa-solid fa-folder')} text-primary text-xs"></i>
+            <span class="gs-result-title">${escapeHtml(s.name)}</span>
+          </span>
+          <span class="text-2xs text-muted">Suite</span>
+        </button>
+      `).join("");
+    }
+
+    dropdown.innerHTML = html;
+    dropdown.style.display = "block";
+  }
+
+  const globalSearchClearBtn = document.getElementById("globalSearchClearBtn");
+  const globalSearchShortcut = document.getElementById("globalSearchShortcut");
+  const globalSearchDropdown = document.getElementById("globalSearchResultsDropdown");
+
+  on(DOM.globalSearchInput, "input", (e) => {
+    const val = e.target.value;
+    const hasText = val.trim().length > 0;
+    if (globalSearchClearBtn) globalSearchClearBtn.style.display = hasText ? "inline-flex" : "none";
+    if (globalSearchShortcut) globalSearchShortcut.style.display = hasText ? "none" : "inline-block";
+
+    applyGlobalSearchToActiveView(val);
+    renderGlobalSearchDropdown(val);
+  });
+
+  on(DOM.globalSearchInput, "keydown", (e) => {
+    if (e.key === "Escape") {
+      if (globalSearchDropdown) globalSearchDropdown.style.display = "none";
+      DOM.globalSearchInput.blur();
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const raw = DOM.globalSearchInput.value.trim();
+      if (!raw) return;
+      if (globalSearchDropdown) globalSearchDropdown.style.display = "none";
+
+      const { testCases, defects, suites } = computeGlobalSearchMatches(raw);
+      const qLower = raw.toLowerCase();
+      const exactTc = testCases.find(tc => (tc.id || "").toLowerCase() === qLower);
+      const exactBug = defects.find(d => (d.id || "").toLowerCase() === qLower);
+
+      if (exactTc) {
+        window.jumpToGlobalSearchMatch("test_case", exactTc.id);
+      } else if (exactBug) {
+        window.jumpToGlobalSearchMatch("defect", exactBug.id);
+      } else if (testCases.length > 0 && state.currentPortal !== "dev") {
+        if (DOM.testCaseSearchInput) DOM.testCaseSearchInput.value = raw;
+        state.searchQuery = qLower;
+        state.globalSearchQuery = qLower;
+        switchView("test-cases");
+      } else if (defects.length > 0) {
+        state.globalSearchQuery = qLower;
+        if (state.currentPortal === "dev") {
+          switchView("dev-kanban");
+        } else {
+          if (DOM.bugSearchInput) DOM.bugSearchInput.value = raw;
+          switchView("defects");
+        }
+      } else if (testCases.length > 0) {
+        state.globalSearchQuery = qLower;
+        switchView("dev-failures");
+      } else if (suites.length > 0) {
+        window.jumpToGlobalSearchMatch("suite", suites[0].id);
+      } else {
+        showToast(`No matches found for "${raw}"`, "info");
+      }
+    }
+  });
+
+  on(globalSearchClearBtn, "click", () => {
+    if (!DOM.globalSearchInput) return;
+    DOM.globalSearchInput.value = "";
+    globalSearchClearBtn.style.display = "none";
+    if (globalSearchShortcut) globalSearchShortcut.style.display = "inline-block";
+    if (globalSearchDropdown) globalSearchDropdown.style.display = "none";
+    applyGlobalSearchToActiveView("");
+    DOM.globalSearchInput.focus();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (globalSearchDropdown && !e.target.closest("#topbarSearchWrapper")) {
+      globalSearchDropdown.style.display = "none";
     }
   });
 
@@ -2794,6 +3446,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (state.devOnlyMyBugs) {
       filtered = filtered.filter(d => d.assignee && d.assignee.toLowerCase().includes(currentUser.name.toLowerCase().split(" ")[0]));
     }
+    if (state.globalSearchQuery) {
+      const gq = state.globalSearchQuery;
+      filtered = filtered.filter(d =>
+        (d.id && d.id.toLowerCase().includes(gq)) ||
+        (d.summary && d.summary.toLowerCase().includes(gq)) ||
+        (d.linkedTestCaseId && d.linkedTestCaseId.toLowerCase().includes(gq)) ||
+        (d.assignee && d.assignee.toLowerCase().includes(gq)) ||
+        (d.gitBranch && d.gitBranch.toLowerCase().includes(gq)) ||
+        (d.prLink && d.prLink.toLowerCase().includes(gq))
+      );
+    }
 
     const openBugs = filtered.filter(d => d.status === "Open" || d.status === "Fail" || d.status === "Blocked" || d.status === "Untested");
     const progressBugs = filtered.filter(d => d.status === "In Progress" || d.status === "In Dev / Fixing" || d.status === "Cannot Reproduce");
@@ -2854,6 +3517,33 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const defect = StorageManager.getDefectById(bugId);
     if (!defect) return;
 
+    const curUser = StorageManager.getCurrentUser() || state.currentUser;
+    const nowIso = new Date().toISOString();
+    const viewerId = curUser ? (curUser.id || curUser.name || "") : "";
+    if (curUser && (curUser.role === "dev" || state.currentPortal === "dev")) {
+      StorageManager.updateDefect({
+        ...defect,
+        lastViewedByDevId: viewerId,
+        lastViewedByDevAt: nowIso
+      });
+      if (defect.linkedTestCaseId) {
+        const linkedTc = StorageManager.getTestCaseById(defect.linkedTestCaseId);
+        if (linkedTc) {
+          StorageManager.updateTestCase({
+            ...linkedTc,
+            lastViewedByDevId: viewerId,
+            lastViewedByDevAt: nowIso
+          });
+        }
+      }
+    }
+    logUserActivity({
+      action_type: "defect_viewed",
+      target_type: "defect",
+      target_id: defect.id,
+      details: { linkedTestCaseId: defect.linkedTestCaseId || "", summary: defect.summary }
+    });
+
     if (DOM.devFixModalBugId) DOM.devFixModalBugId.textContent = defect.id;
     if (DOM.devFixBugId) DOM.devFixBugId.value = defect.id;
     if (DOM.devFixBugSummary) DOM.devFixBugSummary.textContent = defect.summary;
@@ -2892,6 +3582,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
     if (DOM.devFixAssigneeSelect) DOM.devFixAssigneeSelect.value = defect.assignee || state.currentUser.name;
 
+    const historyHost = document.getElementById("devFixHistoryTimeline");
+    if (historyHost) {
+      historyHost.innerHTML = formatTicketHistoryHtml([defect.id, defect.linkedTestCaseId], defect);
+    }
+
     if (DOM.devFixModal) DOM.devFixModal.style.display = "flex";
   };
 
@@ -2912,6 +3607,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       return;
     }
 
+    const prevDefect = StorageManager.getDefectById(bugId);
+    const oldDefectStatus = prevDefect ? prevDefect.status : "";
+    const curUser = StorageManager.getCurrentUser() || state.currentUser;
+    const ownershipPatch = applyLifecycleOwnershipFields({}, oldDefectStatus, status, curUser);
+
     StorageManager.updateDefectDevFix(bugId, {
       devNotes,
       prLink,
@@ -2919,12 +3619,40 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       status,
       assignee
     });
+    const updatedDefect = StorageManager.getDefectById(bugId);
+    if (updatedDefect) {
+      StorageManager.updateDefect({
+        ...updatedDefect,
+        ...ownershipPatch,
+        assignedTo: assignee
+      });
+    }
 
-    // Also sync linked Test Case status when developer updates lifecycle status
+    logUserActivity({
+      action_type: "status_changed",
+      target_type: "defect",
+      target_id: bugId,
+      old_value: oldDefectStatus,
+      new_value: status,
+      details: { assignee, gitBranch, prLink, linkedTestCaseId: prevDefect?.linkedTestCaseId || "" }
+    });
+    if (status === "Ready for Re-Test" || status === "Fixed - Ready for QA") {
+      logUserActivity({
+        action_type: "marked_fixed",
+        target_type: "defect",
+        target_id: bugId,
+        old_value: oldDefectStatus,
+        new_value: status,
+        details: { fixedByDevId: ownershipPatch.fixedByDevId || "", linkedTestCaseId: prevDefect?.linkedTestCaseId || "" }
+      });
+    }
+
+    // Also sync linked Test Case status & ownership timestamps when developer updates lifecycle status
     const defect = StorageManager.getDefectById(bugId);
     if (defect && defect.linkedTestCaseId) {
       const linkedTc = StorageManager.getTestCaseById(defect.linkedTestCaseId);
       if (linkedTc) {
+        const prevTcStatus = linkedTc.status;
         const mappedTcStatus = status === "Fixed - Ready for QA"
           ? "Ready for Re-Test"
           : (status === "Resolved & Verified" || status === "Closed")
@@ -2932,12 +3660,25 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             : status === "Open"
               ? "Fail"
               : status;
+        const tcOwnership = applyLifecycleOwnershipFields({}, prevTcStatus, mappedTcStatus, curUser);
         StorageManager.updateTestCase({
           ...linkedTc,
+          ...tcOwnership,
           status: mappedTcStatus,
           assignedDev: assignee || linkedTc.assignedDev || "",
+          assignedTo: assignee || linkedTc.assignedTo || linkedTc.assignedDev || "",
           lastRun: formatLocalTimestamp()
         });
+        if (prevTcStatus !== mappedTcStatus) {
+          logUserActivity({
+            action_type: "status_changed",
+            target_type: "test_case",
+            target_id: linkedTc.id,
+            old_value: prevTcStatus,
+            new_value: mappedTcStatus,
+            details: { syncedFromDefect: bugId }
+          });
+        }
       }
     }
 
@@ -2951,8 +3692,36 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   window.updateTestCaseStatusFromDev = async function(tcId, newStatus) {
     const tc = StorageManager.getTestCaseById(tcId);
     if (!tc) return;
+    const oldStatus = tc.status || "Untested";
     const nowStamp = formatLocalTimestamp();
-    const updated = StorageManager.updateTestCase({ ...tc, status: newStatus, lastRun: nowStamp });
+    const curUser = StorageManager.getCurrentUser() || state.currentUser;
+    const ownership = applyLifecycleOwnershipFields({}, oldStatus, newStatus, curUser);
+    const updated = StorageManager.updateTestCase({
+      ...tc,
+      ...ownership,
+      status: newStatus,
+      lastRun: nowStamp
+    });
+
+    logUserActivity({
+      action_type: "status_changed",
+      target_type: "test_case",
+      target_id: tcId,
+      old_value: oldStatus,
+      new_value: newStatus,
+      details: { portal: "dev" }
+    });
+    if (newStatus === "Ready for Re-Test" || newStatus === "Fixed - Ready for QA") {
+      logUserActivity({
+        action_type: "marked_fixed",
+        target_type: "test_case",
+        target_id: tcId,
+        old_value: oldStatus,
+        new_value: newStatus,
+        details: { fixedByDevId: ownership.fixedByDevId || "" }
+      });
+    }
+
     const linkedDefect = StorageManager.getDefects().find(d => d.linkedTestCaseId === tcId);
     if (linkedDefect) {
       const defectStatus = newStatus === "Ready for Re-Test"
@@ -2964,7 +3733,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             : (newStatus === "Fail" || newStatus === "Failed" || newStatus === "Blocked")
               ? "Open"
               : linkedDefect.status;
-      StorageManager.updateDefect({ ...linkedDefect, status: defectStatus });
+      StorageManager.updateDefect({
+        ...linkedDefect,
+        ...ownership,
+        status: defectStatus
+      });
     }
     if (typeof SupabaseManager !== "undefined" && updated) {
       await SupabaseManager.syncTestCaseUpsert(updated);
@@ -3007,13 +3780,24 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     if (DOM.devFailedTestsBadge) DOM.devFailedTestsBadge.textContent = failedTests.length;
 
+    const visibleFailedTests = state.globalSearchQuery
+      ? failedTests.filter(f => {
+          const tc = f.testCase || {};
+          const gq = state.globalSearchQuery;
+          return (tc.id && tc.id.toLowerCase().includes(gq)) ||
+            (tc.title && tc.title.toLowerCase().includes(gq)) ||
+            (f.notes && f.notes.toLowerCase().includes(gq)) ||
+            (f.status && f.status.toLowerCase().includes(gq));
+        })
+      : failedTests;
+
     if (DOM.devFailuresContainer) {
-      if (failedTests.length === 0) {
-        DOM.devFailuresContainer.innerHTML = `<div class="dashboard-card p-4 text-center text-muted">✅ All recent tests passed! Zero execution failures.</div>`;
+      if (visibleFailedTests.length === 0) {
+        DOM.devFailuresContainer.innerHTML = `<div class="dashboard-card p-4 text-center text-muted">${state.globalSearchQuery ? "No failures match your search query." : "✅ All recent tests passed! Zero execution failures."}</div>`;
         return;
       }
 
-      DOM.devFailuresContainer.innerHTML = failedTests.map(f => {
+      DOM.devFailuresContainer.innerHTML = visibleFailedTests.map(f => {
         const tc = f.testCase || { id: "TC-Unknown", title: "Test Case", steps: [] };
         const st = normalizeModalStatus(f.status || "Untested");
         const badgeCls = getStatusBadgeClass(st);
@@ -5538,9 +6322,16 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
       if (uploaded && uploaded.url) {
         setTestCaseMediaPreview(uploaded.url, uploaded.mediaType, uploaded.mediaName, uploaded.storage);
+        logUserActivity({
+          action_type: "media_uploaded",
+          target_type: "test_case",
+          target_id: tcId,
+          new_value: uploaded.mediaName,
+          details: { mediaType: uploaded.mediaType, bucket: uploaded.bucket || uploaded.storage, fileUrl: uploaded.url }
+        });
         showToast(
           uploaded.storage === "supabase"
-            ? `${uploaded.mediaType === "video" ? "Video" : "Screenshot"} uploaded to Supabase Storage!`
+            ? `${uploaded.mediaType === "video" ? "Video" : "Screenshot"} uploaded to Supabase Storage (${uploaded.bucket || "nexus-evidence"})!`
             : `${uploaded.mediaType === "video" ? "Video" : "Screenshot"} attached!`,
           "success"
         );
@@ -6648,35 +7439,53 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (isDefectTrigger) {
       const defectStatus = mapTcStatusToDefectStatus(st);
       const severity = (tc.priority || "").includes("P0") ? "Critical" : (tc.priority || "").includes("P1") ? "Major" : "Medium";
+      const mediaUrls = Array.isArray(tc.mediaUrls) && tc.mediaUrls.length > 0
+        ? tc.mediaUrls
+        : ((tc.mediaUrl || tc.image) ? [tc.mediaUrl || tc.image] : []);
 
       if (existingDefect) {
         StorageManager.updateDefect({
           ...existingDefect,
           summary: tc.title,
+          suiteId: tc.suiteId || existingDefect.suiteId || null,
           description: tc.explanation || tc.preconditions || existingDefect.description || "",
           reproSteps: formattedRepro || existingDefect.reproSteps || "",
+          stepsToReproduce: formattedRepro || existingDefect.stepsToReproduce || "",
           priority: tc.priority || existingDefect.priority,
           severity,
-          assignee: tc.assignedDev || existingDefect.assignee || "Unassigned",
+          assignee: tc.assignedDev || tc.assignedTo || existingDefect.assignee || "Unassigned",
+          assignedTo: tc.assignedTo || tc.assignedDev || existingDefect.assignedTo || "Unassigned",
+          mediaUrls: mediaUrls.length > 0 ? mediaUrls : (existingDefect.mediaUrls || []),
+          fixedByDevId: tc.fixedByDevId || existingDefect.fixedByDevId || "",
+          fixedAt: tc.fixedAt || existingDefect.fixedAt || "",
+          verifiedByTesterId: tc.verifiedByTesterId || existingDefect.verifiedByTesterId || "",
+          verifiedAt: tc.verifiedAt || existingDefect.verifiedAt || "",
           status: defectStatus
         });
       } else if (isActiveDefectStatus(st) || st === "Blocked") {
         StorageManager.addDefect({
           summary: tc.title,
           linkedTestCaseId: tc.id,
+          suiteId: tc.suiteId || null,
           severity,
           priority: tc.priority || "P1 - High",
           status: defectStatus,
-          assignee: tc.assignedDev || "Unassigned",
-          reportedBy: tc.author || "QA Tester",
+          assignee: tc.assignedDev || tc.assignedTo || "Unassigned",
+          assignedTo: tc.assignedTo || tc.assignedDev || "Unassigned",
+          reportedBy: tc.author || tc.createdBy || "QA Tester",
+          createdBy: tc.createdBy || tc.author || "QA Tester",
           description: tc.explanation || tc.preconditions || `Logged from Test Case ${tc.id}`,
           reproSteps: formattedRepro,
+          stepsToReproduce: formattedRepro,
+          mediaUrls,
           devNotes: tc.mediaUrl ? `Evidence attached (${tc.mediaType || 'image'}): ${tc.mediaName || tc.id}` : ""
         });
       }
     } else if (existingDefect && (isPassStatus(st) || st === "Won't Fix / By Design")) {
       StorageManager.updateDefect({
         ...existingDefect,
+        verifiedByTesterId: tc.verifiedByTesterId || existingDefect.verifiedByTesterId || "",
+        verifiedAt: tc.verifiedAt || existingDefect.verifiedAt || "",
         status: "Resolved & Verified"
       });
     }
@@ -6712,26 +7521,35 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       ? ((DOM.tcGeneratedTimestamp && DOM.tcGeneratedTimestamp.value) || liveTimestamp)
       : liveTimestamp;
     const curUser = StorageManager.getCurrentUser();
+    const mediaUrlVal = state.currentTcMedia?.url || state.currentTcImage || "";
+    const stepsText = steps.map(s => `${s.step}. ${s.action}${s.expected ? ` -> ${s.expected}` : ""}`).join("\n");
+    const prevTc = editId ? StorageManager.getTestCaseById(editId) : null;
+    const oldStatusVal = prevTc ? prevTc.status : "";
 
     const testCaseData = {
       title,
-      suiteId: DOM.tcSuite ? DOM.tcSuite.value : "suite-auth",
+      suiteId: DOM.tcSuite ? DOM.tcSuite.value : "",
       priority: DOM.tcPriority ? DOM.tcPriority.value : "P1 - High",
       type: "Manual",
       status,
       assignedDev,
+      assignedTo: assignedDev,
+      createdBy: prevTc ? (prevTc.createdBy || prevTc.author || (curUser ? curUser.id || curUser.name : "QA Tester")) : (curUser ? (curUser.id || curUser.name) : "QA Tester"),
       explanation,
       preconditions: explanation,
       tags: assignedDev ? [assignedDev.toLowerCase().replace(/\s+/g, "-")] : [],
       steps,
+      stepsToReproduce: stepsText,
       createdAt,
       lastRun: liveTimestamp,
       author: (curUser ? curUser.name : "QA Tester"),
-      mediaUrl: state.currentTcMedia?.url || state.currentTcImage || "",
+      mediaUrl: mediaUrlVal,
+      mediaUrls: mediaUrlVal ? [mediaUrlVal] : (prevTc && Array.isArray(prevTc.mediaUrls) ? prevTc.mediaUrls : []),
       mediaType: state.currentTcMedia?.mediaType || (state.currentTcImage ? "image" : ""),
       mediaName: state.currentTcMedia?.mediaName || "",
-      image: (state.currentTcMedia?.mediaType === "video") ? "" : (state.currentTcMedia?.url || state.currentTcImage || "")
+      image: (state.currentTcMedia?.mediaType === "video") ? "" : mediaUrlVal
     };
+    applyLifecycleOwnershipFields(testCaseData, oldStatusVal, status, curUser);
 
     if (DOM.saveTestCaseBtn) {
       DOM.saveTestCaseBtn.disabled = true;
@@ -6747,6 +7565,26 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           await SupabaseManager.syncTestCaseUpsert(savedTc || testCaseData);
         }
         syncLinkedDefectForTestCase(savedTc || testCaseData);
+        if (oldStatusVal !== status) {
+          logUserActivity({
+            action_type: "status_changed",
+            target_type: "test_case",
+            target_id: editId,
+            old_value: oldStatusVal,
+            new_value: status,
+            details: { title }
+          });
+          if (status === "Ready for Re-Test") {
+            logUserActivity({
+              action_type: "marked_fixed",
+              target_type: "test_case",
+              target_id: editId,
+              old_value: oldStatusVal,
+              new_value: status,
+              details: { title }
+            });
+          }
+        }
         showToast(`Updated ${editId} & synced with Supabase!`, "success");
       } else {
         const autoId = (DOM.tcGeneratedId && DOM.tcGeneratedId.value) || (typeof SupabaseManager !== "undefined" ? await SupabaseManager.generateNextTestCaseId() : "");
@@ -6754,8 +7592,23 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
         savedTc = StorageManager.addTestCase(testCaseData);
         if (typeof SupabaseManager !== "undefined") {
           await SupabaseManager.syncTestCaseUpsert(savedTc);
+          if (mediaUrlVal) {
+            await SupabaseManager.saveMediaAttachmentRecord({
+              testCaseId: savedTc.id,
+              fileName: testCaseData.mediaName || `${savedTc.id}-evidence`,
+              fileType: testCaseData.mediaType || "image",
+              fileUrl: mediaUrlVal
+            });
+          }
         }
         syncLinkedDefectForTestCase(savedTc);
+        logUserActivity({
+          action_type: "test_case_created",
+          target_type: "test_case",
+          target_id: savedTc.id,
+          new_value: savedTc.status,
+          details: { title: savedTc.title, assignedTo: assignedDev, suiteId: testCaseData.suiteId }
+        });
         showToast(`Saved ${savedTc.id} (${liveTimestamp}) to Supabase & synced with Dev Portal!`, "success");
       }
 
@@ -6789,8 +7642,28 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   };
 
   window.viewTestCaseDetail = function(id) {
-    const tc = StorageManager.getTestCaseById(id);
+    let tc = StorageManager.getTestCaseById(id);
     if (!tc || !DOM.testCaseDetailModal) return;
+
+    const curUser = StorageManager.getCurrentUser() || state.currentUser;
+    if (curUser && (curUser.role === "dev" || state.currentPortal === "dev")) {
+      const devId = curUser.id || curUser.name || "";
+      const viewedAt = new Date().toISOString();
+      tc = StorageManager.updateTestCase({
+        ...tc,
+        lastViewedByDevId: devId,
+        lastViewedByDevAt: viewedAt
+      }) || tc;
+    }
+
+    logUserActivity({
+      action_type: "test_case_viewed",
+      target_type: "test_case",
+      target_id: tc.id,
+      details: { title: tc.title, status: tc.status, portal: state.currentPortal || "qa" }
+    });
+
+    const linkedDefect = StorageManager.getDefects().find(d => d.linkedTestCaseId === tc.id);
     const suites = StorageManager.getSuites();
     const suite = suites.find(s => s.id === tc.suiteId);
 
@@ -6871,7 +7744,23 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           <span>Logged By: <strong>${escapeHtml(tc.author || 'QA Tester')}</strong></span>
           <span>Timestamp: <strong>${escapeHtml(tc.createdAt || tc.lastRun || 'Just now')}</strong></span>
         </div>
+        <div id="tcDetailHistoryHost">
+          ${formatTicketHistoryHtml([tc.id, linkedDefect ? linkedDefect.id : null], tc)}
+        </div>
       `;
+    }
+
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
+      Promise.all([
+        SupabaseManager.fetchActivityLogsFromSupabase({ targetId: tc.id, limit: 50 }).catch(() => []),
+        SupabaseManager.fetchMediaAttachmentsFromSupabase({ testCaseId: tc.id }).catch(() => [])
+      ]).then(() => {
+        const host = document.getElementById("tcDetailHistoryHost");
+        const freshTc = StorageManager.getTestCaseById(tc.id) || tc;
+        if (host && DOM.testCaseDetailModal && DOM.testCaseDetailModal.style.display === "flex") {
+          host.innerHTML = formatTicketHistoryHtml([freshTc.id, linkedDefect ? linkedDefect.id : null], freshTc);
+        }
+      });
     }
 
     if (DOM.editDetailTestCaseBtn) {
@@ -6922,9 +7811,34 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   window.markTestCaseStatus = function(testCaseId, newStatus) {
     const tc = StorageManager.getTestCaseById(testCaseId);
     if (!tc) return;
+    const oldStatus = tc.status || "Untested";
     const nowStamp = formatLocalTimestamp(new Date(), true);
-    const updated = StorageManager.updateTestCase({ ...tc, status: newStatus, lastRun: nowStamp });
-    syncLinkedDefectForTestCase(updated || { ...tc, status: newStatus });
+    const curUser = StorageManager.getCurrentUser() || state.currentUser;
+    const ownership = applyLifecycleOwnershipFields({}, oldStatus, newStatus, curUser);
+    const updated = StorageManager.updateTestCase({
+      ...tc,
+      ...ownership,
+      status: newStatus,
+      lastRun: nowStamp
+    });
+    logUserActivity({
+      action_type: "status_changed",
+      target_type: "test_case",
+      target_id: tc.id,
+      old_value: oldStatus,
+      new_value: newStatus,
+      details: { title: tc.title, portal: state.currentPortal || "qa" }
+    });
+    if (newStatus === "Ready for Re-Test") {
+      logUserActivity({
+        action_type: "marked_fixed",
+        target_type: "test_case",
+        target_id: tc.id,
+        old_value: oldStatus,
+        new_value: newStatus
+      });
+    }
+    syncLinkedDefectForTestCase(updated || { ...tc, ...ownership, status: newStatus });
     renderTestCaseTable();
     renderDashboard();
     renderDefects();
@@ -7032,22 +7946,39 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       return;
     }
 
+    const curUser = StorageManager.getCurrentUser() || state.currentUser;
     const defectData = {
       summary,
       severity: DOM.bugSeverity ? DOM.bugSeverity.value : "Major",
       priority: DOM.bugPriority ? DOM.bugPriority.value : "P1 - High",
       linkedTestCaseId: DOM.bugLinkedTest ? DOM.bugLinkedTest.value.trim() : "",
       assignee: (DOM.bugAssignee ? DOM.bugAssignee.value.trim() : "") || "Senior Developer",
-      description: DOM.bugDescription ? DOM.bugDescription.value.trim() : ""
+      assignedTo: (DOM.bugAssignee ? DOM.bugAssignee.value.trim() : "") || "Senior Developer",
+      createdBy: curUser ? (curUser.id || curUser.name) : "QA Tester",
+      description: DOM.bugDescription ? DOM.bugDescription.value.trim() : "",
+      stepsToReproduce: DOM.bugDescription ? DOM.bugDescription.value.trim() : ""
     };
 
     const editId = DOM.editDefectId ? DOM.editDefectId.value : "";
     if (editId) {
       defectData.id = editId;
       StorageManager.updateDefect(defectData);
+      logUserActivity({
+        action_type: "defect_updated",
+        target_type: "defect",
+        target_id: editId,
+        details: { summary }
+      });
       showToast(`Updated defect ${editId}`);
     } else {
       const created = StorageManager.addDefect(defectData);
+      logUserActivity({
+        action_type: "defect_created",
+        target_type: "defect",
+        target_id: created.id,
+        new_value: created.status || "Open",
+        details: { summary, linkedTestCaseId: defectData.linkedTestCaseId }
+      });
       showToast(`Logged defect ${created.id} & broadcasted to Dev Hub & Cloud!`);
     }
 
@@ -7560,11 +8491,20 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
   // Suites
   function renderSuitesView() {
     if (!DOM.suitesGridCards) return;
-    const suites = StorageManager.getSuites();
+    let suites = StorageManager.getSuites();
     const cases = StorageManager.getTestCases();
 
+    if (state.globalSearchQuery) {
+      const gq = state.globalSearchQuery;
+      suites = suites.filter(s =>
+        (s.name && s.name.toLowerCase().includes(gq)) ||
+        (s.description && s.description.toLowerCase().includes(gq)) ||
+        (s.id && s.id.toLowerCase().includes(gq))
+      );
+    }
+
     if (suites.length === 0) {
-      DOM.suitesGridCards.innerHTML = `<div class="dashboard-card p-4 text-center text-muted" style="grid-column: 1 / -1;">No modules or test suites created yet in Supabase. Click <strong>Create Suite</strong> above to add one.</div>`;
+      DOM.suitesGridCards.innerHTML = `<div class="dashboard-card p-4 text-center text-muted" style="grid-column: 1 / -1;">${state.globalSearchQuery ? "No suites match your search query." : "No modules or test suites created yet in Supabase. Click <strong>Create Suite</strong> above to add one."}</div>`;
       return;
     }
 

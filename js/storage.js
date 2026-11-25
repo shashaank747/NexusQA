@@ -15,7 +15,9 @@ const STORAGE_KEYS = {
   CONFERENCE_MESSAGES: "nexusqa_conference_messages",
   CONFERENCE_PROJECTS: "nexusqa_conference_projects",
   PRIVATE_MESSAGES: "nexusqa_private_messages",
-  NOTIFICATIONS: "nexusqa_user_notifications"
+  NOTIFICATIONS: "nexusqa_user_notifications",
+  ACTIVITY_LOGS: "nexusqa_activity_logs",
+  MEDIA_ATTACHMENTS: "nexusqa_media_attachments"
 };
 
 const syncChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("nexusqa_sync_channel") : null;
@@ -933,17 +935,26 @@ const StorageManager = {
   updateUser(userId, updatedFields) {
     const users = this.getUsers();
     const index = users.findIndex(u => u.id === userId);
-    if (index === -1) return null;
+    const stamp = new Date().toISOString().replace("T", " ").substring(0, 16);
 
-    users[index] = {
-      ...users[index],
-      ...updatedFields,
-      updatedAt: new Date().toISOString().replace("T", " ").substring(0, 16)
-    };
+    let nextUser;
+    if (index === -1) {
+      const cur = this.getCurrentUser();
+      const base = (cur && cur.id === userId) ? cur : { id: userId, status: "active", emailVerified: true };
+      nextUser = { ...base, ...updatedFields, updatedAt: stamp };
+      users.push(nextUser);
+    } else {
+      users[index] = {
+        ...users[index],
+        ...updatedFields,
+        updatedAt: stamp
+      };
+      nextUser = users[index];
+    }
 
     if (updatedFields.name) {
       const parts = updatedFields.name.trim().split(/\s+/);
-      users[index].avatar = parts.length > 1 
+      nextUser.avatar = parts.length > 1
         ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
         : updatedFields.name.substring(0, 2).toUpperCase();
     }
@@ -952,11 +963,12 @@ const StorageManager = {
 
     const cur = this.getCurrentUser();
     if (cur && cur.id === userId) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(users[index]));
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(nextUser));
+      localStorage.setItem("nexus_qa_current_user", JSON.stringify(nextUser));
     }
 
-    this.broadcast("USER_UPDATED", { user: users[index] });
-    return users[index];
+    this.broadcast("USER_UPDATED", { user: nextUser });
+    return nextUser;
   },
 
   deleteUser(userId) {
@@ -1015,7 +1027,199 @@ const StorageManager = {
   },
 
   logout() {
+    const cur = this.getCurrentUser();
+    if (cur && cur.id) {
+      const nowIso = new Date().toISOString();
+      const users = this.getUsers();
+      const idx = users.findIndex(u => u.id === cur.id);
+      if (idx !== -1) {
+        users[idx].isOnline = false;
+        users[idx].lastLogoutAt = nowIso;
+        this.saveUsers(users, true);
+      }
+      if (typeof SupabaseManager !== "undefined") {
+        if (SupabaseManager.updateUserPresence) {
+          SupabaseManager.updateUserPresence(cur, false, { keepalive: true, logoutAt: nowIso });
+        }
+        if (SupabaseManager.logActivity) {
+          SupabaseManager.logActivity({
+            action_type: "logout",
+            target_type: "session",
+            target_id: cur.id,
+            old_value: "online",
+            new_value: "offline",
+            details: { reason: "user_logout", timestamp: nowIso }
+          }, { keepalive: true, userOverride: cur });
+        }
+      }
+    }
     this.setCurrentUser(null);
+  },
+
+  markUserLoggedIn(user) {
+    if (!user || !user.id) return user;
+    const nowIso = new Date().toISOString();
+    const updatedUser = {
+      ...user,
+      isOnline: true,
+      lastLoginAt: nowIso
+    };
+    const users = this.getUsers();
+    const idx = users.findIndex(u => u.id === updatedUser.id);
+    if (idx !== -1) {
+      users[idx] = { ...users[idx], isOnline: true, lastLoginAt: nowIso };
+      this.saveUsers(users, true);
+    }
+    this.setCurrentUser(updatedUser);
+    if (typeof SupabaseManager !== "undefined") {
+      if (SupabaseManager.updateUserPresence) {
+        SupabaseManager.updateUserPresence(updatedUser, true, { loginAt: nowIso });
+      }
+      if (SupabaseManager.logActivity) {
+        SupabaseManager.logActivity({
+          action_type: "login",
+          target_type: "session",
+          target_id: updatedUser.id,
+          old_value: "offline",
+          new_value: "online",
+          details: { email: updatedUser.email, role: updatedUser.role, timestamp: nowIso }
+        }, { userOverride: updatedUser });
+      }
+    }
+    return updatedUser;
+  },
+
+  // -------------------------------------------------------------
+  // Activity & Audit Logs Cache
+  // -------------------------------------------------------------
+  getActivityLogs(filters = {}) {
+    const raw = localStorage.getItem(STORAGE_KEYS.ACTIVITY_LOGS);
+    let logs = [];
+    try {
+      logs = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(logs)) logs = [];
+    } catch (e) { logs = []; }
+
+    if (filters.userId && filters.userId !== "all") {
+      logs = logs.filter(l => l.userId === filters.userId || l.username === filters.userId);
+    }
+    if (filters.actionType && filters.actionType !== "all") {
+      logs = logs.filter(l => l.actionType === filters.actionType);
+    }
+    if (filters.targetType && filters.targetType !== "all") {
+      logs = logs.filter(l => l.targetType === filters.targetType);
+    }
+    if (filters.targetId) {
+      logs = logs.filter(l => l.targetId === filters.targetId || (l.details && l.details.linkedTestCaseId === filters.targetId));
+    }
+    return logs;
+  },
+
+  addActivityLog(entry) {
+    const logs = this.getActivityLogs();
+    const record = {
+      id: entry.id || ("act-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7)),
+      userId: entry.userId || entry.user_id || "",
+      username: entry.username || "Unknown",
+      userRole: entry.userRole || entry.user_role || "qa",
+      actionType: entry.actionType || entry.action_type || "activity",
+      targetType: entry.targetType || entry.target_type || "",
+      targetId: entry.targetId || entry.target_id || "",
+      oldValue: entry.oldValue ?? entry.old_value ?? "",
+      newValue: entry.newValue ?? entry.new_value ?? "",
+      details: entry.details || {},
+      createdAt: entry.createdAt || entry.created_at || new Date().toISOString()
+    };
+    if (!logs.some(l => l.id === record.id)) {
+      logs.unshift(record);
+      if (logs.length > 1000) logs.length = 1000;
+      localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(logs));
+      this.broadcast("ACTIVITY_LOGS_UPDATED", { log: record });
+    }
+    return record;
+  },
+
+  mergeRemoteActivityLogs(remoteLogs = []) {
+    if (!Array.isArray(remoteLogs) || remoteLogs.length === 0) return;
+    const local = this.getActivityLogs();
+    const byId = new Map();
+    local.forEach(l => { if (l && l.id) byId.set(l.id, l); });
+    let changed = false;
+    remoteLogs.forEach(rl => {
+      if (rl && rl.id && !byId.has(rl.id)) {
+        byId.set(rl.id, rl);
+        changed = true;
+      }
+    });
+    if (changed) {
+      const merged = Array.from(byId.values())
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice(0, 1000);
+      localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(merged));
+      this.broadcast("ACTIVITY_LOGS_UPDATED", { remote: true });
+    }
+  },
+
+  // -------------------------------------------------------------
+  // Media Attachments Cache
+  // -------------------------------------------------------------
+  getMediaAttachments(filters = {}) {
+    const raw = localStorage.getItem(STORAGE_KEYS.MEDIA_ATTACHMENTS);
+    let items = [];
+    try {
+      items = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(items)) items = [];
+    } catch (e) { items = []; }
+
+    if (filters.testCaseId) {
+      items = items.filter(m => m.testCaseId === filters.testCaseId);
+    }
+    if (filters.defectId) {
+      items = items.filter(m => m.defectId === filters.defectId);
+    }
+    return items;
+  },
+
+  addMediaAttachment(att) {
+    const items = this.getMediaAttachments();
+    const record = {
+      id: att.id || ("med-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7)),
+      testCaseId: att.testCaseId || att.test_case_id || "",
+      defectId: att.defectId || att.defect_id || "",
+      uploadedBy: att.uploadedBy || att.uploaded_by || "",
+      uploaderName: att.uploaderName || att.uploader_name || "Team Member",
+      fileName: att.fileName || att.file_name || "evidence",
+      fileType: att.fileType || att.file_type || "image",
+      fileUrl: att.fileUrl || att.file_url || "",
+      fileSizeBytes: att.fileSizeBytes || att.file_size_bytes || 0,
+      createdAt: att.createdAt || att.created_at || new Date().toISOString()
+    };
+    if (record.fileUrl && !items.some(m => m.id === record.id || (m.fileUrl === record.fileUrl && m.testCaseId === record.testCaseId && m.defectId === record.defectId))) {
+      items.unshift(record);
+      localStorage.setItem(STORAGE_KEYS.MEDIA_ATTACHMENTS, JSON.stringify(items));
+      this.broadcast("MEDIA_ATTACHMENTS_UPDATED", { attachment: record });
+    }
+    return record;
+  },
+
+  mergeRemoteMediaAttachments(remoteItems = []) {
+    if (!Array.isArray(remoteItems) || remoteItems.length === 0) return;
+    const local = this.getMediaAttachments();
+    const byId = new Map();
+    local.forEach(m => { if (m && m.id) byId.set(m.id, m); });
+    let changed = false;
+    remoteItems.forEach(rm => {
+      if (rm && rm.id && !byId.has(rm.id)) {
+        byId.set(rm.id, rm);
+        changed = true;
+      }
+    });
+    if (changed) {
+      const merged = Array.from(byId.values())
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      localStorage.setItem(STORAGE_KEYS.MEDIA_ATTACHMENTS, JSON.stringify(merged));
+      this.broadcast("MEDIA_ATTACHMENTS_UPDATED", { remote: true });
+    }
   },
 
   getUserByEmail(email) {
@@ -1051,8 +1255,8 @@ const StorageManager = {
         approvedBy: "System",
         createdAt: new Date().toISOString()
       };
-      this.setCurrentUser(devUser);
-      return { status: "success", user: devUser };
+      const loggedDev = this.markUserLoggedIn(devUser);
+      return { status: "success", user: loggedDev };
     }
 
     // Temporary hardcoded credentials: test / 222222
@@ -1074,8 +1278,8 @@ const StorageManager = {
         approvedBy: "System",
         createdAt: new Date().toISOString()
       };
-      this.setCurrentUser(testUser);
-      return { status: "success", user: testUser };
+      const loggedTest = this.markUserLoggedIn(testUser);
+      return { status: "success", user: loggedTest };
     }
 
     const _decodeKey = (s) => { try { return atob(s); } catch(e) { return ""; } };
@@ -1121,7 +1325,7 @@ const StorageManager = {
         this.saveUsers(users);
       }
 
-      this.setCurrentUser(user);
+      user = this.markUserLoggedIn(user);
       return { status: "success", user };
     }
 
@@ -1142,7 +1346,7 @@ const StorageManager = {
       throw new Error("Access Denied: Account is inactive or not authorized.");
     }
 
-    this.setCurrentUser(user);
+    user = this.markUserLoggedIn(user);
     return { status: "success", user };
   },
 
@@ -1240,8 +1444,8 @@ const StorageManager = {
 
     user.otpCode = null;
     this.saveUsers(users);
-    this.setCurrentUser(user);
-    return { status: "success", user };
+    const loggedIn = this.markUserLoggedIn(user);
+    return { status: "success", user: loggedIn };
   },
 
   /**
