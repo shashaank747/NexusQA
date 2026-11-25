@@ -244,6 +244,17 @@ document.addEventListener("DOMContentLoaded", () => {
     filterMyBugsBtn: document.getElementById("filterMyBugsBtn"),
     devAssignedBadge: document.getElementById("devAssignedBadge"),
     devFailedTestsBadge: document.getElementById("devFailedTestsBadge"),
+    devTestCasesBadge: document.getElementById("devTestCasesBadge"),
+    devTestCasesTableBody: document.getElementById("devTestCasesTableBody"),
+    devTcSearchInput: document.getElementById("devTcSearchInput"),
+    devTcStatusFilter: document.getElementById("devTcStatusFilter"),
+    devTcDevStatusFilter: document.getElementById("devTcDevStatusFilter"),
+    devTcPriorityFilter: document.getElementById("devTcPriorityFilter"),
+    devTcSuiteFilter: document.getElementById("devTcSuiteFilter"),
+    devTcResetFiltersBtn: document.getElementById("devTcResetFiltersBtn"),
+    devRefreshTestCasesBtn: document.getElementById("devRefreshTestCasesBtn"),
+    devTcShowingCount: document.getElementById("devTcShowingCount"),
+    devTcTotalCount: document.getElementById("devTcTotalCount"),
 
     kanbanOpenCount: document.getElementById("kanbanOpenCount"),
     kanbanProgressCount: document.getElementById("kanbanProgressCount"),
@@ -2787,6 +2798,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   function renderActiveView() {
     if (state.currentPortal === "dev") {
       renderDevDashboard();
+      if (state.currentView === "dev-test-cases") renderDevTestCasesView();
       if (state.currentView === "dev-approvals") renderDevApprovals();
       if (state.currentView === "dev-kanban") renderDevKanban();
       if (state.currentView === "dev-failures") renderDevFailures();
@@ -2826,6 +2838,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       suites: "Suites & Modules",
       conference: "Dev & Tester Conference Room",
       "dev-dashboard": "Dev Defect Command Center",
+      "dev-test-cases": "QA Test Cases & Specs",
       "dev-approvals": "Employees & Access Control",
       "dev-audit": "Audit & Activity Trail",
       "dev-kanban": "Bug Triage Kanban",
@@ -2888,6 +2901,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       renderConference();
     }
     if (viewName === "dev-dashboard") renderDevDashboard();
+    if (viewName === "dev-test-cases") {
+      renderDevTestCasesView();
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected && typeof SupabaseManager.fetchAllFromSupabase === "function") {
+        SupabaseManager.fetchAllFromSupabase()
+          .then(() => {
+            renderDevDashboard();
+            renderDevTestCasesView();
+          })
+          .catch(() => { });
+      }
+    }
     if (viewName === "dev-approvals") {
       renderDevApprovals();
       if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected) {
@@ -3548,13 +3572,126 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   // =========================================================================
   // DEVELOPER PORTAL LOGIC
   // =========================================================================
+  function getMergedDevDefects() {
+    const defects = StorageManager.getDefects();
+    const cases = StorageManager.getTestCases();
+    const linkedTcIds = new Set(defects.map(d => d.linkedTestCaseId).filter(Boolean));
+    const merged = [...defects];
+
+    cases.forEach(tc => {
+      if (!tc || !tc.id || linkedTcIds.has(tc.id)) return;
+      const st = normalizeModalStatus(tc.status);
+      const stages = resolveTestCaseStages(tc);
+      const isFailOrBlocked = (
+        isActiveDefectStatus(st) ||
+        st === "Blocked" ||
+        stages.qaStatus === "Fail" ||
+        stages.qaStatus === "Blocked"
+      ) && !isPassStatus(st) && st !== "Won't Fix / By Design";
+
+      if (!isFailOrBlocked) return;
+
+      const mappedStatus = st === "Ready for Re-Test"
+        ? "Fixed - Ready for QA"
+        : (st === "In Dev / Fixing" || st === "Cannot Reproduce")
+          ? st
+          : (st === "Blocked" || stages.qaStatus === "Blocked")
+            ? "Blocked"
+            : "Open";
+
+      merged.unshift({
+        id: tc.id,
+        _isVirtualTcDefect: true,
+        linkedTestCaseId: tc.id,
+        suiteId: tc.suiteId || null,
+        summary: tc.title || tc.id,
+        description: tc.explanation || tc.preconditions || "",
+        severity: (tc.priority || "").includes("P0") ? "Critical" : (tc.priority || "").includes("P1") ? "Major" : "Medium",
+        priority: tc.priority || "P1 - High",
+        status: mappedStatus,
+        assignee: tc.assignedDev || tc.assignedTo || "Unassigned",
+        reportedBy: tc.author || tc.createdBy || "QA Tester",
+        devNotes: tc.devNotes || ""
+      });
+    });
+
+    return merged;
+  }
+
+  function getDevFailedTestsList() {
+    const runs = StorageManager.getTestRuns();
+    const cases = StorageManager.getTestCases();
+    const caseMap = new Map(cases.map(c => [c.id, c]));
+    const failedTests = [];
+    const seenTcIds = new Set();
+
+    cases.forEach(tc => {
+      if (!tc || !tc.id) return;
+      const s = normalizeModalStatus(tc.status || "Untested");
+      const stages = resolveTestCaseStages(tc);
+      const isFailure = (
+        s === "Fail" ||
+        s === "Blocked" ||
+        s === "In Dev / Fixing" ||
+        s === "Cannot Reproduce" ||
+        ((stages.qaStatus === "Fail" || stages.qaStatus === "Blocked") && stages.resolutionStatus === "Open" && !isPassStatus(s) && s !== "Ready for Re-Test")
+      );
+      if (isFailure) {
+        seenTcIds.add(tc.id);
+        failedTests.push({
+          run: {
+            name: tc.createdAt ? `Logged ${tc.createdAt}` : "Manual QA Log",
+            environment: tc.assignedDev ? `Assigned: ${tc.assignedDev}` : "Unassigned"
+          },
+          testCase: tc,
+          status: s,
+          notes: tc.explanation || tc.preconditions || ""
+        });
+      }
+    });
+
+    runs.forEach(run => {
+      Object.entries(run.results || {}).forEach(([tcId, res]) => {
+        const resStatus = normalizeModalStatus(res?.status || "");
+        if ((resStatus === "Fail" || resStatus === "Blocked") && !seenTcIds.has(tcId)) {
+          seenTcIds.add(tcId);
+          failedTests.push({ run, testCase: caseMap.get(tcId), status: resStatus, notes: res.notes });
+        }
+      });
+    });
+
+    return failedTests;
+  }
+
+  function updateDevSidebarBadges(mergedDefects = null, failedTests = null) {
+    const allCases = StorageManager.getTestCases();
+    const defectsList = mergedDefects || getMergedDevDefects();
+    const failedList = failedTests || getDevFailedTestsList();
+    const currentUser = state.currentUser || { name: "Developer" };
+    const firstName = (currentUser.name || "Developer").toLowerCase().split(" ")[0];
+    const assigned = defectsList.filter(d =>
+      d.assignee &&
+      d.assignee.toLowerCase().includes(firstName) &&
+      d.status !== "Resolved & Verified" &&
+      d.status !== "Closed" &&
+      d.status !== "Verified & Closed" &&
+      d.status !== "Won't Fix / By Design"
+    );
+
+    if (DOM.devAssignedBadge) DOM.devAssignedBadge.textContent = assigned.length;
+    if (DOM.devFailedTestsBadge) DOM.devFailedTestsBadge.textContent = failedList.length;
+    if (DOM.devTestCasesBadge) DOM.devTestCasesBadge.textContent = allCases.length;
+  }
+
   function renderDevDashboard() {
     updateDevApprovalsBadge();
-    const defects = StorageManager.getDefects();
+    const defects = getMergedDevDefects();
+    const failedTests = getDevFailedTestsList();
     const currentUser = state.currentUser || { name: "Developer" };
+    const firstName = (currentUser.name || "Developer").toLowerCase().split(" ")[0];
 
     const critical = defects.filter(d => (d.severity === "Critical" || (d.priority && d.priority.includes("P0"))) && d.status !== "Resolved & Verified" && d.status !== "Closed" && d.status !== "Verified & Closed" && d.status !== "Won't Fix / By Design");
-    const assigned = defects.filter(d => d.assignee && d.assignee.toLowerCase().includes(currentUser.name.toLowerCase().split(" ")[0]) && d.status !== "Resolved & Verified" && d.status !== "Closed" && d.status !== "Verified & Closed" && d.status !== "Won't Fix / By Design");
+    const assigned = defects.filter(d => d.assignee && d.assignee.toLowerCase().includes(firstName) && d.status !== "Resolved & Verified" && d.status !== "Closed" && d.status !== "Verified & Closed" && d.status !== "Won't Fix / By Design");
     const readyRetest = defects.filter(d => d.status === "Fixed - Ready for QA" || d.status === "Ready for Re-Test");
     const verified = defects.filter(d => d.status === "Resolved & Verified" || d.status === "Closed" || d.status === "Verified & Closed" || d.status === "Pass" || d.status === "Won't Fix / By Design");
 
@@ -3564,27 +3701,30 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.devKpiReadyRetest) DOM.devKpiReadyRetest.textContent = readyRetest.length;
     if (DOM.devKpiVerified) DOM.devKpiVerified.textContent = verified.length;
 
-    if (DOM.devAssignedBadge) DOM.devAssignedBadge.textContent = assigned.length;
+    updateDevSidebarBadges(defects, failedTests);
 
     const unfixBugs = defects.filter(d => d.status === "Open" || d.status === "In Progress" || d.status === "Fail" || d.status === "Blocked" || d.status === "In Dev / Fixing" || d.status === "Cannot Reproduce");
     if (DOM.devActiveDefectsList) {
       if (unfixBugs.length === 0) {
         DOM.devActiveDefectsList.innerHTML = `<div class="p-4 text-center text-muted">🎉 No unresolved defects! All bugs fixed.</div>`;
       } else {
-        DOM.devActiveDefectsList.innerHTML = unfixBugs.slice(0, 5).map(d => `
+        DOM.devActiveDefectsList.innerHTML = unfixBugs.slice(0, 10).map(d => `
           <div class="dev-feed-item">
             <div class="dev-feed-info">
-              <div class="d-flex align-center gap-1">
-                <span class="test-id-pill" style="color:var(--rose); background:rgba(244,63,94,0.1);">${d.id}</span>
-                <span class="badge ${d.severity === 'Critical' ? 'badge-p0' : 'badge-p1'} text-xs">${d.severity}</span>
+              <div class="d-flex align-center gap-1 flex-wrap">
+                <span class="test-id-pill" style="color:var(--rose); background:rgba(244,63,94,0.1);">${escapeHtml(d.id)}</span>
+                <span class="badge ${d.severity === 'Critical' ? 'badge-p0' : 'badge-p1'} text-xs">${escapeHtml(d.severity)}</span>
                 <span class="badge ${getStatusBadgeClass(d.status === 'Open' ? 'Fail' : d.status)} text-xs">${escapeHtml(d.status)}</span>
               </div>
               <div class="dev-feed-title">${escapeHtml(d.summary)}</div>
-              <div class="text-xs text-muted">Linked: <strong>${d.linkedTestCaseId || 'None'}</strong> • Assignee: <strong>${escapeHtml(d.assignee || 'Unassigned')}</strong></div>
+              <div class="text-xs text-muted">Linked: <strong>${escapeHtml(d.linkedTestCaseId || 'None')}</strong> • Assignee: <strong>${escapeHtml(d.assignee || 'Unassigned')}</strong></div>
             </div>
-            <button class="btn btn-secondary btn-xs" onclick="window.openDevFixModal('${d.id}')">
-              <i class="fa-solid fa-wrench text-emerald"></i> Fix
-            </button>
+            <div class="d-flex align-center gap-1">
+              ${d.linkedTestCaseId ? `<button class="btn btn-ghost btn-xs" onclick="window.viewTestCaseDetail('${escapeHtml(d.linkedTestCaseId)}')" title="Inspect QA Test Case"><i class="fa-solid fa-eye"></i></button>` : ""}
+              <button class="btn btn-secondary btn-xs" onclick="window.openDevFixModal('${escapeHtml(d.id)}')">
+                <i class="fa-solid fa-wrench text-emerald"></i> Fix
+              </button>
+            </div>
           </div>
         `).join("");
       }
@@ -3599,24 +3739,159 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           <div class="dev-feed-item">
             <div class="dev-feed-info">
               <div class="d-flex align-center gap-1">
-                <strong class="font-mono text-xs text-cyan">${d.id}</strong>
+                <strong class="font-mono text-xs text-cyan">${escapeHtml(d.id)}</strong>
                 <span class="badge ${getStatusBadgeClass(d.status)} text-xs">${escapeHtml(d.status)}</span>
               </div>
               <div class="dev-feed-title">${escapeHtml(d.devNotes || d.summary)}</div>
               <div class="text-xs text-muted">
-                ${d.prLink ? `<a href="${d.prLink}" target="_blank" class="text-primary"><i class="fa-solid fa-code-pull-request"></i> ${d.prLink.substring(0, 35)}...</a>` : ''}
-                ${d.gitBranch ? `• branch: <code class="text-amber">${d.gitBranch}</code>` : ''}
+                ${d.prLink ? `<a href="${escapeHtml(d.prLink)}" target="_blank" class="text-primary"><i class="fa-solid fa-code-pull-request"></i> ${escapeHtml(d.prLink.substring(0, 35))}...</a>` : ''}
+                ${d.gitBranch ? `• branch: <code class="text-amber">${escapeHtml(d.gitBranch)}</code>` : ''}
               </div>
             </div>
-            <button class="btn btn-ghost btn-xs" onclick="window.openDevFixModal('${d.id}')"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn btn-ghost btn-xs" onclick="window.openDevFixModal('${escapeHtml(d.id)}')"><i class="fa-solid fa-pen"></i></button>
           </div>
         `).join("");
       }
     }
   }
 
+  function renderDevTestCasesView() {
+    const cases = StorageManager.getTestCases();
+    const suites = StorageManager.getSuites();
+    const users = StorageManager.getUsers ? StorageManager.getUsers() : [];
+    const suiteMap = new Map(suites.map(s => [s.id, s]));
+    const userMap = new Map();
+    users.forEach(u => {
+      if (u && u.id) userMap.set(u.id, u.fullName || u.name || u.username || u.email || u.id);
+      if (u && u.username) userMap.set(u.username, u.fullName || u.name || u.username);
+    });
+    const resolveCreatorName = (tc) => {
+      const raw = tc.createdBy || tc.author || "QA Tester";
+      return userMap.get(raw) || (tc.author && !userMap.has(tc.author) && tc.author !== tc.createdBy ? tc.author : raw);
+    };
+
+    if (DOM.devTestCasesBadge) DOM.devTestCasesBadge.textContent = cases.length;
+
+    if (DOM.devTcSuiteFilter) {
+      const prevSuite = DOM.devTcSuiteFilter.value || "all";
+      const opts = ['<option value="all">All Suites / Modules</option>'];
+      suites.forEach(s => {
+        opts.push(`<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`);
+      });
+      DOM.devTcSuiteFilter.innerHTML = opts.join("");
+      if (Array.from(DOM.devTcSuiteFilter.options).some(o => o.value === prevSuite)) {
+        DOM.devTcSuiteFilter.value = prevSuite;
+      }
+    }
+
+    const searchQ = ((DOM.devTcSearchInput?.value || "") || state.globalSearchQuery || "").trim().toLowerCase();
+    const qaFilter = DOM.devTcStatusFilter?.value || "all";
+    const devFilter = DOM.devTcDevStatusFilter?.value || "all";
+    const prioFilter = DOM.devTcPriorityFilter?.value || "all";
+    const suiteFilter = DOM.devTcSuiteFilter?.value || "all";
+
+    let filtered = cases.filter(tc => {
+      const stages = resolveTestCaseStages(tc);
+      const overallStatus = normalizeModalStatus(tc.status);
+      const suiteName = (suiteMap.get(tc.suiteId)?.name || "General").toLowerCase();
+
+      if (qaFilter !== "all") {
+        if (qaFilter !== overallStatus && qaFilter !== stages.qaStatus) return false;
+      }
+      if (devFilter !== "all" && stages.devStatus !== devFilter) return false;
+      if (prioFilter !== "all" && (tc.priority || "") !== prioFilter) return false;
+      if (suiteFilter !== "all" && (tc.suiteId || "") !== suiteFilter) return false;
+
+      if (searchQ) {
+        const creator = resolveCreatorName(tc).toLowerCase();
+        const hay = `${tc.id} ${tc.title || ""} ${suiteName} ${creator} ${tc.explanation || ""} ${tc.devNotes || ""}`.toLowerCase();
+        if (!hay.includes(searchQ)) return false;
+      }
+      return true;
+    });
+
+    filtered = [...filtered].sort((a, b) => {
+      const ta = String(b.updatedAt || b.lastRun || b.createdAt || "");
+      const tb = String(a.updatedAt || a.lastRun || a.createdAt || "");
+      return ta.localeCompare(tb);
+    });
+
+    if (DOM.devTcTotalCount) DOM.devTcTotalCount.textContent = cases.length;
+    if (DOM.devTcShowingCount) DOM.devTcShowingCount.textContent = filtered.length;
+
+    if (!DOM.devTestCasesTableBody) return;
+
+    if (filtered.length === 0) {
+      DOM.devTestCasesTableBody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center p-5 text-muted">
+            ${cases.length === 0 ? "No QA test cases found in Supabase yet." : "No test cases match the active filters."}
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    DOM.devTestCasesTableBody.innerHTML = filtered.map(tc => {
+      const stages = resolveTestCaseStages(tc);
+      const suite = suiteMap.get(tc.suiteId);
+      const suiteLabel = suite ? suite.name : "Unassigned / General";
+      const prio = tc.priority || "P1 - High";
+      const prioCls = prio.includes("P0") ? "badge-p0" : prio.includes("P1") ? "badge-p1" : prio.includes("P3") ? "badge-p3" : "badge-p2";
+      const qaStatusDisplay = stages.qaStatus || normalizeModalStatus(tc.status) || "Untested";
+      const devStatusDisplay = stages.devStatus || "Pending Dev";
+      const createdBy = resolveCreatorName(tc);
+      const rawUpdated = tc.updatedAt || tc.lastRun || tc.createdAt || "";
+      const updatedDisplay = rawUpdated ? String(rawUpdated).replace("T", " ").substring(0, 16) : "—";
+      const hasMedia = Boolean(tc.mediaUrl || tc.image || (Array.isArray(tc.mediaUrls) && tc.mediaUrls.length > 0));
+      const stepsCount = Array.isArray(tc.steps) ? tc.steps.length : 0;
+
+      return `
+        <tr class="clickable-row" onclick="window.viewTestCaseDetail('${escapeHtml(tc.id)}')" style="cursor: pointer;" title="Click to inspect spec, steps &amp; triage">
+          <td class="whitespace-nowrap"><span class="test-id-pill">${escapeHtml(tc.id)}</span></td>
+          <td>
+            <div class="font-semibold text-heading">${escapeHtml(tc.title || tc.id)}</div>
+            <div class="text-2xs text-muted d-flex align-center gap-2 mt-1">
+              <span><i class="fa-solid fa-list-ol"></i> ${stepsCount} step${stepsCount === 1 ? "" : "s"}</span>
+              ${hasMedia ? `<span class="text-cyan"><i class="fa-solid fa-paperclip"></i> Media</span>` : ""}
+              ${tc.devNotes ? `<span class="text-emerald"><i class="fa-solid fa-note-sticky"></i> Dev Notes</span>` : ""}
+            </div>
+          </td>
+          <td class="whitespace-nowrap"><span class="text-xs">${escapeHtml(suiteLabel)}</span></td>
+          <td class="whitespace-nowrap"><span class="badge ${prioCls} text-xs">${escapeHtml(prio)}</span></td>
+          <td class="whitespace-nowrap"><span class="badge ${getStatusBadgeClass(qaStatusDisplay)} text-xs">${escapeHtml(qaStatusDisplay)}</span></td>
+          <td class="whitespace-nowrap"><span class="badge ${getStatusBadgeClass(devStatusDisplay)} text-xs">${escapeHtml(devStatusDisplay)}</span></td>
+          <td class="whitespace-nowrap"><span class="text-xs">${escapeHtml(createdBy)}</span></td>
+          <td class="whitespace-nowrap"><span class="text-xs font-mono text-muted">${escapeHtml(updatedDisplay)}</span></td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  on(DOM.devTcSearchInput, "input", () => renderDevTestCasesView());
+  on(DOM.devTcStatusFilter, "change", () => renderDevTestCasesView());
+  on(DOM.devTcDevStatusFilter, "change", () => renderDevTestCasesView());
+  on(DOM.devTcPriorityFilter, "change", () => renderDevTestCasesView());
+  on(DOM.devTcSuiteFilter, "change", () => renderDevTestCasesView());
+  on(DOM.devTcResetFiltersBtn, "click", () => {
+    if (DOM.devTcSearchInput) DOM.devTcSearchInput.value = "";
+    if (DOM.devTcStatusFilter) DOM.devTcStatusFilter.value = "all";
+    if (DOM.devTcDevStatusFilter) DOM.devTcDevStatusFilter.value = "all";
+    if (DOM.devTcPriorityFilter) DOM.devTcPriorityFilter.value = "all";
+    if (DOM.devTcSuiteFilter) DOM.devTcSuiteFilter.value = "all";
+    renderDevTestCasesView();
+  });
+  on(DOM.devRefreshTestCasesBtn, "click", async () => {
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.isConnected && typeof SupabaseManager.fetchAllFromSupabase === "function") {
+      await SupabaseManager.fetchAllFromSupabase().catch(() => { });
+    }
+    renderDevDashboard();
+    renderDevTestCasesView();
+    showToast("QA Test Cases synced with Supabase!", "success");
+  });
+
   function renderDevKanban() {
-    const defects = StorageManager.getDefects();
+    const defects = getMergedDevDefects();
     const currentUser = state.currentUser || { name: "Developer" };
 
     let filtered = defects;
@@ -3692,7 +3967,13 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   window.openDevFixModal = function (bugId) {
     const defect = StorageManager.getDefectById(bugId);
-    if (!defect) return;
+    if (!defect) {
+      const tc = StorageManager.getTestCaseById(bugId);
+      if (tc && typeof window.openDevFixModalForTest === "function") {
+        return window.openDevFixModalForTest(tc.id);
+      }
+      return;
+    }
 
     const curUser = StorageManager.getCurrentUser() || state.currentUser;
     const nowIso = new Date().toISOString();
@@ -3844,6 +4125,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           ...tcOwnership,
           ...nextStages,
           status: mappedTcStatus,
+          devNotes: devNotes || linkedTc.devNotes || "",
           assignedDev: assignee || linkedTc.assignedDev || "",
           assignedTo: assignee || linkedTc.assignedTo || linkedTc.assignedDev || "",
           lastRun: formatLocalTimestamp()
@@ -3854,6 +4136,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
     if (DOM.devFixModal) DOM.devFixModal.style.display = "none";
     renderDevDashboard();
+    if (state.currentView === "dev-test-cases") renderDevTestCasesView();
     if (state.currentView === "dev-kanban") renderDevKanban();
     if (state.currentView === "dev-failures") renderDevFailures();
     showToast(`Bug ${bugId} updated to '${status}' & synced with QA!`);
@@ -3898,41 +4181,14 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       await SupabaseManager.syncTestCaseUpsert(updated);
     }
     renderDevDashboard();
+    if (state.currentView === "dev-test-cases") renderDevTestCasesView();
     if (state.currentView === "dev-kanban") renderDevKanban();
     if (state.currentView === "dev-failures") renderDevFailures();
     showToast(`${tcId} status updated to "${newStatus}" & synced with QA!`);
   };
 
   function renderDevFailures() {
-    const runs = StorageManager.getTestRuns();
-    const cases = StorageManager.getTestCases();
-    const caseMap = new Map(cases.map(c => [c.id, c]));
-
-    const failedTests = [];
-    const seenTcIds = new Set();
-
-    // Include live logged test cases in active defect / blocked / pending / assigned states
-    cases.forEach(tc => {
-      const s = tc.status || "Untested";
-      if (isActiveDefectStatus(s) || s === "Blocked" || s === "In Progress" || tc.assignedDev) {
-        seenTcIds.add(tc.id);
-        failedTests.push({
-          run: { name: tc.createdAt ? `Logged ${tc.createdAt}` : "Manual QA Log", environment: tc.assignedDev ? `Assigned: ${tc.assignedDev}` : "Unassigned" },
-          testCase: tc,
-          status: s,
-          notes: tc.explanation || tc.preconditions || ""
-        });
-      }
-    });
-
-    runs.forEach(run => {
-      Object.entries(run.results || {}).forEach(([tcId, res]) => {
-        if ((isActiveDefectStatus(res.status) || res.status === "Blocked") && !seenTcIds.has(tcId)) {
-          failedTests.push({ run, testCase: caseMap.get(tcId), status: res.status, notes: res.notes });
-        }
-      });
-    });
-
+    const failedTests = getDevFailedTestsList();
     if (DOM.devFailedTestsBadge) DOM.devFailedTestsBadge.textContent = failedTests.length;
 
     const visibleFailedTests = state.globalSearchQuery
@@ -3972,7 +4228,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
                 ${tc.priority ? `<span class="badge badge-p1">${escapeHtml(tc.priority)}</span>` : ""}
                 <span class="text-xs text-muted"><strong>${escapeHtml(f.run.name)}</strong> • ${escapeHtml(f.run.environment)}</span>
               </div>
-              <div class="d-flex align-center gap-2">
+              <div class="d-flex align-center gap-2 flex-wrap">
+                <button class="btn btn-secondary btn-xs" onclick="window.viewTestCaseDetail('${escapeHtml(tc.id)}')" title="Inspect Test Case &amp; Dev Triage">
+                  <i class="fa-solid fa-eye"></i> Inspect
+                </button>
                 <select class="nexus-select text-xs" style="padding: 0.25rem 0.5rem; width: auto;" onchange="window.updateTestCaseStatusFromDev('${escapeHtml(tc.id)}', this.value)" title="Update QA Test Case Status">
                   ${TEST_CASE_STATUSES.map(opt => `<option value="${escapeHtml(opt)}" ${st === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join("")}
                 </select>
@@ -4000,13 +4259,24 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (defect) {
       window.openDevFixModal(defect.id);
     } else {
+      const tc = StorageManager.getTestCaseById(tcId);
+      const formattedRepro = tc && Array.isArray(tc.steps)
+        ? tc.steps.map(s => `${s.step}. ${s.action}${s.expected ? ` -> ${s.expected}` : ""}`).join("\n")
+        : "";
+      const priority = (tc && tc.priority) || "P1 - High";
+      const severity = priority.includes("P0") ? "Critical" : priority.includes("P1") ? "Major" : "Medium";
       const newBug = StorageManager.addDefect({
-        summary: `Failure investigation for ${tcId}`,
+        summary: (tc && tc.title) ? tc.title : `Failure investigation for ${tcId}`,
         linkedTestCaseId: tcId,
-        severity: "Critical",
-        priority: "P0 - Urgent",
-        assignee: state.currentUser ? state.currentUser.name : "Developer",
-        description: `Triggered from failed test diagnostics for ${tcId}`
+        suiteId: tc ? (tc.suiteId || null) : null,
+        severity,
+        priority,
+        assignee: (tc && (tc.assignedDev || tc.assignedTo)) || (state.currentUser ? state.currentUser.name : "Developer"),
+        reportedBy: (tc && (tc.author || tc.createdBy)) || "QA Tester",
+        description: (tc && (tc.explanation || tc.preconditions)) || `Triggered from failed test diagnostics for ${tcId}`,
+        reproSteps: formattedRepro,
+        stepsToReproduce: formattedRepro,
+        devNotes: (tc && tc.devNotes) || ""
       });
       window.openDevFixModal(newBug.id);
     }
@@ -7700,6 +7970,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           assignee: tc.assignedDev || tc.assignedTo || existingDefect.assignee || "Unassigned",
           assignedTo: tc.assignedTo || tc.assignedDev || existingDefect.assignedTo || "Unassigned",
           mediaUrls: mediaUrls.length > 0 ? mediaUrls : (existingDefect.mediaUrls || []),
+          devNotes: tc.devNotes !== undefined && tc.devNotes !== "" ? tc.devNotes : (existingDefect.devNotes || ""),
           fixedByDevId: tc.fixedByDevId || existingDefect.fixedByDevId || "",
           fixedAt: tc.fixedAt || existingDefect.fixedAt || "",
           verifiedByTesterId: tc.verifiedByTesterId || existingDefect.verifiedByTesterId || "",
@@ -7722,7 +7993,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           reproSteps: formattedRepro,
           stepsToReproduce: formattedRepro,
           mediaUrls,
-          devNotes: tc.mediaUrl ? `Evidence attached (${tc.mediaType || 'image'}): ${tc.mediaName || tc.id}` : ""
+          devNotes: tc.devNotes || (tc.mediaUrl ? `Evidence attached (${tc.mediaType || 'image'}): ${tc.mediaName || tc.id}` : "")
         });
       }
     } else if (existingDefect && (isPassStatus(st) || st === "Won't Fix / By Design")) {
@@ -7884,8 +8155,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (!tc || !DOM.testCaseDetailModal) return;
 
     const curUser = StorageManager.getCurrentUser() || state.currentUser;
-    if (curUser && (curUser.role === "dev" || state.currentPortal === "dev")) {
-      const devId = curUser.id || curUser.name || "";
+    const isDevPortal = Boolean((curUser && (curUser.role === "dev" || curUser.role === "developer")) || state.currentPortal === "dev");
+
+    if (isDevPortal) {
+      const devId = curUser ? (curUser.id || curUser.name || "") : "developer";
       const viewedAt = new Date().toISOString();
       tc = StorageManager.updateTestCase({
         ...tc,
@@ -7899,16 +8172,20 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       target_type: "test_case",
       target_id: tc.id,
       details: { title: tc.title, status: tc.status, portal: state.currentPortal || "qa" }
-    });
+    }, isDevPortal ? { userOverride: { ...(curUser || {}), role: "developer" } } : {});
 
     const linkedDefect = StorageManager.getDefects().find(d => d.linkedTestCaseId === tc.id);
     const suites = StorageManager.getSuites();
     const suite = suites.find(s => s.id === tc.suiteId);
+    const allUsers = StorageManager.getUsers ? StorageManager.getUsers() : [];
+    const rawCreator = tc.createdBy || tc.author || "QA Tester";
+    const creatorUser = allUsers.find(u => u && (u.id === rawCreator || u.username === rawCreator));
+    const creatorDisplayName = creatorUser ? (creatorUser.fullName || creatorUser.name || creatorUser.username) : (tc.author || rawCreator);
 
     if (DOM.viewDetailId) DOM.viewDetailId.textContent = tc.id;
     if (DOM.viewDetailTitle) DOM.viewDetailTitle.textContent = tc.title;
 
-    let prioClass = tc.priority.includes("P0") ? "badge-p0" : tc.priority.includes("P1") ? "badge-p1" : tc.priority.includes("P3") ? "badge-p3" : "badge-p2";
+    let prioClass = (tc.priority || "").includes("P0") ? "badge-p0" : (tc.priority || "").includes("P1") ? "badge-p1" : (tc.priority || "").includes("P3") ? "badge-p3" : "badge-p2";
     let statusClass = getStatusBadgeClass(tc.status);
 
     const stepsRowsHtml = (tc.steps || []).map(s => `
@@ -7920,43 +8197,101 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     `).join("");
 
     const mediaUrl = tc.mediaUrl || tc.image || "";
-    const mediaHtml = mediaUrl ? (
-      tc.mediaType === "video"
-        ? `
+    const renderMediaItemHtml = (url, type, name, labelText = "Reference Screenshot / Evidence") => {
+      if (!url) return "";
+      const isVid = type === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(url);
+      if (isVid) {
+        return `
         <div class="mb-3">
-          <label class="console-label"><i class="fa-solid fa-video text-primary"></i> Attached Screen Recording</label>
+          <label class="console-label"><i class="fa-solid fa-video text-primary"></i> ${escapeHtml(name || "Attached Screen Recording")}</label>
           <div class="tc-detail-image-box text-center">
-            <video src="${escapeHtml(mediaUrl)}" controls muted playsinline class="tc-video-preview-player"></video>
+            <video src="${escapeHtml(url)}" controls muted playsinline class="tc-video-preview-player"></video>
           </div>
-        </div>`
-        : `
+        </div>`;
+      }
+      return `
         <div class="mb-3">
-          <label class="console-label"><i class="fa-solid fa-image text-primary"></i> Reference Screenshot / Evidence</label>
+          <label class="console-label"><i class="fa-solid fa-image text-primary"></i> ${escapeHtml(name || labelText)}</label>
           <div class="tc-detail-image-box text-center">
-            <a href="${escapeHtml(mediaUrl)}" target="_blank" title="Click to view full image in new tab">
-              <img src="${escapeHtml(mediaUrl)}" alt="Reference image for ${escapeHtml(tc.id)}">
+            <a href="${escapeHtml(url)}" target="_blank" title="Click to view full image in new tab">
+              <img src="${escapeHtml(url)}" alt="Reference image for ${escapeHtml(tc.id)}">
             </a>
             <div class="text-xs text-muted mt-2 d-flex justify-between align-center">
               <span><i class="fa-solid fa-up-right-from-square"></i> Click image to open high-resolution view</span>
-              <a href="${escapeHtml(mediaUrl)}" download="${escapeHtml(tc.id)}-evidence.png" class="btn btn-ghost btn-xs text-primary">
+              <a href="${escapeHtml(url)}" download="${escapeHtml(tc.id)}-evidence.png" class="btn btn-ghost btn-xs text-primary">
                 <i class="fa-solid fa-download"></i> Download Image
               </a>
             </div>
           </div>
-        </div>`
-    ) : "";
+        </div>`;
+    };
+
+    const mediaHtml = renderMediaItemHtml(mediaUrl, tc.mediaType, tc.mediaName);
+
+    const renderExtraMediaAttachments = (testCaseObj) => {
+      const allAtts = typeof StorageManager !== "undefined" && StorageManager.getMediaAttachments ? StorageManager.getMediaAttachments() : [];
+      const primaryUrls = new Set([mediaUrl, ...(Array.isArray(testCaseObj.mediaUrls) ? testCaseObj.mediaUrls : [])].filter(Boolean));
+      const extras = [];
+      (Array.isArray(testCaseObj.mediaUrls) ? testCaseObj.mediaUrls : []).forEach(u => {
+        if (u && u !== mediaUrl) extras.push({ fileUrl: u, fileType: "", fileName: "Additional Evidence" });
+      });
+      allAtts.forEach(a => {
+        if (a && a.testCaseId === testCaseObj.id && a.fileUrl && !primaryUrls.has(a.fileUrl)) {
+          primaryUrls.add(a.fileUrl);
+          extras.push(a);
+        }
+      });
+      return extras.map(a => renderMediaItemHtml(a.fileUrl, a.fileType, a.fileName, "Media Attachment")).join("");
+    };
 
     if (DOM.viewDetailBody) {
       const stages = resolveTestCaseStages(tc);
+      const currentDevNotes = tc.devNotes || (linkedDefect && linkedDefect.devNotes) || "";
+      const devTriageSectionHtml = isDevPortal ? `
+        <div class="dashboard-card mt-3 mb-3" id="detailDevTriageBox" style="border: 1px solid rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.04);">
+          <div class="card-body">
+            <div class="d-flex justify-between align-center flex-wrap gap-2 mb-2">
+              <label class="console-label m-0"><i class="fa-solid fa-code text-cyan"></i> Developer Triage &amp; Fix Sync</label>
+              <span class="badge badge-info text-2xs">Syncs to QA in Real Time</span>
+            </div>
+            <div class="d-flex flex-wrap gap-3 align-end">
+              <div style="flex: 0 0 210px; min-width: 180px;">
+                <label class="text-xs font-semibold text-muted d-block mb-1" for="detailDevStatusSelect">Dev Triage Status</label>
+                <select id="detailDevStatusSelect" class="nexus-select text-sm">
+                  <option value="Pending Dev" ${stages.devStatus === "Pending Dev" ? "selected" : ""}>Pending Dev</option>
+                  <option value="In Dev / Fixing" ${stages.devStatus === "In Dev / Fixing" ? "selected" : ""}>In Dev / Fixing</option>
+                  <option value="Cannot Reproduce" ${stages.devStatus === "Cannot Reproduce" ? "selected" : ""}>Cannot Reproduce</option>
+                  <option value="Ready for Re-Test" ${stages.devStatus === "Ready for Re-Test" ? "selected" : ""}>Ready for Re-Test</option>
+                </select>
+              </div>
+              <div style="flex: 1 1 280px; min-width: 220px;">
+                <label class="text-xs font-semibold text-muted d-block mb-1" for="detailDevNotesInput">Developer Notes / Fix Details</label>
+                <textarea id="detailDevNotesInput" class="nexus-textarea text-sm" rows="2" placeholder="Add root cause, fix PR/commit info, or clarification for QA...">${escapeHtml(currentDevNotes)}</textarea>
+              </div>
+            </div>
+            <div class="d-flex justify-end mt-2">
+              <button type="button" class="btn btn-primary btn-sm" id="saveDetailDevTriageBtn" onclick="window.saveDetailDevTriage('${escapeHtml(tc.id)}')">
+                <i class="fa-solid fa-floppy-disk"></i> Save Dev Triage &amp; Sync
+              </button>
+            </div>
+          </div>
+        </div>
+      ` : (currentDevNotes ? `
+        <div class="mb-3">
+          <label class="console-label"><i class="fa-solid fa-code text-emerald"></i> Developer Notes</label>
+          <div class="precondition-box">${escapeHtml(currentDevNotes)}</div>
+        </div>
+      ` : "");
+
       DOM.viewDetailBody.innerHTML = `
         <div class="detail-meta-grid">
           <div class="detail-meta-item">
             <span class="meta-label">Module / Feature</span>
-            <span class="meta-val"><i class="${suite ? suite.icon : 'fa-solid fa-folder'} text-primary"></i> ${suite ? suite.name : 'General'}</span>
+            <span class="meta-val"><i class="${suite ? suite.icon : 'fa-solid fa-folder'} text-primary"></i> ${suite ? escapeHtml(suite.name) : 'General'}</span>
           </div>
           <div class="detail-meta-item">
             <span class="meta-label">Priority</span>
-            <span class="meta-val"><span class="badge ${prioClass}">${tc.priority}</span></span>
+            <span class="meta-val"><span class="badge ${prioClass}">${escapeHtml(tc.priority || "P1 - High")}</span></span>
           </div>
           <div class="detail-meta-item">
             <span class="meta-label">Assigned Developer</span>
@@ -7964,7 +8299,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           </div>
           <div class="detail-meta-item">
             <span class="meta-label">Overall Status</span>
-            <span class="meta-val"><span class="badge ${statusClass}">${escapeHtml(tc.status || 'Untested')}</span></span>
+            <span class="meta-val" id="detailOverallStatusHost"><span class="badge ${statusClass}">${escapeHtml(tc.status || 'Untested')}</span></span>
           </div>
         </div>
         <div class="detail-meta-grid" style="margin-top: -0.25rem;">
@@ -7974,7 +8309,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           </div>
           <div class="detail-meta-item">
             <span class="meta-label">Dev Triage Status</span>
-            <span class="meta-val"><span class="badge ${getStatusBadgeClass(stages.devStatus)}">${escapeHtml(stages.devStatus)}</span></span>
+            <span class="meta-val" id="detailDevStatusBadgeHost"><span class="badge ${getStatusBadgeClass(stages.devStatus)}">${escapeHtml(stages.devStatus)}</span></span>
           </div>
           <div class="detail-meta-item">
             <span class="meta-label">Final Resolution</span>
@@ -7986,6 +8321,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           <div class="precondition-box">${escapeHtml(tc.explanation || tc.preconditions || 'None specified.')}</div>
         </div>
         ${mediaHtml}
+        <div id="tcDetailExtraMediaHost">${renderExtraMediaAttachments(tc)}</div>
         <div class="mb-3">
           <label class="console-label"><i class="fa-solid fa-list-ol"></i> Steps to Reproduce (${(tc.steps || []).length} Steps)</label>
           <table class="detail-steps-table">
@@ -7993,8 +8329,9 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
             <tbody>${stepsRowsHtml || '<tr><td colspan="3" class="text-muted">No steps provided.</td></tr>'}</tbody>
           </table>
         </div>
+        ${devTriageSectionHtml}
         <div class="d-flex justify-between text-muted text-xs mt-3 pt-3 border-top">
-          <span>Logged By: <strong>${escapeHtml(tc.author || 'QA Tester')}</strong></span>
+          <span>Logged By: <strong>${escapeHtml(creatorDisplayName)}</strong></span>
           <span>Timestamp: <strong>${escapeHtml(tc.createdAt || tc.lastRun || 'Just now')}</strong></span>
         </div>
         <div id="tcDetailHistoryHost">
@@ -8009,9 +8346,11 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
         SupabaseManager.fetchMediaAttachmentsFromSupabase({ testCaseId: tc.id }).catch(() => [])
       ]).then(() => {
         const host = document.getElementById("tcDetailHistoryHost");
+        const extraMediaHost = document.getElementById("tcDetailExtraMediaHost");
         const freshTc = StorageManager.getTestCaseById(tc.id) || tc;
-        if (host && DOM.testCaseDetailModal && DOM.testCaseDetailModal.style.display === "flex") {
-          host.innerHTML = formatTicketHistoryHtml([freshTc.id, linkedDefect ? linkedDefect.id : null], freshTc);
+        if (DOM.testCaseDetailModal && DOM.testCaseDetailModal.style.display === "flex") {
+          if (host) host.innerHTML = formatTicketHistoryHtml([freshTc.id, linkedDefect ? linkedDefect.id : null], freshTc);
+          if (extraMediaHost) extraMediaHost.innerHTML = renderExtraMediaAttachments(freshTc);
         }
       });
     }
@@ -8019,7 +8358,9 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     if (DOM.editDetailTestCaseBtn) {
       DOM.editDetailTestCaseBtn.onclick = () => {
         if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none";
-        window.openEditTestCaseModal(tc.id);
+        if (!isDevPortal && document.getElementById("testCaseModal") && typeof window.openEditTestCaseModal === "function") {
+          window.openEditTestCaseModal(tc.id);
+        }
       };
     }
     const detailPassBtn = document.getElementById("detailPassedTestCaseBtn");
@@ -8050,12 +8391,90 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       };
     }
     if (DOM.deleteDetailTestCaseBtn) {
+      DOM.deleteDetailTestCaseBtn.style.display = isDevPortal ? "none" : "";
       DOM.deleteDetailTestCaseBtn.onclick = () => {
         if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none";
         window.deleteSingleTestCase(tc.id);
       };
     }
     DOM.testCaseDetailModal.style.display = "flex";
+  };
+
+  window.saveDetailDevTriage = async function (tcId) {
+    const tc = StorageManager.getTestCaseById(tcId);
+    if (!tc) return;
+    const devSelect = document.getElementById("detailDevStatusSelect");
+    const devNotesInput = document.getElementById("detailDevNotesInput");
+    const saveBtn = document.getElementById("saveDetailDevTriageBtn");
+
+    const newDevStatus = devSelect ? devSelect.value : "Pending Dev";
+    const newDevNotes = devNotesInput ? devNotesInput.value.trim() : "";
+    const curUser = StorageManager.getCurrentUser() || state.currentUser;
+
+    const prevStages = resolveTestCaseStages(tc);
+    const nextStages = {
+      ...prevStages,
+      devStatus: newDevStatus,
+      resolutionStatus: prevStages.resolutionStatus === "Verified & Closed" && newDevStatus !== "Ready for Re-Test"
+        ? "Open"
+        : prevStages.resolutionStatus
+    };
+    const derivedStatus = deriveOverallStatusFromStages(nextStages.qaStatus, nextStages.devStatus, nextStages.resolutionStatus);
+    const oldStatus = tc.status || "Untested";
+    const ownership = applyLifecycleOwnershipFields({}, oldStatus, derivedStatus, curUser);
+    const nowStamp = formatLocalTimestamp();
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
+    }
+
+    const updated = StorageManager.updateTestCase({
+      ...tc,
+      ...ownership,
+      ...nextStages,
+      devNotes: newDevNotes,
+      status: derivedStatus,
+      lastRun: nowStamp,
+      updatedAt: new Date().toISOString()
+    });
+
+    if (typeof syncLinkedDefectForTestCase === "function") {
+      syncLinkedDefectForTestCase(updated || { ...tc, ...ownership, ...nextStages, devNotes: newDevNotes, status: derivedStatus });
+    }
+
+    logStageTransitions(tc.id, prevStages, nextStages, { portal: "dev", title: tc.title, devNotes: newDevNotes }, { userOverride: { ...(curUser || {}), role: "developer" } });
+    if (newDevNotes !== (tc.devNotes || "")) {
+      logUserActivity({
+        action_type: "dev_notes_updated",
+        target_type: "test_case",
+        target_id: tc.id,
+        old_value: tc.devNotes || "",
+        new_value: newDevNotes,
+        details: { portal: "dev", title: tc.title, dev_status: newDevStatus }
+      }, { userOverride: { ...(curUser || {}), role: "developer" } });
+    }
+
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Save Dev Triage &amp; Sync`;
+    }
+
+    const overallHost = document.getElementById("detailOverallStatusHost");
+    if (overallHost) overallHost.innerHTML = `<span class="badge ${getStatusBadgeClass(derivedStatus)}">${escapeHtml(derivedStatus)}</span>`;
+    const devStatusHost = document.getElementById("detailDevStatusBadgeHost");
+    if (devStatusHost) devStatusHost.innerHTML = `<span class="badge ${getStatusBadgeClass(newDevStatus)}">${escapeHtml(newDevStatus)}</span>`;
+    const historyHost = document.getElementById("tcDetailHistoryHost");
+    const linkedDefect = StorageManager.getDefects().find(d => d.linkedTestCaseId === tc.id);
+    if (historyHost && updated) {
+      historyHost.innerHTML = formatTicketHistoryHtml([updated.id, linkedDefect ? linkedDefect.id : null], updated);
+    }
+
+    renderDevDashboard();
+    if (state.currentView === "dev-test-cases") renderDevTestCasesView();
+    if (state.currentView === "dev-kanban") renderDevKanban();
+    if (state.currentView === "dev-failures") renderDevFailures();
+    showToast(`${tc.id} Dev Triage updated to "${newDevStatus}" & synced to QA!`, "success");
   };
 
   on(DOM.closeDetailModalBtn, "click", () => { if (DOM.testCaseDetailModal) DOM.testCaseDetailModal.style.display = "none"; });

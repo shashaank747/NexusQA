@@ -234,11 +234,6 @@
       </div>
 
       <div class="topbar-right pr-6">
-        <button class="btn btn-primary btn-sm" id="createQuickBtn">
-          <i class="fa-solid fa-plus"></i>
-          <span id="createQuickBtnLabel">New Bug Ticket</span>
-        </button>
-
         <button type="button" class="icon-btn mobile-search-toggle" id="mobileSearchToggleBtn" title="Search" aria-label="Toggle Search">
           <i class="fa-solid fa-magnifying-glass"></i>
         </button>
@@ -308,6 +303,9 @@
               <li class="rail-nav-item active" data-view="dev-dashboard" title="Dev Defect Dashboard">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-laptop-code"></i></button>
               </li>
+              <li class="rail-nav-item" data-view="dev-test-cases" title="QA Test Cases &amp; Specs">
+                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-clipboard-list text-cyan"></i></button>
+              </li>
               <li class="rail-nav-item" data-view="dev-approvals" title="Employees">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-users text-amber"></i></button>
               </li>
@@ -370,18 +368,25 @@
                     <span class="nav-badge badge-version" id="devAuditCountBadge">0</span>
                   </a>
                 </li>
+                <li class="nav-item" data-view="dev-test-cases">
+                  <a href="javascript:void(0)" class="nav-link">
+                    <i class="fa-solid fa-clipboard-list text-cyan"></i>
+                    <span>QA Test Cases &amp; Specs</span>
+                    <span class="nav-badge badge-info" id="devTestCasesBadge">0</span>
+                  </a>
+                </li>
                 <li class="nav-item" data-view="dev-kanban">
                   <a href="javascript:void(0)" class="nav-link">
                     <i class="fa-solid fa-table-columns"></i>
                     <span>Bug Triage Kanban</span>
-                    <span class="nav-badge badge-danger" id="devAssignedBadge">2</span>
+                    <span class="nav-badge badge-danger" id="devAssignedBadge">0</span>
                   </a>
                 </li>
                 <li class="nav-item" data-view="dev-failures">
                   <a href="javascript:void(0)" class="nav-link">
                     <i class="fa-solid fa-bug-slash"></i>
                     <span>Failed Test Diagnostics</span>
-                    <span class="nav-badge badge-blocked" id="devFailedTestsBadge">2</span>
+                    <span class="nav-badge badge-blocked" id="devFailedTestsBadge">0</span>
                   </a>
                 </li>
                 <li class="nav-item" data-view="conference">
@@ -782,6 +787,91 @@
             </div>
           </div>
           <div class="dev-failures-container" id="devFailuresContainer"></div>
+        </section>
+
+        <!-- DEVELOPER VIEW: QA TEST CASES & SPECS -->
+        <section class="view-panel" id="view-dev-test-cases">
+          <div class="view-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div class="dev-header-badge"><i class="fa-solid fa-clipboard-list text-cyan"></i> QA Coverage &amp; Spec Inspector</div>
+              <h1 class="view-title">QA Test Cases &amp; Specs</h1>
+              <p class="view-subtitle">Inspect every test case across all suites (Untested, In Progress, Pass, Fail, Blocked), review media &amp; repro steps, and update Dev triage status in real time.</p>
+            </div>
+            <div class="view-actions d-flex align-center gap-2 flex-wrap">
+              <button class="btn btn-secondary btn-sm" id="devRefreshTestCasesBtn" type="button">
+                <i class="fa-solid fa-rotate"></i> Refresh Live
+              </button>
+            </div>
+          </div>
+
+          <div class="dashboard-card mb-4">
+            <div class="card-body d-flex flex-wrap align-center gap-3">
+              <div style="flex: 1 1 220px; min-width: 180px;">
+                <input type="text" class="nexus-input text-sm" id="devTcSearchInput" placeholder="Search ID, title, suite, creator, or notes...">
+              </div>
+              <select class="nexus-select text-xs" id="devTcStatusFilter" style="width: auto; min-width: 145px;">
+                <option value="all">All QA Statuses</option>
+                <option value="Untested">Untested</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Pass">Pass</option>
+                <option value="Fail">Fail</option>
+                <option value="Blocked">Blocked</option>
+                <option value="In Dev / Fixing">In Dev / Fixing</option>
+                <option value="Cannot Reproduce">Cannot Reproduce</option>
+                <option value="Ready for Re-Test">Ready for Re-Test</option>
+                <option value="Verified & Closed">Verified &amp; Closed</option>
+              </select>
+              <select class="nexus-select text-xs" id="devTcDevStatusFilter" style="width: auto; min-width: 155px;">
+                <option value="all">All Dev Triage</option>
+                <option value="Pending Dev">Pending Dev</option>
+                <option value="In Dev / Fixing">In Dev / Fixing</option>
+                <option value="Cannot Reproduce">Cannot Reproduce</option>
+                <option value="Ready for Re-Test">Ready for Re-Test</option>
+              </select>
+              <select class="nexus-select text-xs" id="devTcPriorityFilter" style="width: auto; min-width: 135px;">
+                <option value="all">All Priorities</option>
+                <option value="P0 - Urgent">P0 - Urgent</option>
+                <option value="P1 - High">P1 - High</option>
+                <option value="P2 - Medium">P2 - Medium</option>
+                <option value="P3 - Low">P3 - Low</option>
+              </select>
+              <select class="nexus-select text-xs" id="devTcSuiteFilter" style="width: auto; min-width: 155px;">
+                <option value="all">All Suites / Modules</option>
+              </select>
+              <button class="btn btn-ghost btn-xs" id="devTcResetFiltersBtn" type="button">
+                <i class="fa-solid fa-filter-circle-xmark"></i> Reset
+              </button>
+            </div>
+          </div>
+
+          <div class="dashboard-card">
+            <div class="card-header d-flex justify-between align-center flex-wrap gap-2">
+              <div class="card-title-group">
+                <h3><i class="fa-solid fa-table-list text-cyan"></i> All Synchronized QA Test Cases</h3>
+                <p class="card-subtitle">Showing <strong id="devTcShowingCount">0</strong> of <strong id="devTcTotalCount">0</strong> test cases — click any row to inspect details &amp; update Dev Triage</p>
+              </div>
+              <span class="badge badge-info text-xs"><i class="fa-solid fa-bolt"></i> Supabase Realtime</span>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive-wrapper w-full overflow-x-auto">
+                <table class="nexus-table" id="devTestCasesTable">
+                  <thead>
+                    <tr>
+                      <th class="whitespace-nowrap">TEST ID</th>
+                      <th>TITLE</th>
+                      <th class="whitespace-nowrap">MODULE / SUITE</th>
+                      <th class="whitespace-nowrap">PRIORITY</th>
+                      <th class="whitespace-nowrap">QA STATUS</th>
+                      <th class="whitespace-nowrap">DEV TRIAGE STATUS</th>
+                      <th class="whitespace-nowrap">CREATED BY</th>
+                      <th class="whitespace-nowrap">UPDATED AT</th>
+                    </tr>
+                  </thead>
+                  <tbody id="devTestCasesTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- VIEW: USER PROFILE & ACCOUNT SETTINGS -->
@@ -1343,7 +1433,7 @@
           </button>
         </div>
         <div class="d-flex align-center gap-2">
-          <button type="button" class="btn btn-secondary" id="editDetailTestCaseBtn"><i class="fa-solid fa-pen-to-square"></i> Close</button>
+          <button type="button" class="btn btn-secondary" id="editDetailTestCaseBtn"><i class="fa-solid fa-xmark"></i> Close</button>
         </div>
       </div>
     </div>
@@ -1702,9 +1792,9 @@
   
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.6"></script>
-  <script src="js/supabase.js?v=1.0.17"></script>
+  <script src="js/supabase.js?v=1.0.18"></script>
   <script src="js/storage.js?v=1.0.20"></script>
   <script src="js/nexus-widgets-bundle.js?v=1.0.1"></script>
-  <script src="js/app.js?v=1.0.31"></script>
+  <script src="js/app.js?v=1.0.34"></script>
 </body>
 </html>

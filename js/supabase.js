@@ -222,8 +222,10 @@ const SupabaseManager = {
       const idx = cases.findIndex(c => c.id === payload.new.id);
       if (idx !== -1) {
         cases[idx] = this.mapTestCaseFromDB(payload.new);
-        StorageManager.saveTestCases(cases, true);
+      } else {
+        cases.unshift(this.mapTestCaseFromDB(payload.new));
       }
+      StorageManager.saveTestCases(cases, true);
     } else if (payload.eventType === "DELETE") {
       const filtered = cases.filter(c => c.id !== payload.old.id);
       StorageManager.saveTestCases(filtered, true);
@@ -547,7 +549,7 @@ const SupabaseManager = {
     const hasMeta = Boolean(
       tc.assignedDev || tc.assignedTo || tc.mediaUrl || tc.image || tc.mediaType || tc.mediaName ||
       tc.explanation || tc.createdAt || tc.createdBy || tc.lastViewedByDevId || tc.fixedByDevId || tc.verifiedByTesterId ||
-      tc.qaStatus || tc.devStatus || tc.resolutionStatus ||
+      tc.qaStatus || tc.devStatus || tc.resolutionStatus || tc.devNotes ||
       mediaUrls.length > 0
     );
     const stepsPayload = hasMeta
@@ -559,6 +561,7 @@ const SupabaseManager = {
             qaStatus,
             devStatus,
             resolutionStatus,
+            devNotes: tc.devNotes || "",
             mediaUrl: tc.mediaUrl || tc.image || mediaUrls[0] || "",
             mediaUrls,
             mediaType: tc.mediaType || (tc.image ? "image" : ""),
@@ -639,6 +642,7 @@ const SupabaseManager = {
       qaStatus: row.qa_status || meta.qaStatus || "",
       devStatus: row.dev_status || meta.devStatus || "",
       resolutionStatus: row.resolution_status || meta.resolutionStatus || "",
+      devNotes: row.dev_notes || meta.devNotes || "",
       author: row.author,
       createdBy: row.created_by || meta.createdBy || row.author || "",
       assignedDev: row.assigned_to || meta.assignedDev || "",
@@ -646,6 +650,7 @@ const SupabaseManager = {
       stepsToReproduce: row.steps_to_reproduce || "",
       lastRun: row.last_run,
       createdAt: meta.createdAt || (row.created_at ? row.created_at.substring(0, 16).replace("T", " ") : ""),
+      updatedAt: row.updated_at || row.last_run || meta.createdAt || (row.created_at ? row.created_at.substring(0, 16).replace("T", " ") : ""),
       preconditions: row.preconditions || meta.explanation || "",
       explanation: meta.explanation || row.preconditions || "",
       mediaUrl,
