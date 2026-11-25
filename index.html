@@ -502,6 +502,16 @@
       background: #1f2937;
       color: #e2e8f0;
     }
+
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 1000px #1c1c1f inset !important;
+      -webkit-text-fill-color: #f4f4f5 !important;
+      caret-color: #f4f4f5 !important;
+      transition: background-color 5000s ease-in-out 0s;
+    }
   </style>
 </head>
 <body>

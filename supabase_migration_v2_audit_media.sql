@@ -97,23 +97,36 @@ CREATE INDEX IF NOT EXISTS idx_nexus_media_test_case
 CREATE INDEX IF NOT EXISTS idx_nexus_media_defect
   ON public.nexus_media_attachments (defect_id);
 
--- 6. Create nexus_conference_messages (Project Chat & Google Meet Invites)
+-- 6. Create / Upgrade nexus_conference_messages (Project Chat, Google Meet & 1-on-1 DMs)
 CREATE TABLE IF NOT EXISTS public.nexus_conference_messages (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL,
   project_slug TEXT,
+  channel_type TEXT DEFAULT 'project',
   sender_id TEXT,
   sender_name TEXT,
   sender_role TEXT DEFAULT 'qa',
   role_title TEXT,
   sender_avatar TEXT DEFAULT 'QA',
+  recipient_id TEXT,
   message_type TEXT DEFAULT 'text',
   meet_url TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
   text TEXT NOT NULL,
   time_label TEXT,
   date_label TEXT DEFAULT 'Today',
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+ALTER TABLE public.nexus_conference_messages
+  ADD COLUMN IF NOT EXISTS channel_type TEXT DEFAULT 'project',
+  ADD COLUMN IF NOT EXISTS recipient_id TEXT,
+  ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+
+CREATE INDEX IF NOT EXISTS idx_nexus_conf_project_channel
+  ON public.nexus_conference_messages (project_id, channel_type, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_nexus_conf_dm_participants
+  ON public.nexus_conference_messages (project_id, sender_id, recipient_id, created_at ASC);
 
 -- 7. Create Supabase Storage Bucket `nexus-evidence` (Public Read + Upload Policies)
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

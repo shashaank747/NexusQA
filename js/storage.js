@@ -561,53 +561,18 @@ const StorageManager = {
   getConferenceMessages(projectId = null) {
     const raw = localStorage.getItem(STORAGE_KEYS.CONFERENCE_MESSAGES);
     let msgs = [];
-    if (!raw) {
-      const timeStr1 = new Date(Date.now() - 3600000 * 2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const timeStr2 = new Date(Date.now() - 3600000 * 1).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const seed = [
-        {
-          id: "msg-seed-1",
-          projectId: "proj-1",
-          senderId: "dev-lead",
-          senderName: "Developer Lead",
-          senderRole: "dev",
-          roleTitle: "Senior Developer",
-          senderAvatar: "DV",
-          text: "Welcome to the E-Commerce Checkout & Payments conference room! QA team, please verify the 3D-Secure payment flow on staging.",
-          time: timeStr1,
-          date: "Today"
-        },
-        {
-          id: "msg-seed-2",
-          projectId: "proj-1",
-          senderId: "qa-lead",
-          senderName: "QA Lead",
-          senderRole: "qa",
-          roleTitle: "QA Lead",
-          senderAvatar: "QA",
-          text: "On it! Running regression pass on Stripe webhook simulation right now. Will flag any blocker defects here.",
-          time: timeStr2,
-          date: "Today"
-        },
-        {
-          id: "msg-seed-3",
-          projectId: "proj-2",
-          senderId: "dev-lead",
-          senderName: "Developer Lead",
-          senderRole: "dev",
-          roleTitle: "Senior Developer",
-          senderAvatar: "DV",
-          text: "Auth Gateway v2 is ready for regression. Passcode auto-verification is live.",
-          time: timeStr1,
-          date: "Today"
-        }
-      ];
-      localStorage.setItem(STORAGE_KEYS.CONFERENCE_MESSAGES, JSON.stringify(seed));
-      msgs = seed;
-    } else {
+    if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        msgs = Array.isArray(parsed) ? parsed : [];
+        if (Array.isArray(parsed)) {
+          // Filter out any legacy seeded fake messages or 1-on-1 DMs
+          msgs = parsed.filter(m =>
+            m &&
+            !(m.id && String(m.id).startsWith("msg-seed-")) &&
+            m.channelType !== "direct" &&
+            m.messageType !== "direct"
+          );
+        }
       } catch (e) {
         msgs = [];
       }
@@ -711,49 +676,18 @@ const StorageManager = {
     try {
       all = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(all)) all = [];
-    } catch(e) { all = []; }
+    } catch (e) { all = []; }
 
-    const threadKey = [userId1, userId2].sort().join("___");
-    let threadMsgs = all.filter(m => (m.projectId || "proj-1") === projectId && m.threadKey === threadKey);
+    // Purge any legacy hardcoded seed greetings so threads contain real messages only
+    all = all.filter(m => m && !(m.id && String(m.id).startsWith("pmsg-seed-")));
 
-    // If empty, generate a realistic initial welcoming message from the target member
-    if (threadMsgs.length === 0) {
-      const curUser = this.getCurrentUser();
-      const otherId = (curUser && curUser.id === userId1) ? userId2 : ((curUser && curUser.id === userId2) ? userId1 : userId2);
-      const otherUser = this.getUsers().find(u => u.id === otherId) || {
-        id: otherId,
-        name: "Team Member",
-        role: "dev",
-        roleTitle: "Project Collaborator",
-        avatar: "TM"
-      };
-
-      const project = this.getConferenceProjectById(projectId);
-      const projName = project ? project.name : "this project";
-
-      const seed = [
-        {
-          id: "pmsg-seed-" + threadKey + "-" + (projectId || "proj-1"),
-          projectId: projectId || "proj-1",
-          threadKey,
-          senderId: otherUser.id,
-          recipientId: (curUser && curUser.id) || "cur-user",
-          senderName: otherUser.name,
-          senderAvatar: otherUser.avatar || otherUser.name.substring(0, 2).toUpperCase(),
-          senderRole: otherUser.role || "dev",
-          roleTitle: otherUser.roleTitle || (otherUser.role === "dev" ? "Lead Developer" : "QA Engineer"),
-          text: `Hi! This is our dedicated 1-on-1 private channel for ${projName}. Feel free to message me directly regarding urgent defects, blocker triage, or technical questions.`,
-          time: new Date(Date.now() - 3600000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: "Today",
-          timestamp: Date.now() - 3600000
-        }
-      ];
-      all.push(...seed);
-      localStorage.setItem(STORAGE_KEYS.PRIVATE_MESSAGES, JSON.stringify(all));
-      return seed;
-    }
-
-    return threadMsgs;
+    return all
+      .filter(m =>
+        (m.projectId || "proj-1") === (projectId || "proj-1") &&
+        ((m.senderId === userId1 && m.recipientId === userId2) ||
+         (m.senderId === userId2 && m.recipientId === userId1))
+      )
+      .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
   },
 
   addPrivateMessage(msg) {
@@ -762,13 +696,15 @@ const StorageManager = {
     try {
       all = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(all)) all = [];
-    } catch(e) { all = []; }
+    } catch (e) { all = []; }
 
     const threadKey = [msg.senderId, msg.recipientId].sort().join("___");
     const now = new Date();
     const newMsg = {
-      id: "pmsg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6),
+      id: msg.id || ("pmsg-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6)),
       projectId: msg.projectId || "proj-1",
+      channelType: "direct",
+      messageType: "direct",
       threadKey,
       senderId: msg.senderId,
       recipientId: msg.recipientId,
@@ -777,14 +713,55 @@ const StorageManager = {
       senderRole: msg.senderRole || "qa",
       roleTitle: msg.roleTitle || "",
       text: msg.text,
-      time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      date: "Today",
-      timestamp: Date.now()
+      time: msg.time || now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: msg.date || "Today",
+      timestamp: msg.timestamp || Date.now()
     };
-    all.push(newMsg);
+    const existingIdx = all.findIndex(m => m.id === newMsg.id);
+    if (existingIdx !== -1) all[existingIdx] = newMsg;
+    else all.push(newMsg);
     localStorage.setItem(STORAGE_KEYS.PRIVATE_MESSAGES, JSON.stringify(all));
     this.broadcast("PRIVATE_MESSAGE", { message: newMsg });
     return newMsg;
+  },
+
+  mergeRemotePrivateMessages(remoteMessages = []) {
+    if (!Array.isArray(remoteMessages) || remoteMessages.length === 0) return;
+    const raw = localStorage.getItem(STORAGE_KEYS.PRIVATE_MESSAGES);
+    let all = [];
+    try {
+      all = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(all)) all = [];
+    } catch (e) { all = []; }
+
+    const byId = new Map();
+    all
+      .filter(m => m && m.id && !String(m.id).startsWith("pmsg-seed-"))
+      .forEach(m => byId.set(m.id, m));
+
+    let changed = false;
+    let latestNewMsg = null;
+    remoteMessages.forEach(rm => {
+      if (!rm || !rm.id || !rm.recipientId) return;
+      const prev = byId.get(rm.id);
+      if (!prev || prev.text !== rm.text) {
+        const normalized = {
+          ...rm,
+          channelType: "direct",
+          messageType: "direct",
+          threadKey: [rm.senderId, rm.recipientId].sort().join("___")
+        };
+        byId.set(rm.id, normalized);
+        if (!prev) latestNewMsg = normalized;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      const merged = Array.from(byId.values()).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      localStorage.setItem(STORAGE_KEYS.PRIVATE_MESSAGES, JSON.stringify(merged));
+      this.broadcast("PRIVATE_MESSAGE", { remote: true, message: latestNewMsg });
+    }
   },
 
   clearPrivateMessages(projectId, userId1, userId2) {

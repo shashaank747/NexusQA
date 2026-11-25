@@ -5184,6 +5184,16 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
       window.renderPrivateChatMessages();
 
+      const curUsr = StorageManager.getCurrentUser() || state.currentUser;
+      const curUsrId = curUsr ? (curUsr.id || curUsr.email || "") : "";
+      if (curUsrId && typeof SupabaseManager !== "undefined" && SupabaseManager.fetchPrivateMessagesFromSupabase) {
+        SupabaseManager.fetchPrivateMessagesFromSupabase(pId, curUsrId, targetUserId).then(() => {
+          if (state.activePrivateChatProjectId === pId && state.activePrivateChatTargetUserId === targetUserId) {
+            window.renderPrivateChatMessages();
+          }
+        });
+      }
+
       if (modal) modal.style.display = "flex";
       setTimeout(() => { if (input) input.focus(); }, 150);
     };
@@ -5216,9 +5226,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             <div class="empty-private-chat-icon-wrap">
               <i class="fa-solid fa-lock text-emerald" style="font-size: 24px;"></i>
             </div>
-            <h4 class="font-bold text-sm text-heading m-0">Confidential Direct Message</h4>
-            <p class="text-xs text-muted mt-2 mb-0">This thread is completely private between you and <strong class="text-heading">${escapeHtml(tName)}</strong> within this project scope.</p>
-            <p class="text-2xs text-muted mt-1 mb-0">Select a quick suggestion chip below or type a message to start communicating.</p>
+            <p class="text-sm font-semibold text-heading mt-2 mb-0">No messages yet. Start a private conversation with ${escapeHtml(tName)}.</p>
           </div>
         `;
         return;
@@ -5272,9 +5280,10 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       const targetUser = StorageManager.getUsers().find(u => u.id === targetUserId) ||
         StorageManager.getProjectAllottedUsers(pId).find(u => u.id === targetUserId);
 
-      // Save user message
-      StorageManager.addPrivateMessage({
+      const savedDm = StorageManager.addPrivateMessage({
         projectId: pId,
+        channelType: "direct",
+        messageType: "direct",
         senderId: curUserId,
         recipientId: targetUserId,
         senderName: curUser.name || "QA Tester",
@@ -5284,73 +5293,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         text
       });
 
-      window.renderPrivateChatMessages();
-
-      // Trigger realistic auto-reply simulation from target teammate
-      if (targetUser) {
-        const typingIndicator = document.getElementById("privateChatTypingIndicator");
-        const typingText = document.getElementById("privateChatTypingText");
-        const container = document.getElementById("privateChatMessagesContainer");
-
-        if (typingText) typingText.textContent = `${targetUser.name} is typing...`;
-        if (typingIndicator) typingIndicator.style.display = "flex";
-        if (container) container.scrollTop = container.scrollHeight;
-
-        clearTimeout(privateChatTypingTimeout);
-        privateChatTypingTimeout = setTimeout(() => {
-          if (typingIndicator) typingIndicator.style.display = "none";
-
-          let replyText = "";
-          const tName = targetUser.name || "";
-          const project = StorageManager.getConferenceProjectById(pId);
-          const projName = project ? project.name : "this project";
-
-          if (tName.includes("Marcus")) {
-            const replies = [
-              `Thanks for flagging this directly on ${projName}. I'm reviewing the backend logs and latest PR commit now.`,
-              `Acknowledged! I will coordinate with the team to ensure this blocker doesn't impact our release window.`,
-              `Good catch on the payment flow. Checking the webhook idempotency handler on staging now.`,
-              `Thanks for the private update. Patch is in progress and will notify QA as soon as deployment finishes.`
-            ];
-            replyText = replies[Math.floor(Math.random() * replies.length)];
-          } else if (tName.includes("David")) {
-            const replies = [
-              `Got your direct message! Inspecting the database query latency and API response headers for ${projName} now.`,
-              `Thanks for the details! Re-running the service endpoint locally to reproduce with the same test credentials.`,
-              `Understood. The 500 error was caused by a null pointer in session serialization. Pushing hotfix shortly.`
-            ];
-            replyText = replies[Math.floor(Math.random() * replies.length)];
-          } else if (tName.includes("Sarah")) {
-            const replies = [
-              `Received! Adding this assertion directly into our automated Playwright regression pipeline for ${projName}.`,
-              `Thanks for the heads up! I'll run a targeted smoke test on staging cluster once the build settles.`,
-              `Awesome! Test case documented and automated script queued in CI.`
-            ];
-            replyText = replies[Math.floor(Math.random() * replies.length)];
-          } else if (tName.includes("Alex")) {
-            const replies = [
-              `Thanks for the direct ping! I'll update the QA test run matrix and assign blocker priority immediately.`,
-              `Got it. I'm executing the verification checklist on staging right now.`
-            ];
-            replyText = replies[Math.floor(Math.random() * replies.length)];
-          } else {
-            replyText = `Thanks for messaging me on ${projName}! I'm looking into this right now and will update you shortly.`;
-          }
-
-          StorageManager.addPrivateMessage({
-            projectId: pId,
-            senderId: targetUser.id,
-            recipientId: curUserId,
-            senderName: targetUser.name,
-            senderAvatar: targetUser.avatar || targetUser.name.substring(0, 2).toUpperCase(),
-            senderRole: targetUser.role || "dev",
-            roleTitle: targetUser.roleTitle || (targetUser.role === "dev" ? "Developer" : "QA Tester"),
-            text: replyText
-          });
-
-          window.renderPrivateChatMessages();
-        }, 1200 + Math.random() * 500);
+      if (typeof SupabaseManager !== "undefined" && SupabaseManager.syncConferenceMessageInsert) {
+        SupabaseManager.syncConferenceMessageInsert(savedDm);
       }
+
+      window.renderPrivateChatMessages();
     };
 
     // Private Chat Triggers & Event Listeners
@@ -5758,14 +5705,25 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           renderConference();
         }
       } else if (msg.type === "PRIVATE_MESSAGE") {
-        if (state.activePrivateChatProjectId && state.activePrivateChatTargetUserId) {
+        const incomingMsg = msg.payload && msg.payload.message ? msg.payload.message : null;
+        const curUsr = StorageManager.getCurrentUser() || state.currentUser;
+        const curId = curUsr ? (curUsr.id || curUsr.email) : null;
+        const activeTarget = state.activePrivateChatTargetUserId;
+        const activeProj = state.activePrivateChatProjectId;
+
+        const matchesOpenThread = Boolean(
+          incomingMsg &&
+          activeProj &&
+          activeTarget &&
+          (incomingMsg.projectId || "proj-1") === activeProj &&
+          ((incomingMsg.senderId === curId && incomingMsg.recipientId === activeTarget) ||
+           (incomingMsg.senderId === activeTarget && incomingMsg.recipientId === curId))
+        );
+
+        if (matchesOpenThread || (activeProj && activeTarget && !incomingMsg)) {
           window.renderPrivateChatMessages();
-        } else {
-          const curUsr = StorageManager.getCurrentUser() || state.currentUser;
-          const curId = curUsr ? (curUsr.id || curUsr.email) : null;
-          if (msg.payload && msg.payload.message && msg.payload.message.recipientId === curId) {
-            showToast(`Private message from ${msg.payload.message.senderName}: "${msg.payload.message.text.substring(0, 32)}..."`, "info");
-          }
+        } else if (incomingMsg && curId && incomingMsg.recipientId === curId) {
+          showToast(`Private message from ${incomingMsg.senderName}: "${incomingMsg.text.substring(0, 32)}${incomingMsg.text.length > 32 ? '...' : ''}"`, "info");
         }
       }
     });

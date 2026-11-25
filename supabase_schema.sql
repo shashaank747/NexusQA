@@ -99,23 +99,31 @@ CREATE TABLE IF NOT EXISTS public.nexus_defects (
   updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 5. Conference Channel Messages & Google Meet Invites
+-- 5. Conference Channel & Private 1-on-1 Direct Messages
 CREATE TABLE IF NOT EXISTS public.nexus_conference_messages (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL,
   project_slug TEXT,
+  channel_type TEXT DEFAULT 'project',
   sender_id TEXT,
   sender_name TEXT,
   sender_role TEXT DEFAULT 'qa',
   role_title TEXT,
   sender_avatar TEXT DEFAULT 'QA',
+  recipient_id TEXT,
   message_type TEXT DEFAULT 'text',
   meet_url TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
   text TEXT NOT NULL,
   time_label TEXT,
   date_label TEXT DEFAULT 'Today',
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_nexus_conf_project_channel
+  ON public.nexus_conference_messages (project_id, channel_type, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_nexus_conf_dm_participants
+  ON public.nexus_conference_messages (project_id, sender_id, recipient_id, created_at ASC);
 
 -- 6. User Activity & Audit Logs
 CREATE TABLE IF NOT EXISTS public.nexus_activity_logs (

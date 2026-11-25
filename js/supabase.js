@@ -291,7 +291,11 @@ const SupabaseManager = {
     if (typeof StorageManager === "undefined") return;
     if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
       const mapped = this.mapConferenceMessageFromDB(payload.new);
-      if (StorageManager.mergeRemoteConferenceMessages) {
+      if (mapped.channelType === "direct" || mapped.messageType === "direct") {
+        if (StorageManager.mergeRemotePrivateMessages) {
+          StorageManager.mergeRemotePrivateMessages([mapped]);
+        }
+      } else if (StorageManager.mergeRemoteConferenceMessages) {
         StorageManager.mergeRemoteConferenceMessages([mapped], mapped.projectId);
       }
     } else if (payload.eventType === "DELETE" && payload.old && payload.old.id) {
@@ -301,21 +305,40 @@ const SupabaseManager = {
     }
   },
 
-  mapConferenceMessageToDB(msg) {
+  mapConferenceMessageToBaseDB(msg) {
+    const isDirect = msg.channelType === "direct" || msg.messageType === "direct" || Boolean(msg.recipientId);
+    const projectSlug = isDirect
+      ? `dm::${msg.senderId || ""}::${msg.recipientId || ""}`
+      : (msg.projectSlug || "");
     return {
       id: msg.id,
       project_id: msg.projectId || "proj-1",
-      project_slug: msg.projectSlug || "",
+      project_slug: projectSlug,
       sender_id: msg.senderId || "",
       sender_name: msg.senderName || "Team Member",
       sender_role: msg.senderRole || "qa",
       role_title: msg.roleTitle || "",
       sender_avatar: msg.senderAvatar || "QA",
-      message_type: msg.messageType || "text",
+      message_type: isDirect ? "direct" : (msg.messageType || "text"),
       meet_url: msg.meetUrl || "",
       text: msg.text || "",
       time_label: msg.time || "",
       date_label: msg.date || "Today"
+    };
+  },
+
+  mapConferenceMessageToDB(msg) {
+    const base = this.mapConferenceMessageToBaseDB(msg);
+    const isDirect = msg.channelType === "direct" || msg.messageType === "direct" || Boolean(msg.recipientId);
+    return {
+      ...base,
+      channel_type: isDirect ? "direct" : "project",
+      recipient_id: isDirect ? (msg.recipientId || null) : null,
+      metadata: {
+        ...(msg.metadata && typeof msg.metadata === "object" ? msg.metadata : {}),
+        ...(msg.meetUrl ? { meetUrl: msg.meetUrl } : {}),
+        ...(isDirect && msg.recipientId ? { recipientId: msg.recipientId } : {})
+      }
     };
   },
 
@@ -324,17 +347,27 @@ const SupabaseManager = {
     const fallbackTime = row.created_at
       ? new Date(row.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       : "";
+    const meta = (row.metadata && typeof row.metadata === "object") ? row.metadata : {};
+    const slugParts = String(row.project_slug || "").startsWith("dm::")
+      ? String(row.project_slug).split("::")
+      : null;
+    const isDirect = row.channel_type === "direct" || row.message_type === "direct" || Boolean(slugParts);
+    const recipientId = row.recipient_id || meta.recipientId || (slugParts ? slugParts[2] : "");
+
     return {
       id: row.id,
       projectId: row.project_id || "proj-1",
-      projectSlug: row.project_slug || "",
-      senderId: row.sender_id || "",
+      projectSlug: slugParts ? "" : (row.project_slug || ""),
+      channelType: isDirect ? "direct" : "project",
+      senderId: row.sender_id || (slugParts ? slugParts[1] : ""),
+      recipientId: recipientId || "",
       senderName: row.sender_name || "Team Member",
       senderRole: row.sender_role || "qa",
       roleTitle: row.role_title || "",
       senderAvatar: row.sender_avatar || "QA",
-      messageType: row.message_type || (row.meet_url ? "google_meet_invite" : "text"),
-      meetUrl: row.meet_url || "",
+      messageType: isDirect ? "direct" : (row.message_type || (row.meet_url ? "google_meet_invite" : "text")),
+      meetUrl: row.meet_url || meta.meetUrl || "",
+      metadata: meta,
       text: row.text || "",
       time: row.time_label || fallbackTime,
       date: row.date_label || "Today",
@@ -767,9 +800,14 @@ const SupabaseManager = {
         StorageManager.saveUsers(mapped, true);
       }
 
-      // Also pull conference channel messages, activity logs, and media attachments if tables exist
+      // Also pull conference channel messages, direct messages, activity logs, and media attachments if tables exist
+      const curUsr = typeof StorageManager !== "undefined" ? StorageManager.getCurrentUser() : null;
+      const dmPullPromise = curUsr && curUsr.id
+        ? this.fetchPrivateMessagesForUserFromSupabase(curUsr.id).catch(() => [])
+        : Promise.resolve([]);
       await Promise.all([
         this.fetchConferenceMessagesFromSupabase().catch(() => []),
+        dmPullPromise,
         this.fetchActivityLogsFromSupabase({ limit: 300 }).catch(() => []),
         this.fetchMediaAttachmentsFromSupabase().catch(() => [])
       ]);
@@ -1297,6 +1335,7 @@ const SupabaseManager = {
       let query = client
         .from("nexus_conference_messages")
         .select("*")
+        .neq("message_type", "direct")
         .order("created_at", { ascending: true });
       if (projectId) {
         query = query.eq("project_id", projectId);
@@ -1306,7 +1345,9 @@ const SupabaseManager = {
         this.markTableStateFromError("nexus_conference_messages", error);
         return [];
       }
-      const mapped = (data || []).map(row => this.mapConferenceMessageFromDB(row));
+      const mapped = (data || [])
+        .map(row => this.mapConferenceMessageFromDB(row))
+        .filter(m => m.channelType !== "direct" && m.messageType !== "direct");
       if (typeof StorageManager !== "undefined" && StorageManager.mergeRemoteConferenceMessages) {
         StorageManager.mergeRemoteConferenceMessages(mapped, projectId);
       }
@@ -1317,21 +1358,103 @@ const SupabaseManager = {
     }
   },
 
+  async fetchPrivateMessagesFromSupabase(projectId, userId1, userId2) {
+    const client = this.getClient();
+    if (!client || !projectId || !userId1 || !userId2 || this._missingTables.has("nexus_conference_messages")) return [];
+    try {
+      let dataRows = [];
+      if (!this._baseOnlyTables.has("nexus_conference_messages")) {
+        const res = await client
+          .from("nexus_conference_messages")
+          .select("*")
+          .eq("project_id", projectId)
+          .or(`and(sender_id.eq.${userId1},recipient_id.eq.${userId2}),and(sender_id.eq.${userId2},recipient_id.eq.${userId1})`)
+          .order("created_at", { ascending: true });
+        if (!res.error) {
+          dataRows = res.data || [];
+        } else if (this.isSchemaError(res.error)) {
+          this.markTableStateFromError("nexus_conference_messages", res.error);
+        } else {
+          return [];
+        }
+      }
+      if (this._baseOnlyTables.has("nexus_conference_messages")) {
+        const res = await client
+          .from("nexus_conference_messages")
+          .select("*")
+          .eq("project_id", projectId)
+          .eq("message_type", "direct")
+          .order("created_at", { ascending: true });
+        if (!res.error) dataRows = res.data || [];
+      }
+
+      const mapped = dataRows
+        .map(row => this.mapConferenceMessageFromDB(row))
+        .filter(m =>
+          (m.senderId === userId1 && m.recipientId === userId2) ||
+          (m.senderId === userId2 && m.recipientId === userId1)
+        );
+      if (typeof StorageManager !== "undefined" && StorageManager.mergeRemotePrivateMessages) {
+        StorageManager.mergeRemotePrivateMessages(mapped);
+      }
+      return mapped;
+    } catch (e) {
+      console.warn("Supabase fetch private DMs warning:", e);
+      return [];
+    }
+  },
+
+  async fetchPrivateMessagesForUserFromSupabase(userId) {
+    const client = this.getClient();
+    if (!client || !userId || this._missingTables.has("nexus_conference_messages")) return [];
+    try {
+      let res;
+      if (!this._baseOnlyTables.has("nexus_conference_messages")) {
+        res = await client
+          .from("nexus_conference_messages")
+          .select("*")
+          .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+          .order("created_at", { ascending: true });
+        if (res.error && this.isSchemaError(res.error)) {
+          this.markTableStateFromError("nexus_conference_messages", res.error);
+        }
+      }
+      if (this._baseOnlyTables.has("nexus_conference_messages")) {
+        res = await client
+          .from("nexus_conference_messages")
+          .select("*")
+          .eq("message_type", "direct")
+          .order("created_at", { ascending: true });
+      }
+      if (!res || res.error) return [];
+      const mapped = (res.data || [])
+        .map(row => this.mapConferenceMessageFromDB(row))
+        .filter(m =>
+          (m.channelType === "direct" || m.messageType === "direct") &&
+          (m.senderId === userId || m.recipientId === userId)
+        );
+      if (typeof StorageManager !== "undefined" && StorageManager.mergeRemotePrivateMessages) {
+        StorageManager.mergeRemotePrivateMessages(mapped);
+      }
+      return mapped;
+    } catch (e) {
+      return [];
+    }
+  },
+
   async syncConferenceMessageInsert(message) {
     const client = this.getClient();
     if (!client || !message) return { ok: false, error: "Supabase client unavailable" };
     try {
-      const payload = this.mapConferenceMessageToDB(message);
-      const { data, error } = await client
-        .from("nexus_conference_messages")
-        .upsert(payload)
-        .select();
-      if (error) {
-        const missingTable = error.code === "PGRST205" || String(error.message || "").includes("nexus_conference_messages");
-        console.warn("Supabase conference message insert warning:", error.message);
-        return { ok: false, missingTable, error };
+      const res = await this.upsertWithSchemaFallback(
+        "nexus_conference_messages",
+        this.mapConferenceMessageToDB(message),
+        this.mapConferenceMessageToBaseDB(message)
+      );
+      if (!res.ok) {
+        console.warn("Supabase message insert warning:", res.error);
       }
-      return { ok: true, data: data && data[0] ? this.mapConferenceMessageFromDB(data[0]) : message };
+      return res;
     } catch (e) {
       console.warn("Supabase conference message insert error:", e);
       return { ok: false, error: e };
