@@ -360,10 +360,14 @@ const SupabaseManager = {
     if (!error) return;
     const code = String(error.code || "");
     const msg = String(error.message || "");
-    if (code === "PGRST205" || msg.includes(`public.${tableName}`) || msg.includes(`'${tableName}'`)) {
-      this._missingTables.add(tableName);
-    } else if (code === "PGRST204" || msg.includes("column")) {
+    if (code === "PGRST204" || msg.includes("column")) {
       this._baseOnlyTables.add(tableName);
+    } else if (
+      code === "PGRST205" ||
+      msg.includes(`Could not find the table 'public.${tableName}'`) ||
+      msg.includes(`relation "public.${tableName}" does not exist`)
+    ) {
+      this._missingTables.add(tableName);
     }
   },
 
@@ -499,9 +503,13 @@ const SupabaseManager = {
     const mediaUrls = Array.isArray(tc.mediaUrls) && tc.mediaUrls.length > 0
       ? tc.mediaUrls
       : ((tc.mediaUrl || tc.image) ? [tc.mediaUrl || tc.image] : []);
+    const qaStatus = tc.qaStatus || "Untested";
+    const devStatus = tc.devStatus || "Pending Dev";
+    const resolutionStatus = tc.resolutionStatus || "Open";
     const hasMeta = Boolean(
       tc.assignedDev || tc.assignedTo || tc.mediaUrl || tc.image || tc.mediaType || tc.mediaName ||
       tc.explanation || tc.createdAt || tc.createdBy || tc.lastViewedByDevId || tc.fixedByDevId || tc.verifiedByTesterId ||
+      tc.qaStatus || tc.devStatus || tc.resolutionStatus ||
       mediaUrls.length > 0
     );
     const stepsPayload = hasMeta
@@ -510,6 +518,9 @@ const SupabaseManager = {
           _meta: {
             explanation: tc.explanation || tc.preconditions || "",
             assignedDev: tc.assignedDev || tc.assignedTo || "",
+            qaStatus,
+            devStatus,
+            resolutionStatus,
             mediaUrl: tc.mediaUrl || tc.image || mediaUrls[0] || "",
             mediaUrls,
             mediaType: tc.mediaType || (tc.image ? "image" : ""),
@@ -552,6 +563,9 @@ const SupabaseManager = {
 
     return {
       ...base,
+      qa_status: tc.qaStatus || "Untested",
+      dev_status: tc.devStatus || "Pending Dev",
+      resolution_status: tc.resolutionStatus || "Open",
       created_by: tc.createdBy || tc.author || "",
       assigned_to: tc.assignedTo || tc.assignedDev || "",
       steps_to_reproduce: reproText,
@@ -575,6 +589,7 @@ const SupabaseManager = {
       : (Array.isArray(meta.mediaUrls) ? meta.mediaUrls : []);
     const mediaUrl = meta.mediaUrl || mediaUrls[0] || "";
     const mediaType = meta.mediaType || "";
+    const status = row.status || "Untested";
 
     return {
       id: row.id,
@@ -582,7 +597,10 @@ const SupabaseManager = {
       suiteId: row.suite_id,
       priority: row.priority,
       type: row.type || "Manual",
-      status: row.status || "Untested",
+      status,
+      qaStatus: row.qa_status || meta.qaStatus || "",
+      devStatus: row.dev_status || meta.devStatus || "",
+      resolutionStatus: row.resolution_status || meta.resolutionStatus || "",
       author: row.author,
       createdBy: row.created_by || meta.createdBy || row.author || "",
       assignedDev: row.assigned_to || meta.assignedDev || "",

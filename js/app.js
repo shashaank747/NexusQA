@@ -336,7 +336,9 @@ document.addEventListener("DOMContentLoaded", () => {
     tcExplanation: document.getElementById("tcExplanation"),
     tcSuite: document.getElementById("tcSuite"),
     tcPriority: document.getElementById("tcPriority"),
-    tcStatus: document.getElementById("tcStatus"),
+    tcQaStatus: document.getElementById("tcQaStatus"),
+    tcDevStatus: document.getElementById("tcDevStatus"),
+    tcResolutionStatus: document.getElementById("tcResolutionStatus"),
     tcAssignedDev: document.getElementById("tcAssignedDev"),
     stepsBuilderList: document.getElementById("stepsBuilderList"),
     addStepBtn: document.getElementById("addStepBtn"),
@@ -3065,21 +3067,47 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     }
   };
 
+  const appTopbar = document.getElementById("appTopbar") || document.querySelector(".topbar");
+  const mobileSearchToggleBtn = document.getElementById("mobileSearchToggleBtn");
+  const drawerLogoutBtn = document.getElementById("drawerLogoutBtn");
+  const mobileFabBtn = document.getElementById("mobileFabBtn");
+
+  const closeMobileDrawer = () => {
+    if (DOM.sidebar) DOM.sidebar.classList.remove("mobile-open");
+    const backdrop = document.getElementById("sidebarBackdrop");
+    if (backdrop) backdrop.classList.remove("active");
+  };
+
+  const closeMobileSearchBar = () => {
+    if (appTopbar) appTopbar.classList.remove("mobile-search-open");
+    if (mobileSearchToggleBtn) mobileSearchToggleBtn.classList.remove("active");
+  };
+
   on(DOM.sidebarBurgerBtn, "click", toggleSidebarCollapse);
   const secondaryClose = document.getElementById("secondaryCollapseBtn");
-  if (secondaryClose) secondaryClose.addEventListener("click", toggleSidebarCollapse);
+  if (secondaryClose) {
+    secondaryClose.addEventListener("click", (e) => {
+      if (window.innerWidth < 768) {
+        e.preventDefault();
+        closeMobileDrawer();
+      } else {
+        toggleSidebarCollapse(e);
+      }
+    });
+  }
 
   const sidebarBackdrop = document.getElementById("sidebarBackdrop");
   if (sidebarBackdrop) {
     sidebarBackdrop.addEventListener("click", () => {
-      if (DOM.sidebar) DOM.sidebar.classList.remove("mobile-open");
-      sidebarBackdrop.classList.remove("active");
+      closeMobileDrawer();
+      closeMobileSearchBar();
     });
   }
 
   on(DOM.menuToggleBtn, "click", () => {
     if (DOM.sidebar) {
-      if (window.innerWidth <= 768) {
+      if (window.innerWidth < 768) {
+        closeMobileSearchBar();
         const isOpen = DOM.sidebar.classList.toggle("mobile-open");
         const backdrop = document.getElementById("sidebarBackdrop");
         if (backdrop) backdrop.classList.toggle("active", isOpen);
@@ -3090,6 +3118,35 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       }
     }
   });
+
+  if (mobileSearchToggleBtn) {
+    mobileSearchToggleBtn.addEventListener("click", () => {
+      if (!appTopbar) return;
+      closeMobileDrawer();
+      const isOpen = appTopbar.classList.toggle("mobile-search-open");
+      mobileSearchToggleBtn.classList.toggle("active", isOpen);
+      if (isOpen && DOM.globalSearchInput) {
+        setTimeout(() => DOM.globalSearchInput.focus(), 50);
+      }
+    });
+  }
+
+  if (drawerLogoutBtn) {
+    drawerLogoutBtn.addEventListener("click", () => {
+      closeMobileDrawer();
+      if (DOM.logoutBtn) DOM.logoutBtn.click();
+    });
+  }
+
+  if (mobileFabBtn) {
+    mobileFabBtn.addEventListener("click", () => {
+      if (state.currentPortal === "dev") {
+        if (DOM.createNewBugBtn) DOM.createNewBugBtn.click();
+      } else {
+        openCreateTestCaseModal();
+      }
+    });
+  }
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "/" && document.activeElement !== DOM.globalSearchInput && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
@@ -3162,6 +3219,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   window.jumpToGlobalSearchMatch = function(kind, id) {
     const dropdown = document.getElementById("globalSearchResultsDropdown");
     if (dropdown) dropdown.style.display = "none";
+    closeMobileSearchBar();
 
     if (kind === "test_case") {
       if (state.currentPortal === "dev") {
@@ -3269,6 +3327,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   on(DOM.globalSearchInput, "keydown", (e) => {
     if (e.key === "Escape") {
       if (globalSearchDropdown) globalSearchDropdown.style.display = "none";
+      closeMobileSearchBar();
       DOM.globalSearchInput.blur();
       return;
     }
@@ -3660,25 +3719,18 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
             : status === "Open"
               ? "Fail"
               : status;
+        const { prevStages, nextStages } = applySingleStatusToStages(linkedTc, mappedTcStatus);
         const tcOwnership = applyLifecycleOwnershipFields({}, prevTcStatus, mappedTcStatus, curUser);
         StorageManager.updateTestCase({
           ...linkedTc,
           ...tcOwnership,
+          ...nextStages,
           status: mappedTcStatus,
           assignedDev: assignee || linkedTc.assignedDev || "",
           assignedTo: assignee || linkedTc.assignedTo || linkedTc.assignedDev || "",
           lastRun: formatLocalTimestamp()
         });
-        if (prevTcStatus !== mappedTcStatus) {
-          logUserActivity({
-            action_type: "status_changed",
-            target_type: "test_case",
-            target_id: linkedTc.id,
-            old_value: prevTcStatus,
-            new_value: mappedTcStatus,
-            details: { syncedFromDefect: bugId }
-          });
-        }
+        logStageTransitions(linkedTc.id, prevStages, nextStages, { syncedFromDefect: bugId });
       }
     }
 
@@ -3695,32 +3747,17 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     const oldStatus = tc.status || "Untested";
     const nowStamp = formatLocalTimestamp();
     const curUser = StorageManager.getCurrentUser() || state.currentUser;
-    const ownership = applyLifecycleOwnershipFields({}, oldStatus, newStatus, curUser);
+    const { prevStages, nextStages, derivedStatus } = applySingleStatusToStages(tc, newStatus);
+    const ownership = applyLifecycleOwnershipFields({}, oldStatus, derivedStatus, curUser);
     const updated = StorageManager.updateTestCase({
       ...tc,
       ...ownership,
-      status: newStatus,
+      ...nextStages,
+      status: derivedStatus,
       lastRun: nowStamp
     });
 
-    logUserActivity({
-      action_type: "status_changed",
-      target_type: "test_case",
-      target_id: tcId,
-      old_value: oldStatus,
-      new_value: newStatus,
-      details: { portal: "dev" }
-    });
-    if (newStatus === "Ready for Re-Test" || newStatus === "Fixed - Ready for QA") {
-      logUserActivity({
-        action_type: "marked_fixed",
-        target_type: "test_case",
-        target_id: tcId,
-        old_value: oldStatus,
-        new_value: newStatus,
-        details: { fixedByDevId: ownership.fixedByDevId || "" }
-      });
-    }
+    logStageTransitions(tcId, prevStages, nextStages, { portal: "dev", title: tc.title });
 
     const linkedDefect = StorageManager.getDefects().find(d => d.linkedTestCaseId === tcId);
     if (linkedDefect) {
@@ -5670,6 +5707,90 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     return status || "Untested";
   }
 
+  function deriveOverallStatusFromStages(qaStatus, devStatus, resolutionStatus) {
+    const res = resolutionStatus || "Open";
+    const dev = devStatus || "Pending Dev";
+    const qa = qaStatus || "Untested";
+    if (res === "Verified & Closed" || res === "Won't Fix / By Design") return res;
+    if (dev === "In Dev / Fixing" || dev === "Cannot Reproduce" || dev === "Ready for Re-Test") return dev;
+    return qa;
+  }
+
+  function resolveTestCaseStages(tc) {
+    if (!tc) return { qaStatus: "Untested", devStatus: "Pending Dev", resolutionStatus: "Open" };
+    if (tc.qaStatus || tc.devStatus || tc.resolutionStatus) {
+      return {
+        qaStatus: tc.qaStatus || "Untested",
+        devStatus: tc.devStatus || "Pending Dev",
+        resolutionStatus: tc.resolutionStatus || "Open"
+      };
+    }
+    const s = normalizeModalStatus(tc.status);
+    if (s === "Verified & Closed" || s === "Won't Fix / By Design") {
+      return { qaStatus: s === "Verified & Closed" ? "Pass" : "Fail", devStatus: "Ready for Re-Test", resolutionStatus: s };
+    }
+    if (s === "In Dev / Fixing" || s === "Cannot Reproduce" || s === "Ready for Re-Test") {
+      return { qaStatus: "Fail", devStatus: s, resolutionStatus: "Open" };
+    }
+    return { qaStatus: s, devStatus: "Pending Dev", resolutionStatus: "Open" };
+  }
+
+  function applySingleStatusToStages(prevTc, newStatus) {
+    const prevStages = resolveTestCaseStages(prevTc);
+    const s = normalizeModalStatus(newStatus);
+    const nextStages = { ...prevStages };
+    if (s === "Verified & Closed" || s === "Won't Fix / By Design") {
+      nextStages.resolutionStatus = s;
+    } else if (s === "In Dev / Fixing" || s === "Cannot Reproduce" || s === "Ready for Re-Test") {
+      nextStages.devStatus = s;
+      nextStages.resolutionStatus = "Open";
+    } else {
+      nextStages.qaStatus = s;
+      nextStages.devStatus = "Pending Dev";
+      nextStages.resolutionStatus = "Open";
+    }
+    return {
+      prevStages,
+      nextStages,
+      derivedStatus: deriveOverallStatusFromStages(nextStages.qaStatus, nextStages.devStatus, nextStages.resolutionStatus)
+    };
+  }
+
+  function logStageTransitions(targetId, oldStages, newStages, detailsBase = {}, logOptions = {}) {
+    const curUser = StorageManager.getCurrentUser() || state.currentUser;
+    const timestamp = new Date().toISOString();
+    const actorName = curUser ? (curUser.name || "QA User") : "QA User";
+    const actorRole = curUser ? (curUser.role || "qa") : "qa";
+    [
+      { key: "qaStatus", dbCol: "qa_status" },
+      { key: "devStatus", dbCol: "dev_status" },
+      { key: "resolutionStatus", dbCol: "resolution_status" }
+    ].forEach(({ key, dbCol }) => {
+      const oldVal = oldStages[key] || "";
+      const newVal = newStages[key] || "";
+      if (oldVal !== newVal) {
+        logUserActivity({
+          action_type: "status_changed",
+          target_type: "test_case",
+          target_id: targetId,
+          old_value: oldVal,
+          new_value: newVal,
+          details: { ...detailsBase, field: dbCol, actorName, actorRole, timestamp }
+        }, logOptions);
+      }
+    });
+    if (oldStages.devStatus !== newStages.devStatus && newStages.devStatus === "Ready for Re-Test") {
+      logUserActivity({
+        action_type: "marked_fixed",
+        target_type: "test_case",
+        target_id: targetId,
+        old_value: oldStages.devStatus || "",
+        new_value: newStages.devStatus,
+        details: { ...detailsBase, field: "dev_status", actorName, actorRole, timestamp }
+      }, logOptions);
+    }
+  }
+
   function getStatusBadgeClass(status) {
     const s = normalizeModalStatus(status);
     if (s === "Pass" || s === "Verified & Closed") return "badge-passed";
@@ -6500,7 +6621,9 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     setTestCaseMediaPreview("");
     populateSuiteDropdowns();
     if (DOM.tcSuite && state.selectedSuiteId !== "all") DOM.tcSuite.value = state.selectedSuiteId;
-    if (DOM.tcStatus) DOM.tcStatus.value = "Untested";
+    if (DOM.tcQaStatus) DOM.tcQaStatus.value = "Untested";
+    if (DOM.tcDevStatus) DOM.tcDevStatus.value = "Pending Dev";
+    if (DOM.tcResolutionStatus) DOM.tcResolutionStatus.value = "Open";
     if (DOM.tcPriority) DOM.tcPriority.value = "P1 - High";
     renderStepRows([{ step: 1, action: "", expected: "" }, { step: 2, action: "", expected: "" }]);
     if (DOM.editTestCaseDeleteWrap) DOM.editTestCaseDeleteWrap.style.display = "none";
@@ -6539,7 +6662,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     populateSuiteDropdowns();
     if (DOM.tcSuite) DOM.tcSuite.value = tc.suiteId;
     if (DOM.tcPriority) DOM.tcPriority.value = tc.priority;
-    if (DOM.tcStatus) DOM.tcStatus.value = normalizeModalStatus(tc.status);
+    const stages = resolveTestCaseStages(tc);
+    if (DOM.tcQaStatus) DOM.tcQaStatus.value = stages.qaStatus;
+    if (DOM.tcDevStatus) DOM.tcDevStatus.value = stages.devStatus;
+    if (DOM.tcResolutionStatus) DOM.tcResolutionStatus.value = stages.resolutionStatus;
     populateDeveloperDropdown(tc.assignedDev || "");
     renderStepRows(tc.steps || []);
     if (DOM.editTestCaseDeleteWrap) DOM.editTestCaseDeleteWrap.style.display = "inline-flex";
@@ -7556,7 +7682,10 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
     const editId = DOM.editTestCaseId ? DOM.editTestCaseId.value : "";
     const explanation = DOM.tcExplanation ? DOM.tcExplanation.value.trim() : "";
-    const status = DOM.tcStatus ? DOM.tcStatus.value : "Untested";
+    const qaStatus = DOM.tcQaStatus ? DOM.tcQaStatus.value : "Untested";
+    const devStatus = DOM.tcDevStatus ? DOM.tcDevStatus.value : "Pending Dev";
+    const resolutionStatus = DOM.tcResolutionStatus ? DOM.tcResolutionStatus.value : "Open";
+    const status = deriveOverallStatusFromStages(qaStatus, devStatus, resolutionStatus);
     const assignedDev = DOM.tcAssignedDev ? DOM.tcAssignedDev.value.trim() : "";
     const liveTimestamp = formatLocalTimestamp(new Date(), true);
     const createdAt = editId
@@ -7566,6 +7695,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     const mediaUrlVal = state.currentTcMedia?.url || state.currentTcImage || "";
     const stepsText = steps.map(s => `${s.step}. ${s.action}${s.expected ? ` -> ${s.expected}` : ""}`).join("\n");
     const prevTc = editId ? StorageManager.getTestCaseById(editId) : null;
+    const prevStages = resolveTestCaseStages(prevTc);
     const oldStatusVal = prevTc ? prevTc.status : "";
 
     const testCaseData = {
@@ -7574,6 +7704,9 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       priority: DOM.tcPriority ? DOM.tcPriority.value : "P1 - High",
       type: "Manual",
       status,
+      qaStatus,
+      devStatus,
+      resolutionStatus,
       assignedDev,
       assignedTo: assignedDev,
       createdBy: prevTc ? (prevTc.createdBy || prevTc.author || (curUser ? curUser.id || curUser.name : "QA Tester")) : (curUser ? (curUser.id || curUser.name) : "QA Tester"),
@@ -7607,26 +7740,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           await SupabaseManager.syncTestCaseUpsert(savedTc || testCaseData);
         }
         syncLinkedDefectForTestCase(savedTc || testCaseData);
-        if (oldStatusVal !== status) {
-          logUserActivity({
-            action_type: "status_changed",
-            target_type: "test_case",
-            target_id: editId,
-            old_value: oldStatusVal,
-            new_value: status,
-            details: { title }
-          });
-          if (status === "Ready for Re-Test") {
-            logUserActivity({
-              action_type: "marked_fixed",
-              target_type: "test_case",
-              target_id: editId,
-              old_value: oldStatusVal,
-              new_value: status,
-              details: { title }
-            });
-          }
-        }
+        logStageTransitions(editId, prevStages, { qaStatus, devStatus, resolutionStatus }, { title });
         showToast(`Updated ${editId} & synced with Supabase!`, "success");
       } else {
         const autoId = (DOM.tcGeneratedId && DOM.tcGeneratedId.value) || (typeof SupabaseManager !== "undefined" ? await SupabaseManager.generateNextTestCaseId() : "");
@@ -7649,8 +7763,14 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
           target_type: "test_case",
           target_id: savedTc.id,
           new_value: savedTc.status,
-          details: { title: savedTc.title, assignedTo: assignedDev, suiteId: testCaseData.suiteId }
+          details: { title: savedTc.title, assignedTo: assignedDev, suiteId: testCaseData.suiteId, qaStatus, devStatus, resolutionStatus }
         });
+        logStageTransitions(
+          savedTc.id,
+          { qaStatus: "Untested", devStatus: "Pending Dev", resolutionStatus: "Open" },
+          { qaStatus, devStatus, resolutionStatus },
+          { title: savedTc.title }
+        );
         showToast(`Saved ${savedTc.id} (${liveTimestamp}) to Supabase & synced with Dev Portal!`, "success");
       }
 
@@ -7751,6 +7871,7 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     ) : "";
 
     if (DOM.viewDetailBody) {
+      const stages = resolveTestCaseStages(tc);
       DOM.viewDetailBody.innerHTML = `
         <div class="detail-meta-grid">
           <div class="detail-meta-item">
@@ -7766,8 +7887,22 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
             <span class="meta-val"><span class="badge badge-type">${escapeHtml(tc.assignedDev || 'Unassigned')}</span></span>
           </div>
           <div class="detail-meta-item">
-            <span class="meta-label">Current Status</span>
+            <span class="meta-label">Overall Status</span>
             <span class="meta-val"><span class="badge ${statusClass}">${escapeHtml(tc.status || 'Untested')}</span></span>
+          </div>
+        </div>
+        <div class="detail-meta-grid" style="margin-top: -0.25rem;">
+          <div class="detail-meta-item">
+            <span class="meta-label">QA Execution Status</span>
+            <span class="meta-val"><span class="badge ${getStatusBadgeClass(stages.qaStatus)}">${escapeHtml(stages.qaStatus)}</span></span>
+          </div>
+          <div class="detail-meta-item">
+            <span class="meta-label">Dev Triage Status</span>
+            <span class="meta-val"><span class="badge ${getStatusBadgeClass(stages.devStatus)}">${escapeHtml(stages.devStatus)}</span></span>
+          </div>
+          <div class="detail-meta-item">
+            <span class="meta-label">Final Resolution</span>
+            <span class="meta-val"><span class="badge ${getStatusBadgeClass(stages.resolutionStatus)}">${escapeHtml(stages.resolutionStatus)}</span></span>
           </div>
         </div>
         <div class="mb-3">
@@ -7856,31 +7991,17 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     const oldStatus = tc.status || "Untested";
     const nowStamp = formatLocalTimestamp(new Date(), true);
     const curUser = StorageManager.getCurrentUser() || state.currentUser;
-    const ownership = applyLifecycleOwnershipFields({}, oldStatus, newStatus, curUser);
+    const { prevStages, nextStages, derivedStatus } = applySingleStatusToStages(tc, newStatus);
+    const ownership = applyLifecycleOwnershipFields({}, oldStatus, derivedStatus, curUser);
     const updated = StorageManager.updateTestCase({
       ...tc,
       ...ownership,
-      status: newStatus,
+      ...nextStages,
+      status: derivedStatus,
       lastRun: nowStamp
     });
-    logUserActivity({
-      action_type: "status_changed",
-      target_type: "test_case",
-      target_id: tc.id,
-      old_value: oldStatus,
-      new_value: newStatus,
-      details: { title: tc.title, portal: state.currentPortal || "qa" }
-    });
-    if (newStatus === "Ready for Re-Test") {
-      logUserActivity({
-        action_type: "marked_fixed",
-        target_type: "test_case",
-        target_id: tc.id,
-        old_value: oldStatus,
-        new_value: newStatus
-      });
-    }
-    syncLinkedDefectForTestCase(updated || { ...tc, ...ownership, status: newStatus });
+    logStageTransitions(tc.id, prevStages, nextStages, { title: tc.title, portal: state.currentPortal || "qa" });
+    syncLinkedDefectForTestCase(updated || { ...tc, ...ownership, ...nextStages, status: derivedStatus });
     renderTestCaseTable();
     renderDashboard();
     renderDefects();

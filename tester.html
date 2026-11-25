@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.19">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.24">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -201,8 +201,12 @@
   <div id="app" class="app-layout">
     
     <!-- Top Workspace Bar (Fixed permanently at top with Logo on Top-Left) -->
-    <header class="topbar">
+    <header class="topbar" id="appTopbar">
       <div class="topbar-left">
+        <!-- Mobile Navigation Menu Toggle Button -->
+        <button type="button" class="icon-btn mobile-menu-toggle" id="menuToggleBtn" title="Toggle Navigation Menu" aria-label="Toggle navigation">
+          <i class="fa-solid fa-bars"></i>
+        </button>
         <!-- Fixed Logo on Top-Left (Outside and Above Sidebar) -->
         <div class="brand-logo fixed-top-logo">
           <div class="logo-icon">
@@ -238,6 +242,9 @@
       </div>
 
       <div class="topbar-right pr-6">
+        <button type="button" class="icon-btn mobile-search-toggle" id="mobileSearchToggleBtn" title="Search" aria-label="Toggle Search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
         <div class="theme-toggle-wrapper">
           <label class="theme-switch" title="Toggle Theme">
             <input type="checkbox" class="theme-switch__checkbox" id="themeSwitchCheckbox" />
@@ -389,6 +396,12 @@
               </li>
             </ul>
           </nav>
+
+          <div class="sidebar-drawer-footer">
+            <button type="button" class="btn btn-outline w-100 mobile-drawer-logout-btn" id="drawerLogoutBtn">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -1347,6 +1360,10 @@
       </div>
     </main>
     </div>
+    <!-- Mobile Floating Quick-Action (+) Button -->
+    <button type="button" class="mobile-fab-btn" id="mobileFabBtn" title="New Test Case" aria-label="New Test Case">
+      <i class="fa-solid fa-plus"></i>
+    </button>
   </div>
 
   <!-- ============================================== -->
@@ -1355,7 +1372,7 @@
 
   <!-- MODAL: SINGLE-FORM MANUAL TEST CASE & BUG LOGGER -->
   <div class="modal-backdrop" id="testCaseModal" style="display: none;">
-    <div class="modal-dialog modal-lg tc-logger-dialog">
+    <div class="modal-dialog tc-logger-dialog">
       <div class="modal-header">
         <div class="modal-title-group">
           <i class="fa-solid fa-vial-circle-check modal-icon"></i>
@@ -1383,64 +1400,69 @@
           <input type="hidden" id="tcGeneratedId">
           <input type="hidden" id="tcGeneratedTimestamp">
 
-          <!-- 1. Main Description & Media Evidence Section -->
+          <!-- 1. Main Description & Media Evidence Section (2-Column Top Grid) -->
           <div class="tc-logger-section">
-            <div class="form-group mb-3">
-              <label for="tcTitle">Title <span class="text-rose">*</span></label>
-              <input type="text" id="tcTitle" class="nexus-input" placeholder="e.g. Checkout apply coupon button freezes on expired promo code" required>
-            </div>
-
-            <div class="form-group mb-3">
-              <label for="tcExplanation">What is happening / Bug Explanation</label>
-              <textarea id="tcExplanation" class="nexus-textarea" rows="3" placeholder="Describe what happened, expected vs actual behavior, console errors, or environment context..."></textarea>
-            </div>
-
-            <!-- Direct Media Attachment Zone (Ctrl+V Paste, Drag & Drop, File Upload for Image or Video) -->
-            <div class="form-group m-0">
-              <label class="d-flex justify-between align-center mb-1">
-                <span><i class="fa-solid fa-photo-film text-primary"></i> Media Evidence (Screenshot / Short Screen Recording)</span>
-                <span class="text-xs text-muted"><kbd>Ctrl</kbd>+<kbd>V</kbd> paste image • Drag &amp; drop • Browse file</span>
-              </label>
-
-              <div class="tc-image-upload-box tc-media-upload-box" id="tcImageUploadBox" tabindex="0">
-                <!-- Empty Dropzone -->
-                <div class="tc-image-dropzone" id="tcImageDropzone">
-                  <i class="fa-solid fa-cloud-arrow-up text-primary" style="font-size: 24px; margin-bottom: 4px;"></i>
-                  <div class="text-sm font-semibold">Paste screenshot (<kbd>Ctrl+V</kbd>) or drop media here</div>
-                  <p class="text-xs text-muted m-0 mt-1">Supports PNG, JPG, WEBP, GIF &amp; short MP4 / WEBM / MOV screen recordings</p>
-                  <div class="d-flex gap-2 mt-2 align-center">
-                    <label class="btn btn-secondary btn-xs" style="cursor: pointer; margin: 0;" for="tcImageFileInput">
-                      <i class="fa-solid fa-folder-open"></i> Browse Image or Video
-                    </label>
-                    <input type="file" id="tcImageFileInput" accept="image/*,video/mp4,video/webm,video/quicktime,video/*" style="display: none;">
-                    <span class="text-xs text-muted">Uploads to Supabase Storage</span>
-                  </div>
+            <div class="tc-top-split-grid">
+              <div class="tc-top-left-col">
+                <div class="form-group mb-3">
+                  <label for="tcTitle">Title <span class="text-rose">*</span></label>
+                  <input type="text" id="tcTitle" class="nexus-input tc-title-input" placeholder="e.g. Checkout apply coupon button freezes on expired promo code" required>
                 </div>
 
-                <!-- Attached Preview (Image or Video) -->
-                <div class="tc-image-preview-wrap" id="tcImagePreviewWrap" style="display: none;">
-                  <div class="tc-image-preview-container">
-                    <img id="tcImagePreview" src="" alt="Attached Screenshot Evidence" class="tc-image-preview-img" style="display: none;">
-                    <video id="tcVideoPreview" src="" controls muted playsinline class="tc-video-preview-player" style="display: none;"></video>
-                    <div class="tc-image-preview-overlay">
-                      <div class="styled-delete-wrapper btn-sm">
-                        <button type="button" class="button" id="tcRemoveImageBtn" title="Remove attached media">
-                          <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
-                        </button>
+                <div class="form-group m-0 d-flex flex-column flex-1">
+                  <label for="tcExplanation">What is happening / Bug Explanation</label>
+                  <textarea id="tcExplanation" class="nexus-textarea tc-explanation-textarea" rows="4" placeholder="Describe what happened, expected vs actual behavior, console errors, or environment context..."></textarea>
+                </div>
+              </div>
+
+              <!-- Direct Media Attachment Zone (Ctrl+V Paste, Drag & Drop, File Upload for Image or Video) -->
+              <div class="tc-top-right-col">
+                <div class="form-group m-0 d-flex flex-column flex-1">
+                  <label class="d-flex justify-between align-center mb-1">
+                    <span><i class="fa-solid fa-photo-film text-primary"></i> Media Evidence</span>
+                    <span class="text-xs text-muted"><kbd>Ctrl+V</kbd> • Drop • Browse</span>
+                  </label>
+
+                  <div class="tc-image-upload-box tc-media-upload-box" id="tcImageUploadBox" tabindex="0">
+                    <!-- Empty Dropzone -->
+                    <div class="tc-image-dropzone" id="tcImageDropzone">
+                      <i class="fa-solid fa-cloud-arrow-up text-primary" style="font-size: 22px; margin-bottom: 4px;"></i>
+                      <div class="text-sm font-semibold">Paste screenshot (<kbd>Ctrl+V</kbd>) or drop media here</div>
+                      <p class="text-xs text-muted m-0 mt-1">PNG, JPG, WEBP, GIF &amp; short MP4 / WEBM / MOV</p>
+                      <div class="d-flex flex-wrap justify-center gap-2 mt-2 align-center">
+                        <label class="btn btn-secondary btn-xs" style="cursor: pointer; margin: 0;" for="tcImageFileInput">
+                          <i class="fa-solid fa-folder-open"></i> Browse Image or Video
+                        </label>
+                        <input type="file" id="tcImageFileInput" accept="image/*,video/mp4,video/webm,video/quicktime,video/*" style="display: none;">
                       </div>
-                      <a id="tcViewImageFullBtn" href="#" target="_blank" class="btn btn-secondary btn-xs" title="Open Media in New Tab">
-                        <i class="fa-solid fa-up-right-from-square"></i> Full View
-                      </a>
                     </div>
-                  </div>
-                  <div class="d-flex align-center justify-between gap-2 mt-2">
-                    <div class="d-flex align-center gap-2">
-                      <span class="badge badge-passed text-xs" id="tcMediaStorageBadge"><i class="fa-solid fa-check"></i> Media Attached</span>
-                      <span class="text-xs text-muted font-mono" id="tcImageFileName">evidence.png</span>
+
+                    <!-- Attached Preview (Image or Video) -->
+                    <div class="tc-image-preview-wrap" id="tcImagePreviewWrap" style="display: none;">
+                      <div class="tc-image-preview-container">
+                        <img id="tcImagePreview" src="" alt="Attached Screenshot Evidence" class="tc-image-preview-img" style="display: none;">
+                        <video id="tcVideoPreview" src="" controls muted playsinline class="tc-video-preview-player" style="display: none;"></video>
+                        <div class="tc-image-preview-overlay">
+                          <div class="styled-delete-wrapper btn-sm">
+                            <button type="button" class="button" id="tcRemoveImageBtn" title="Remove attached media">
+                              <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+                            </button>
+                          </div>
+                          <a id="tcViewImageFullBtn" href="#" target="_blank" class="btn btn-secondary btn-xs" title="Open Media in New Tab">
+                            <i class="fa-solid fa-up-right-from-square"></i> Full View
+                          </a>
+                        </div>
+                      </div>
+                      <div class="d-flex align-center justify-between gap-2 mt-2 w-100">
+                        <div class="d-flex align-center gap-2">
+                          <span class="badge badge-passed text-xs" id="tcMediaStorageBadge"><i class="fa-solid fa-check"></i> Attached</span>
+                          <span class="text-xs text-muted font-mono" id="tcImageFileName">evidence.png</span>
+                        </div>
+                        <label class="btn btn-ghost btn-xs" style="cursor: pointer;" for="tcImageFileInput">
+                          <i class="fa-solid fa-arrows-rotate"></i> Replace
+                        </label>
+                      </div>
                     </div>
-                    <label class="btn btn-ghost btn-xs" style="cursor: pointer;" for="tcImageFileInput">
-                      <i class="fa-solid fa-arrows-rotate"></i> Replace
-                    </label>
                   </div>
                 </div>
               </div>
@@ -1462,28 +1484,34 @@
             <div class="steps-builder-container" id="stepsBuilderList"></div>
           </div>
 
-          <!-- 3. Standard Status & Triage Dropdowns -->
+          <!-- 3. Split Lifecycle Status Stages & Triage Metadata -->
           <div class="tc-logger-section tc-triage-section">
             <div class="tc-triage-grid">
               <div class="form-group m-0">
-                <label for="tcStatus">Status</label>
-                <select id="tcStatus" class="nexus-select w-100">
-                  <optgroup label="QA Testing">
-                    <option value="Untested" selected>Untested</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Pass">Pass</option>
-                    <option value="Fail">Fail</option>
-                    <option value="Blocked">Blocked</option>
-                  </optgroup>
-                  <optgroup label="Developer Triage">
-                    <option value="In Dev / Fixing">In Dev / Fixing</option>
-                    <option value="Cannot Reproduce">Cannot Reproduce</option>
-                    <option value="Ready for Re-Test">Ready for Re-Test</option>
-                  </optgroup>
-                  <optgroup label="Resolution">
-                    <option value="Verified &amp; Closed">Verified &amp; Closed</option>
-                    <option value="Won't Fix / By Design">Won't Fix / By Design</option>
-                  </optgroup>
+                <label for="tcQaStatus">QA Execution Status</label>
+                <select id="tcQaStatus" class="nexus-select w-100">
+                  <option value="Untested" selected>Untested</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Pass">Pass</option>
+                  <option value="Fail">Fail</option>
+                  <option value="Blocked">Blocked</option>
+                </select>
+              </div>
+              <div class="form-group m-0">
+                <label for="tcDevStatus">Dev Triage Status</label>
+                <select id="tcDevStatus" class="nexus-select w-100">
+                  <option value="Pending Dev" selected>Pending Dev</option>
+                  <option value="In Dev / Fixing">In Dev / Fixing</option>
+                  <option value="Cannot Reproduce">Cannot Reproduce</option>
+                  <option value="Ready for Re-Test">Ready for Re-Test</option>
+                </select>
+              </div>
+              <div class="form-group m-0">
+                <label for="tcResolutionStatus">Final Resolution</label>
+                <select id="tcResolutionStatus" class="nexus-select w-100">
+                  <option value="Open" selected>Open</option>
+                  <option value="Verified &amp; Closed">Verified &amp; Closed</option>
+                  <option value="Won't Fix / By Design">Won't Fix / By Design</option>
                 </select>
               </div>
               <div class="form-group m-0">
@@ -1495,6 +1523,8 @@
                   <option value="P3 - Low">P3 - Low</option>
                 </select>
               </div>
+            </div>
+            <div class="tc-triage-assign-grid">
               <div class="form-group m-0">
                 <label for="tcSuite">Module / Feature</label>
                 <select id="tcSuite" class="nexus-select w-100" required></select>
@@ -2373,9 +2403,9 @@
   
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.6"></script>
-  <script src="js/supabase.js?v=1.0.14"></script>
+  <script src="js/supabase.js?v=1.0.15"></script>
   <script src="js/storage.js?v=1.0.19"></script>
   <script src="js/qa-assistant.js?v=1.0.5"></script>
-  <script src="js/app.js?v=1.0.22"></script>
+  <script src="js/app.js?v=1.0.24"></script>
 </body>
 </html>

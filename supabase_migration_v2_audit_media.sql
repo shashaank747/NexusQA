@@ -23,6 +23,9 @@ WHERE full_name IS NULL AND name IS NOT NULL;
 -- 2. Upgrade nexus_test_cases (Lifecycle & Ownership Timestamps)
 ALTER TABLE public.nexus_test_cases
   ADD COLUMN IF NOT EXISTS suite_id TEXT REFERENCES public.nexus_suites(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS qa_status TEXT DEFAULT 'Untested',
+  ADD COLUMN IF NOT EXISTS dev_status TEXT DEFAULT 'Pending Dev',
+  ADD COLUMN IF NOT EXISTS resolution_status TEXT DEFAULT 'Open',
   ADD COLUMN IF NOT EXISTS created_by TEXT,
   ADD COLUMN IF NOT EXISTS assigned_to TEXT,
   ADD COLUMN IF NOT EXISTS steps_to_reproduce TEXT,

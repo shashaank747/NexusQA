@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.19">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.24">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -192,7 +192,7 @@
   <div id="app" class="app-layout">
     
     <!-- Top Workspace Bar (Fixed permanently at top with Logo on Top-Left) -->
-    <header class="topbar">
+    <header class="topbar" id="appTopbar">
       <div class="topbar-left">
         <!-- Mobile Navigation Menu Toggle Button -->
         <button type="button" class="icon-btn mobile-menu-toggle" id="menuToggleBtn" title="Toggle Navigation Menu" aria-label="Toggle navigation">
@@ -236,6 +236,10 @@
         <button class="btn btn-primary btn-sm" id="createQuickBtn">
           <i class="fa-solid fa-plus"></i>
           <span id="createQuickBtnLabel">New Bug Ticket</span>
+        </button>
+
+        <button type="button" class="icon-btn mobile-search-toggle" id="mobileSearchToggleBtn" title="Search" aria-label="Toggle Search">
+          <i class="fa-solid fa-magnifying-glass"></i>
         </button>
 
         <div class="theme-toggle-wrapper">
@@ -395,6 +399,12 @@
               </ul>
             </div>
           </nav>
+
+          <div class="sidebar-drawer-footer">
+            <button type="button" class="btn btn-outline w-100 mobile-drawer-logout-btn" id="drawerLogoutBtn">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -1128,6 +1138,10 @@
       </div>
     </main>
     </div>
+    <!-- Mobile Floating Quick-Action (+) Button -->
+    <button type="button" class="mobile-fab-btn" id="mobileFabBtn" title="New Bug Ticket" aria-label="New Bug Ticket">
+      <i class="fa-solid fa-plus"></i>
+    </button>
   </div>
 
   <!-- ============================================== -->
@@ -1741,8 +1755,8 @@
   
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.6"></script>
-  <script src="js/supabase.js?v=1.0.14"></script>
+  <script src="js/supabase.js?v=1.0.15"></script>
   <script src="js/storage.js?v=1.0.19"></script>
-  <script src="js/app.js?v=1.0.22"></script>
+  <script src="js/app.js?v=1.0.24"></script>
 </body>
 </html>
