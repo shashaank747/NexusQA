@@ -1004,7 +1004,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
       populateProfileForm();
       showToast("Profile details saved to Supabase!", "success");
 
-      if (typeof renderDevApprovals === "function") {
+      if (state.currentView === "dev-approvals" && StorageManager.isSuperAdmin() && typeof renderDevApprovals === "function") {
         renderDevApprovals();
       }
     }
@@ -2158,15 +2158,15 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         populateProfileForm();
       }
       updateDevApprovalsBadge();
-      if (typeof renderDevApprovals === "function") renderDevApprovals();
+      if (state.currentView === "dev-approvals" && StorageManager.isSuperAdmin() && typeof renderDevApprovals === "function") renderDevApprovals();
     }
 
     if (msg.type === "TESTER_APPROVAL_REQUESTED" || msg.type === "USERS_UPDATED") {
       updateDevApprovalsBadge();
-      if (typeof renderDevApprovals === "function") {
+      if (state.currentView === "dev-approvals" && StorageManager.isSuperAdmin() && typeof renderDevApprovals === "function") {
         renderDevApprovals();
       }
-      if (msg.type === "TESTER_APPROVAL_REQUESTED") {
+      if (msg.type === "TESTER_APPROVAL_REQUESTED" && StorageManager.isSuperAdmin()) {
         if (state.currentPortal === "dev" || document.body.classList.contains("page-dev")) {
           const reqRole = msg.payload?.user?.role === "dev" ? "Developer" : "QA Tester";
           showToast(`🔔 New ${reqRole} Access Request from ${msg.payload?.user?.name || 'Member'}!`, "info");
