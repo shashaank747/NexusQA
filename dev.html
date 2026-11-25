@@ -18,7 +18,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.26">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.27">
+  <link rel="stylesheet" href="components/ui/FlipCard.css?v=1.0.0">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -923,59 +924,7 @@
               </div>
               <p class="text-muted text-sm mb-4">This badge reflects how your profile card and credentials appear to team members across NexusQA.</p>
 
-              <div class="profile-id-card-display">
-                <div class="id-card-banner">
-                  <div class="id-card-company"><i class="fa-solid fa-cube text-primary"></i> NexusQA Workspace</div>
-                  <span class="badge badge-passed text-xs" id="previewAccessBadge"><i class="fa-solid fa-circle-check"></i> Verified</span>
-                </div>
-                
-                <div class="id-card-body">
-                  <div class="id-card-avatar-wrap">
-                    <div class="id-card-avatar" id="previewCardAvatar">
-                      <span id="previewCardInitials">MV</span>
-                      <img id="previewCardImg" src="" alt="Avatar" style="display:none; width:100%; height:100%; object-fit:cover; border-radius:50%;">
-                    </div>
-                  </div>
-                  
-                  <div class="id-card-info">
-                    <h2 class="id-card-name" id="previewCardName">Senior Developer</h2>
-                    <div class="id-card-designation-wrap">
-                      <span class="badge badge-passed" id="previewCardDesignationBadge">Senior Developer</span>
-                    </div>
-                  </div>
-
-                  <div class="id-card-details-list">
-                    <div class="id-card-detail-item">
-                      <span class="detail-label"><i class="fa-solid fa-envelope"></i> Email</span>
-                      <span class="detail-val font-mono" id="previewCardEmail">marcus.dev@nexusqa.io</span>
-                    </div>
-                    <div class="id-card-detail-item">
-                      <span class="detail-label"><i class="fa-solid fa-phone"></i> Phone</span>
-                      <span class="detail-val font-mono" id="previewCardPhone">9876543210</span>
-                    </div>
-                    <div class="id-card-detail-item">
-                      <span class="detail-label"><i class="fa-solid fa-building"></i> Department</span>
-                      <span class="detail-val" id="previewCardDepartment">—</span>
-                    </div>
-                    <div class="id-card-detail-item">
-                      <span class="detail-label"><i class="fa-solid fa-id-badge"></i> User ID</span>
-                      <span class="detail-val font-mono text-muted" id="previewCardUserId">user-dev-1</span>
-                    </div>
-                    <div class="id-card-detail-item">
-                      <span class="detail-label"><i class="fa-solid fa-right-to-bracket"></i> Last Login</span>
-                      <span class="detail-val font-mono text-xs" id="previewCardLastLogin">—</span>
-                    </div>
-                    <div class="id-card-detail-item">
-                      <span class="detail-label"><i class="fa-solid fa-right-from-bracket"></i> Last Logout</span>
-                      <span class="detail-val font-mono text-xs" id="previewCardLastLogout">—</span>
-                    </div>
-                    <div class="id-card-detail-item" style="align-items:flex-start;">
-                      <span class="detail-label"><i class="fa-solid fa-quote-left"></i> Bio</span>
-                      <span class="detail-val text-xs text-muted" id="previewCardBio">—</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <div id="profileFlipCardMount" class="profile-flipcard-mount"></div>
             </div>
           </div>
         </section>
@@ -1755,6 +1704,7 @@
   <script src="js/data.js?v=1.0.6"></script>
   <script src="js/supabase.js?v=1.0.16"></script>
   <script src="js/storage.js?v=1.0.19"></script>
-  <script src="js/app.js?v=1.0.26"></script>
+  <script src="js/flip-card-bundle.js?v=1.0.0"></script>
+  <script src="js/app.js?v=1.0.27"></script>
 </body>
 </html>

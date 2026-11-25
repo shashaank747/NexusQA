@@ -493,6 +493,7 @@ document.addEventListener("DOMContentLoaded", () => {
     previewCardLastLogin: document.getElementById("previewCardLastLogin"),
     previewCardLastLogout: document.getElementById("previewCardLastLogout"),
     previewCardBio: document.getElementById("previewCardBio"),
+    profileFlipCardMount: document.getElementById("profileFlipCardMount"),
     userProfileToggle: document.getElementById("userProfileToggle")
   };
 
@@ -776,6 +777,26 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (DOM.profileLargeInitials) DOM.profileLargeInitials.textContent = initials;
     if (DOM.profileFormAvatarInitials) DOM.profileFormAvatarInitials.textContent = initials;
     if (DOM.previewCardInitials) DOM.previewCardInitials.textContent = initials;
+
+    // Render / live-update interactive 3D Identity FlipCard (React + motion/react)
+    if (DOM.profileFlipCardMount && typeof window.NexusIdentityFlipCard !== "undefined") {
+      const avatarUrl = state.tempProfilePhoto !== undefined ? state.tempProfilePhoto : (user.avatarUrl || user.photo || "");
+      window.NexusIdentityFlipCard.render(DOM.profileFlipCardMount, {
+        fullName: name,
+        designation,
+        department: department || user.department || "",
+        userId: user.id || "user-current",
+        email,
+        phone: phone || "—",
+        bio: bio || user.bio || "",
+        lastLogin: formatAuditDateTime(user.lastLoginAt),
+        lastLogout: formatAuditDateTime(user.lastLogoutAt),
+        avatarUrl,
+        initials,
+        verified: user.status !== "rejected" && user.status !== "pending_approval",
+        isLightTheme: document.body.classList.contains("light-theme")
+      });
+    }
   }
 
   function populateProfileForm() {
@@ -849,6 +870,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
           if (uploaded && uploaded.url) {
             state.tempProfilePhoto = uploaded.url;
             renderProfilePhotoPreview(uploaded.url);
+            updateProfilePreviewBadge();
             showToast(uploaded.storage === "supabase" ? "Avatar uploaded to Supabase Storage! Click Save Profile Details." : "Photo loaded into preview. Click Save Profile Details.", "info");
             return;
           }
@@ -860,6 +882,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         const base64Data = event.target.result;
         state.tempProfilePhoto = base64Data;
         renderProfilePhotoPreview(base64Data);
+        updateProfilePreviewBadge();
         showToast("Photo loaded into preview. Click 'Save Profile' to commit.", "info");
       };
       reader.readAsDataURL(file);
@@ -870,6 +893,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     state.tempProfilePhoto = "";
     if (DOM.profilePhotoInput) DOM.profilePhotoInput.value = "";
     renderProfilePhotoPreview("");
+    updateProfilePreviewBadge();
     showToast("Photo removed from preview. Click 'Save Profile' to commit.", "info");
   });
 
@@ -1092,6 +1116,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (currentUser && currentUser.id) {
       currentUser.theme = isDark ? "dark" : "light";
       StorageManager.updateUser(currentUser.id, { theme: isDark ? "dark" : "light" });
+    }
+    if (typeof updateProfilePreviewBadge === "function") {
+      updateProfilePreviewBadge();
     }
   }
 
