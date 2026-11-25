@@ -1756,6 +1756,43 @@ const StorageManager = {
     return suite;
   },
 
+  updateSuite(updatedSuite, skipRemote = false) {
+    if (!updatedSuite || !updatedSuite.id) return null;
+    const suites = this.getSuites();
+    const idx = suites.findIndex(s => s.id === updatedSuite.id);
+    if (idx === -1) return null;
+    suites[idx] = { ...suites[idx], ...updatedSuite };
+    this.saveSuites(suites);
+    if (!skipRemote && typeof SupabaseManager !== "undefined" && SupabaseManager.syncSuiteUpsert) {
+      SupabaseManager.syncSuiteUpsert(suites[idx]);
+    }
+    return suites[idx];
+  },
+
+  deleteSuite(suiteId, skipRemote = false) {
+    if (!suiteId) return false;
+    const suites = this.getSuites().filter(s => s.id !== suiteId);
+    this.saveSuites(suites);
+
+    // Unlink any test cases assigned to this suite locally
+    const cases = this.getTestCases();
+    let casesChanged = false;
+    cases.forEach(tc => {
+      if (tc.suiteId === suiteId) {
+        tc.suiteId = null;
+        casesChanged = true;
+      }
+    });
+    if (casesChanged) {
+      this.saveTestCases(cases);
+    }
+
+    if (!skipRemote && typeof SupabaseManager !== "undefined" && SupabaseManager.syncSuiteDelete) {
+      SupabaseManager.syncSuiteDelete(suiteId);
+    }
+    return true;
+  },
+
   // -------------------------------------------------------------
   // Defects CRUD & Dev Resolution Workflow
   // -------------------------------------------------------------

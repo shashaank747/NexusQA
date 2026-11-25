@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.16">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.19">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -1454,7 +1454,10 @@
                 <label class="m-0 font-semibold"><i class="fa-solid fa-list-ol text-cyan mr-1"></i> Steps to Reproduce</label>
                 <span class="text-xs text-muted d-block">Write numbered steps or paste multi-line instructions to trigger the issue</span>
               </div>
-              <button type="button" class="btn btn-secondary btn-xs" id="addStepBtn"><i class="fa-solid fa-plus"></i> Add Step</button>
+              <div class="d-flex align-center gap-2">
+                <span class="text-xs text-muted">(Shift + Enter for next step)</span>
+                <button type="button" class="btn btn-secondary btn-xs" id="addStepBtn"><i class="fa-solid fa-plus"></i> Add Step</button>
+              </div>
             </div>
             <div class="steps-builder-container" id="stepsBuilderList"></div>
           </div>
@@ -1982,11 +1985,12 @@
   <div class="modal-backdrop" id="suiteModal" style="display: none;">
     <div class="modal-dialog modal-sm">
       <div class="modal-header">
-        <div class="modal-title-group"><i class="fa-solid fa-folder-plus modal-icon"></i><h2>New Test Suite</h2></div>
+        <div class="modal-title-group"><i class="fa-solid fa-folder-plus modal-icon"></i><h2 id="suiteModalTitle">New Test Suite</h2></div>
         <button class="icon-btn close-modal-btn" id="closeSuiteModalBtn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
         <form id="suiteForm">
+          <input type="hidden" id="editSuiteId">
           <div class="form-group">
             <label for="newSuiteName">Suite / Module Name <span class="text-rose">*</span></label>
             <input type="text" id="newSuiteName" class="nexus-input" placeholder="e.g. Payment Gateway" required>
@@ -2369,9 +2373,9 @@
   
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.6"></script>
-  <script src="js/supabase.js?v=1.0.13"></script>
-  <script src="js/storage.js?v=1.0.18"></script>
+  <script src="js/supabase.js?v=1.0.14"></script>
+  <script src="js/storage.js?v=1.0.19"></script>
   <script src="js/qa-assistant.js?v=1.0.5"></script>
-  <script src="js/app.js?v=1.0.20"></script>
+  <script src="js/app.js?v=1.0.22"></script>
 </body>
 </html>

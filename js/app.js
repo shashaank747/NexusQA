@@ -5925,11 +5925,14 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       const suiteCases = cases.filter(c => c.suiteId === suite.id);
       const isSelected = state.selectedSuiteId === suite.id;
       html += `
-        <button type="button" class="suite-pill-btn ${isSelected ? 'active' : ''}" data-suite-id="${escapeHtml(suite.id)}">
+        <div class="suite-pill-btn suite-pill-custom ${isSelected ? 'active' : ''}" role="button" tabindex="0" data-suite-id="${escapeHtml(suite.id)}">
           <i class="${escapeHtml(suite.icon || 'fa-solid fa-folder')}"></i>
           <span>${escapeHtml(suite.name)}</span>
           <span class="suite-pill-count">${suiteCases.length}</span>
-        </button>
+          <button type="button" class="suite-pill-delete-btn" data-delete-suite-id="${escapeHtml(suite.id)}" title="Delete suite '${escapeHtml(suite.name)}'" aria-label="Delete suite ${escapeHtml(suite.name)}">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
       `;
     });
 
@@ -5942,20 +5945,34 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
 
     DOM.suiteNavList.innerHTML = html;
 
+    DOM.suiteNavList.querySelectorAll(".suite-pill-delete-btn[data-delete-suite-id]").forEach(delBtn => {
+      delBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const delId = delBtn.getAttribute("data-delete-suite-id");
+        if (delId) window.confirmDeleteSuite(delId);
+      });
+    });
+
     DOM.suiteNavList.querySelectorAll(".suite-pill-btn[data-suite-id]").forEach(btn => {
-      btn.addEventListener("click", () => {
+      const activatePill = () => {
         state.selectedSuiteId = btn.getAttribute("data-suite-id");
         DOM.suiteNavList.querySelectorAll(".suite-pill-btn").forEach(i => i.classList.remove("active"));
         btn.classList.add("active");
         renderTestCaseTable();
+      };
+      btn.addEventListener("click", activatePill);
+      btn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          activatePill();
+        }
       });
     });
 
     const newSuiteBtn = document.getElementById("inlineNewSuitePillBtn");
     if (newSuiteBtn) {
       newSuiteBtn.addEventListener("click", () => {
-        if (DOM.suiteForm) DOM.suiteForm.reset();
-        if (DOM.suiteModal) DOM.suiteModal.style.display = "flex";
+        window.openCreateSuiteModal();
       });
     }
 
@@ -6210,8 +6227,8 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     steps.forEach((s, idx) => addStepRow(s.action || "", s.expected || "", idx + 1));
   }
 
-  function addStepRow(actionVal = "", expectedVal = "", stepNum = null) {
-    if (!DOM.stepsBuilderList) return;
+  function addStepRow(actionVal = "", expectedVal = "", stepNum = null, insertAfterRow = null, shouldFocus = false) {
+    if (!DOM.stepsBuilderList) return null;
     const currentRows = DOM.stepsBuilderList.querySelectorAll(".step-builder-row");
     const num = stepNum || currentRows.length + 1;
     const row = document.createElement("div");
@@ -6223,35 +6240,60 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       <button type="button" class="icon-btn-xs remove-step-btn" title="Remove Step"><i class="fa-solid fa-xmark text-rose"></i></button>
     `;
     const actionInput = row.querySelector(".step-input-action");
+    const expectedInput = row.querySelector(".step-input-expected");
+    const handleStepKeyDown = (e) => {
+      if (e.key === "Enter" && e.shiftKey) {
+        e.preventDefault();
+        addStepRow("", "", null, row, true);
+      }
+    };
     if (actionInput) {
+      actionInput.addEventListener("keydown", handleStepKeyDown);
       actionInput.addEventListener("paste", (e) => {
         const text = (e.clipboardData || window.clipboardData)?.getData("text") || "";
         const lines = text.split(/\r?\n/).map(l => l.replace(/^\d+[.)]\s*/, "").trim()).filter(Boolean);
         if (lines.length > 1) {
           e.preventDefault();
           actionInput.value = lines[0];
+          let prevRow = row;
           for (let i = 1; i < lines.length; i++) {
-            addStepRow(lines[i], "");
+            prevRow = addStepRow(lines[i], "", null, prevRow, false) || prevRow;
           }
           renumberSteps();
         }
       });
     }
+    if (expectedInput) {
+      expectedInput.addEventListener("keydown", handleStepKeyDown);
+    }
     row.querySelector(".remove-step-btn").addEventListener("click", () => {
       row.remove();
       renumberSteps();
     });
-    DOM.stepsBuilderList.appendChild(row);
+    if (insertAfterRow && insertAfterRow.parentNode === DOM.stepsBuilderList) {
+      insertAfterRow.after(row);
+    } else {
+      DOM.stepsBuilderList.appendChild(row);
+    }
+    renumberSteps();
+    if (shouldFocus && actionInput) {
+      actionInput.focus();
+    }
+    return row;
   }
 
   function renumberSteps() {
     if (!DOM.stepsBuilderList) return;
     DOM.stepsBuilderList.querySelectorAll(".step-builder-row").forEach((row, i) => {
-      row.querySelector(".step-num-badge").textContent = i + 1;
+      const n = i + 1;
+      const badge = row.querySelector(".step-num-badge");
+      if (badge) badge.textContent = n;
+      const actionInput = row.querySelector(".step-input-action");
+      if (actionInput) actionInput.placeholder = `Step ${n}: Describe action to trigger / reproduce...`;
     });
   }
 
-  on(DOM.addStepBtn, "click", () => addStepRow());
+  on(DOM.addStepBtn, "click", () => addStepRow("", "", null, null, true));
 
   // Media Evidence Attachment Controller (Ctrl+V, Drag & Drop, File Upload -> Supabase Storage)
   state.currentTcImage = "";
@@ -8514,18 +8556,26 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
       const passRate = suiteCases.length > 0 ? Math.round((passed / suiteCases.length) * 100) : 0;
 
       return `
-        <div class="suite-card">
+        <div class="suite-card" data-suite-card-id="${escapeHtml(suite.id)}">
           <div class="suite-card-top">
-            <div class="suite-card-icon"><i class="${suite.icon || 'fa-solid fa-folder'}"></i></div>
-            <div class="suite-card-info">
+            <div class="suite-card-icon"><i class="${escapeHtml(suite.icon || 'fa-solid fa-folder')}"></i></div>
+            <div class="suite-card-info flex-1">
               <h3>${escapeHtml(suite.name)}</h3>
               <p class="suite-card-desc">${escapeHtml(suite.description || 'Test module')}</p>
+            </div>
+            <div class="suite-card-actions d-flex align-center gap-1">
+              <button type="button" class="btn btn-secondary btn-xs" onclick="window.openEditSuiteModal('${escapeHtml(suite.id)}')" title="Edit or rename suite">
+                <i class="fa-solid fa-pen"></i> Edit
+              </button>
+              <button type="button" class="btn btn-outline-danger btn-xs" onclick="window.confirmDeleteSuite('${escapeHtml(suite.id)}')" title="Delete suite">
+                <i class="fa-solid fa-trash-can"></i> Delete
+              </button>
             </div>
           </div>
           <div class="suite-card-footer">
             <span><strong>${suiteCases.length}</strong> Tests</span>
             <span><strong class="text-emerald">${passRate}%</strong> Pass Rate</span>
-            <button class="btn btn-secondary btn-xs" onclick="window.viewSuiteTests('${suite.id}')">View Tests <i class="fa-solid fa-arrow-right"></i></button>
+            <button type="button" class="btn btn-secondary btn-xs" onclick="window.viewSuiteTests('${escapeHtml(suite.id)}')">View Tests <i class="fa-solid fa-arrow-right"></i></button>
           </div>
         </div>
       `;
@@ -8537,27 +8587,111 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     switchView("test-cases");
   };
 
-  on(DOM.createSuiteModalBtn, "click", () => { if (DOM.suiteForm) DOM.suiteForm.reset(); if (DOM.suiteModal) DOM.suiteModal.style.display = "flex"; });
-  on(DOM.addNewSuiteBtn, "click", () => { if (DOM.suiteForm) DOM.suiteForm.reset(); if (DOM.suiteModal) DOM.suiteModal.style.display = "flex"; });
+  window.openCreateSuiteModal = function() {
+    if (DOM.suiteForm) DOM.suiteForm.reset();
+    const editIdEl = document.getElementById("editSuiteId");
+    const titleEl = document.getElementById("suiteModalTitle");
+    if (editIdEl) editIdEl.value = "";
+    if (titleEl) titleEl.textContent = "New Test Suite";
+    if (DOM.suiteModal) DOM.suiteModal.style.display = "flex";
+    if (DOM.newSuiteName) setTimeout(() => DOM.newSuiteName.focus(), 50);
+  };
+
+  window.openEditSuiteModal = function(suiteId) {
+    const suite = StorageManager.getSuites().find(s => s.id === suiteId);
+    if (!suite) return;
+    if (DOM.suiteForm) DOM.suiteForm.reset();
+    const editIdEl = document.getElementById("editSuiteId");
+    const titleEl = document.getElementById("suiteModalTitle");
+    if (editIdEl) editIdEl.value = suite.id;
+    if (titleEl) titleEl.textContent = "Edit / Rename Test Suite";
+    if (DOM.newSuiteName) DOM.newSuiteName.value = suite.name || "";
+    if (DOM.newSuiteDescription) DOM.newSuiteDescription.value = suite.description || "";
+    if (DOM.newSuiteIcon) DOM.newSuiteIcon.value = suite.icon || "fa-solid fa-folder";
+    if (DOM.suiteModal) DOM.suiteModal.style.display = "flex";
+    if (DOM.newSuiteName) setTimeout(() => DOM.newSuiteName.focus(), 50);
+  };
+
+  window.confirmDeleteSuite = async function(suiteId) {
+    const suite = StorageManager.getSuites().find(s => s.id === suiteId);
+    if (!suite) return;
+    const confirmed = confirm(`Delete suite '${suite.name}'? Any linked test cases will remain unassigned.`);
+    if (!confirmed) return;
+
+    if (typeof SupabaseManager !== "undefined" && SupabaseManager.syncSuiteDelete) {
+      await SupabaseManager.syncSuiteDelete(suiteId);
+    }
+    StorageManager.deleteSuite(suiteId, true);
+
+    if (state.selectedSuiteId === suiteId) {
+      state.selectedSuiteId = "all";
+    }
+
+    logUserActivity({
+      action_type: "suite_deleted",
+      target_type: "suite",
+      target_id: suiteId,
+      old_value: suite.name
+    });
+
+    renderSuitesSidebar();
+    populateSuiteDropdowns();
+    renderTestCaseTable();
+    renderSuitesView();
+    renderDashboard();
+    showToast(`Deleted suite "${suite.name}". Linked test cases remain unassigned.`, "info");
+  };
+
+  on(DOM.createSuiteModalBtn, "click", () => window.openCreateSuiteModal());
+  on(DOM.addNewSuiteBtn, "click", () => window.openCreateSuiteModal());
   on(DOM.closeSuiteModalBtn, "click", () => { if (DOM.suiteModal) DOM.suiteModal.style.display = "none"; });
   on(DOM.cancelSuiteModalBtn, "click", () => { if (DOM.suiteModal) DOM.suiteModal.style.display = "none"; });
 
-  on(DOM.saveSuiteBtn, "click", () => {
+  on(DOM.saveSuiteBtn, "click", async () => {
     const name = DOM.newSuiteName ? DOM.newSuiteName.value.trim() : "";
     if (!name) {
       showToast("Please enter a suite name", "error");
       if (DOM.newSuiteName) DOM.newSuiteName.focus();
       return;
     }
-    const suite = StorageManager.addSuite({
-      name,
-      description: DOM.newSuiteDescription ? DOM.newSuiteDescription.value.trim() : "",
-      icon: DOM.newSuiteIcon ? DOM.newSuiteIcon.value : "fa-solid fa-folder"
-    });
-    if (DOM.suiteModal) DOM.suiteModal.style.display = "none";
-    showToast(`Created suite: ${suite.name}`);
+
+    const editIdEl = document.getElementById("editSuiteId");
+    const editId = editIdEl ? editIdEl.value.trim() : "";
+    const description = DOM.newSuiteDescription ? DOM.newSuiteDescription.value.trim() : "";
+    const icon = DOM.newSuiteIcon ? DOM.newSuiteIcon.value : "fa-solid fa-folder";
+
+    if (editId) {
+      const prev = StorageManager.getSuites().find(s => s.id === editId);
+      const updated = StorageManager.updateSuite({ id: editId, name, description, icon }, true);
+      if (updated && typeof SupabaseManager !== "undefined" && SupabaseManager.syncSuiteUpsert) {
+        await SupabaseManager.syncSuiteUpsert(updated);
+      }
+      logUserActivity({
+        action_type: "suite_updated",
+        target_type: "suite",
+        target_id: editId,
+        old_value: prev ? prev.name : "",
+        new_value: name
+      });
+      if (DOM.suiteModal) DOM.suiteModal.style.display = "none";
+      showToast(`Renamed suite to "${name}" & synced with Supabase!`, "success");
+    } else {
+      const suite = StorageManager.addSuite({ name, description, icon });
+      logUserActivity({
+        action_type: "suite_created",
+        target_type: "suite",
+        target_id: suite.id,
+        new_value: suite.name
+      });
+      if (DOM.suiteModal) DOM.suiteModal.style.display = "none";
+      showToast(`Created suite: ${suite.name}`, "success");
+    }
+
     renderSuitesSidebar();
+    populateSuiteDropdowns();
+    renderTestCaseTable();
     renderSuitesView();
+    renderDashboard();
   });
 
   // Settings Backups

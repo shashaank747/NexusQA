@@ -1142,8 +1142,44 @@ const SupabaseManager = {
           description: suite.description || "",
           icon: suite.icon || "fa-solid fa-folder"
         });
-        if (error) console.warn("Supabase suite upsert error:", error);
-      } catch (e) { console.warn("Supabase suite upsert error:", e); }
+        if (error) {
+          console.warn("Supabase suite upsert error:", error);
+          return { ok: false, error };
+        }
+        return { ok: true };
+      } catch (e) {
+        console.warn("Supabase suite upsert error:", e);
+        return { ok: false, error: e };
+      }
+    }
+    return { ok: false };
+  },
+
+  async syncSuiteDelete(suiteId) {
+    const client = this.getClient();
+    if (!client || !suiteId) return { ok: false, error: "Supabase client unavailable" };
+    try {
+      // Safely unlink any linked test cases first so no foreign key errors occur
+      const { error: unlinkTcErr } = await client
+        .from("nexus_test_cases")
+        .update({ suite_id: null })
+        .eq("suite_id", suiteId);
+      if (unlinkTcErr) {
+        console.warn("Supabase test case suite_id unlink warning:", unlinkTcErr.message);
+      }
+
+      const { error } = await client
+        .from("nexus_suites")
+        .delete()
+        .eq("id", suiteId);
+      if (error) {
+        console.warn("Supabase suite delete error:", error);
+        return { ok: false, error };
+      }
+      return { ok: true };
+    } catch (e) {
+      console.warn("Supabase suite delete error:", e);
+      return { ok: false, error: e };
     }
   },
 
