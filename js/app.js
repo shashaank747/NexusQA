@@ -1120,6 +1120,9 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
     if (typeof updateProfilePreviewBadge === "function") {
       updateProfilePreviewBadge();
     }
+    if (typeof renderSuitesView === "function" && state.currentView === "suites") {
+      renderSuitesView();
+    }
   }
 
   function initTheme() {
@@ -3182,7 +3185,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
   const secondaryClose = document.getElementById("secondaryCollapseBtn");
   if (secondaryClose) {
     secondaryClose.addEventListener("click", (e) => {
-      if (window.innerWidth < 768) {
+      if (window.innerWidth < 1024) {
         e.preventDefault();
         closeMobileDrawer();
       } else {
@@ -3201,7 +3204,7 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
 
   on(DOM.menuToggleBtn, "click", () => {
     if (DOM.sidebar) {
-      if (window.innerWidth < 768) {
+      if (window.innerWidth < 1024) {
         closeMobileSearchBar();
         const isOpen = DOM.sidebar.classList.toggle("mobile-open");
         const backdrop = document.getElementById("sidebarBackdrop");
@@ -3212,6 +3215,11 @@ CREATE POLICY "Anon all" ON nexus_suites FOR ALL USING (true); CREATE POLICY "An
         localStorage.setItem("nexusqa_sidebar_collapsed", isNowCollapsed ? "true" : "false");
       }
     }
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth >= 1024) closeMobileDrawer();
+    if (window.innerWidth >= 640) closeMobileSearchBar();
   });
 
   if (mobileSearchToggleBtn) {
@@ -8761,56 +8769,70 @@ ${defects.map(d => `- [${d.id}] (${d.severity}) ${d.summary} - Status: ${d.statu
     DOM.importAllAITestsBtn.addEventListener("click", window.saveAllGeneratedAITests);
   }
 
-  // Suites
+  // Suites (Interactive 3D Physics FolderFloat Grid)
   function renderSuitesView() {
     if (!DOM.suitesGridCards) return;
-    let suites = StorageManager.getSuites();
+    const allSuites = StorageManager.getSuites();
     const cases = StorageManager.getTestCases();
+    const allSuiteIdSet = new Set(allSuites.map(s => s.id));
+
+    let folders = allSuites.map(suite => {
+      const suiteCases = cases.filter(c => c.suiteId === suite.id);
+      const passedCount = suiteCases.filter(c => isPassStatus(c.status)).length;
+      return {
+        ...suite,
+        cases: suiteCases,
+        passedCount,
+        isSystemUnassigned: false
+      };
+    });
+
+    const unassignedCases = cases.filter(c => !c.suiteId || !allSuiteIdSet.has(c.suiteId));
+    if (unassignedCases.length > 0) {
+      folders.push({
+        id: "__unassigned__",
+        name: "Unassigned / General",
+        description: "Test cases without an assigned suite",
+        cases: unassignedCases,
+        passedCount: unassignedCases.filter(c => isPassStatus(c.status)).length,
+        isSystemUnassigned: true
+      });
+    }
 
     if (state.globalSearchQuery) {
       const gq = state.globalSearchQuery;
-      suites = suites.filter(s =>
-        (s.name && s.name.toLowerCase().includes(gq)) ||
-        (s.description && s.description.toLowerCase().includes(gq)) ||
-        (s.id && s.id.toLowerCase().includes(gq))
+      folders = folders.filter(f =>
+        (f.name && f.name.toLowerCase().includes(gq)) ||
+        (f.description && f.description.toLowerCase().includes(gq)) ||
+        (f.id && f.id.toLowerCase().includes(gq)) ||
+        f.cases.some(tc =>
+          (tc.id && tc.id.toLowerCase().includes(gq)) ||
+          (tc.title && tc.title.toLowerCase().includes(gq))
+        )
       );
     }
 
-    if (suites.length === 0) {
-      DOM.suitesGridCards.innerHTML = `<div class="dashboard-card p-4 text-center text-muted" style="grid-column: 1 / -1;">${state.globalSearchQuery ? "No suites match your search query." : "No modules or test suites created yet in Supabase. Click <strong>Create Suite</strong> above to add one."}</div>`;
+    if (typeof window.NexusSuitesFolderGrid !== "undefined" && window.NexusSuitesFolderGrid.render) {
+      window.NexusSuitesFolderGrid.render(DOM.suitesGridCards, {
+        folders,
+        isLightTheme: document.body.classList.contains("light-theme"),
+        searchQuery: state.globalSearchQuery || "",
+        onSelectTestCase: (tcId) => {
+          if (typeof window.viewTestCaseDetail === "function") {
+            window.viewTestCaseDetail(tcId);
+          }
+        },
+        onViewSuite: (suiteId) => window.viewSuiteTests(suiteId),
+        onRenameSuite: (suiteId) => window.openEditSuiteModal(suiteId),
+        onDeleteSuite: (suiteId) => window.confirmDeleteSuite(suiteId),
+        onCreateSuite: () => window.openCreateSuiteModal()
+      });
       return;
     }
 
-    DOM.suitesGridCards.innerHTML = suites.map(suite => {
-      const suiteCases = cases.filter(c => c.suiteId === suite.id);
-      const passed = suiteCases.filter(c => isPassStatus(c.status)).length;
-      const passRate = suiteCases.length > 0 ? Math.round((passed / suiteCases.length) * 100) : 0;
-
-      return `
-        <div class="suite-card" data-suite-card-id="${escapeHtml(suite.id)}">
-          <div class="suite-card-top">
-            <div class="suite-card-icon"><i class="${escapeHtml(suite.icon || 'fa-solid fa-folder')}"></i></div>
-            <div class="suite-card-info flex-1">
-              <h3>${escapeHtml(suite.name)}</h3>
-              <p class="suite-card-desc">${escapeHtml(suite.description || 'Test module')}</p>
-            </div>
-            <div class="suite-card-actions d-flex align-center gap-1">
-              <button type="button" class="btn btn-secondary btn-xs" onclick="window.openEditSuiteModal('${escapeHtml(suite.id)}')" title="Edit or rename suite">
-                <i class="fa-solid fa-pen"></i> Edit
-              </button>
-              <button type="button" class="btn btn-outline-danger btn-xs" onclick="window.confirmDeleteSuite('${escapeHtml(suite.id)}')" title="Delete suite">
-                <i class="fa-solid fa-trash-can"></i> Delete
-              </button>
-            </div>
-          </div>
-          <div class="suite-card-footer">
-            <span><strong>${suiteCases.length}</strong> Tests</span>
-            <span><strong class="text-emerald">${passRate}%</strong> Pass Rate</span>
-            <button type="button" class="btn btn-secondary btn-xs" onclick="window.viewSuiteTests('${escapeHtml(suite.id)}')">View Tests <i class="fa-solid fa-arrow-right"></i></button>
-          </div>
-        </div>
-      `;
-    }).join("");
+    if (folders.length === 0) {
+      DOM.suitesGridCards.innerHTML = `<div class="dashboard-card p-4 text-center text-muted" style="grid-column: 1 / -1;">${state.globalSearchQuery ? "No suites match your search query." : "No modules or test suites created yet in Supabase. Click <strong>Create New Suite</strong> above to add one."}</div>`;
+    }
   }
 
   window.viewSuiteTests = function(suiteId) {

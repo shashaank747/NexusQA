@@ -1,25 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NexusQA - QA Tester Workspace</title>
-  <meta name="description" content="Dedicated QA Tester Portal for manual test case logging, test result tracking, voice/AI test creation, and bug reporting with Supabase synchronization.">
-  
+  <meta name="description"
+    content="Dedicated QA Tester Portal for manual test case logging, test result tracking, voice/AI test creation, and bug reporting with Supabase synchronization.">
+
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="Glossy Neon Coding Loop Logo.png">
-  
+
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/styles.css?v=1.0.27">
-  <link rel="stylesheet" href="components/ui/FlipCard.css?v=1.0.0">
+  <link rel="stylesheet" href="css/styles.css?v=1.0.30">
+  <link rel="stylesheet" href="components/ui/FlipCard.css?v=1.0.1">
+  <link rel="stylesheet" href="components/ui/FolderFloat.css?v=1.0.0">
 
   <style>
     /* Direct Private Chat Modal Fixes */
@@ -34,11 +39,13 @@
       border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
       box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5), 0 0 30px rgba(99, 102, 241, 0.12) !important;
     }
+
     body.light-theme .private-chat-dialog {
       background: #ffffff !important;
       border-color: #cbd5e1 !important;
       box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.18), 0 4px 20px rgba(0, 0, 0, 0.06) !important;
     }
+
     .private-chat-dialog .modal-header {
       padding: 1rem 1.4rem !important;
       border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08)) !important;
@@ -48,10 +55,12 @@
       background: var(--bg-card, #0f172a) !important;
       flex-shrink: 0 !important;
     }
+
     body.light-theme .private-chat-dialog .modal-header {
       background: #ffffff !important;
       border-color: #e2e8f0 !important;
     }
+
     .private-chat-dialog .modal-body {
       padding: 0 !important;
       margin: 0 !important;
@@ -63,9 +72,11 @@
       background: var(--bg-card-subtle, #0a0f1d) !important;
       position: relative !important;
     }
+
     body.light-theme .private-chat-dialog .modal-body {
       background: #f8fafc !important;
     }
+
     .private-chat-security-banner {
       display: flex !important;
       align-items: center !important;
@@ -80,11 +91,13 @@
       width: 100% !important;
       box-sizing: border-box !important;
     }
+
     body.light-theme .private-chat-security-banner {
       background: #ecfdf5 !important;
       border-bottom: 1px solid #a7f3d0 !important;
       color: #065f46 !important;
     }
+
     .private-chat-stream {
       flex: 1 1 auto !important;
       min-height: 0 !important;
@@ -97,6 +110,7 @@
       background: transparent !important;
       scrollbar-width: thin !important;
     }
+
     .private-chat-quick-chips {
       display: flex !important;
       align-items: center !important;
@@ -109,10 +123,12 @@
       flex-shrink: 0 !important;
       scrollbar-width: none !important;
     }
+
     body.light-theme .private-chat-quick-chips {
       background: #f8fafc !important;
       border-color: #e2e8f0 !important;
     }
+
     .private-chat-input-area {
       padding: 0.8rem 1.25rem !important;
       background: var(--bg-card, #0f172a) !important;
@@ -121,10 +137,12 @@
       width: 100% !important;
       box-sizing: border-box !important;
     }
+
     body.light-theme .private-chat-input-area {
       background: #ffffff !important;
       border-color: #e2e8f0 !important;
     }
+
     .private-chat-input {
       width: 100% !important;
       min-width: 0 !important;
@@ -136,12 +154,15 @@
       font-size: 0.85rem !important;
       box-sizing: border-box !important;
     }
+
     body.light-theme .private-chat-input {
       background: #f8fafc !important;
       border-color: #cbd5e1 !important;
       color: #0f172a !important;
     }
-    .modal-close-btn, .btn-icon {
+
+    .modal-close-btn,
+    .btn-icon {
       width: 32px !important;
       height: 32px !important;
       border-radius: var(--radius-md, 8px) !important;
@@ -153,7 +174,9 @@
       justify-content: center !important;
       cursor: pointer !important;
     }
-    body.light-theme .modal-close-btn, body.light-theme .btn-icon {
+
+    body.light-theme .modal-close-btn,
+    body.light-theme .btn-icon {
       background: transparent !important;
       border-color: #e2e8f0 !important;
       color: #64748b !important;
@@ -162,7 +185,7 @@
 
   <!-- Instant Strict Auth & QA Tester Role Guard -->
   <script>
-    (function() {
+    (function () {
       try {
         var raw = localStorage.getItem("nexusqa_current_user") || localStorage.getItem("nexus_qa_current_user");
         if (!raw) {
@@ -194,18 +217,20 @@
     })();
   </script>
 </head>
+
 <body class="light-theme page-tester">
 
   <!-- ============================================== -->
   <!-- MAIN TESTER WORKSPACE LAYOUT -->
   <!-- ============================================== -->
   <div id="app" class="app-layout">
-    
+
     <!-- Top Workspace Bar (Fixed permanently at top with Logo on Top-Left) -->
     <header class="topbar" id="appTopbar">
       <div class="topbar-left">
         <!-- Mobile Navigation Menu Toggle Button -->
-        <button type="button" class="icon-btn mobile-menu-toggle" id="menuToggleBtn" title="Toggle Navigation Menu" aria-label="Toggle navigation">
+        <button type="button" class="icon-btn mobile-menu-toggle" id="menuToggleBtn" title="Toggle Navigation Menu"
+          aria-label="Toggle navigation">
           <i class="fa-solid fa-bars"></i>
         </button>
         <!-- Fixed Logo on Top-Left (Outside and Above Sidebar) -->
@@ -233,9 +258,11 @@
       <div class="topbar-center topbar-global-search flex-1 max-w-md mx-4">
         <div class="global-search-bar topbar-search-flex" id="topbarSearchWrapper">
           <i class="fa-solid fa-magnifying-glass search-icon"></i>
-          <input type="text" id="globalSearchInput" class="topbar-search-input" placeholder="Search test cases, defects, IDs, or suites..." autocomplete="off" />
+          <input type="text" id="globalSearchInput" class="topbar-search-input"
+            placeholder="Search test cases, defects, IDs, or suites..." autocomplete="off" />
           <span class="search-shortcut" id="globalSearchShortcut">/</span>
-          <button type="button" class="topbar-search-clear" id="globalSearchClearBtn" title="Clear search" style="display: none;">
+          <button type="button" class="topbar-search-clear" id="globalSearchClearBtn" title="Clear search"
+            style="display: none;">
             <i class="fa-solid fa-xmark"></i>
           </button>
           <div class="global-search-dropdown" id="globalSearchResultsDropdown" style="display: none;"></div>
@@ -243,7 +270,8 @@
       </div>
 
       <div class="topbar-right pr-6">
-        <button type="button" class="icon-btn mobile-search-toggle" id="mobileSearchToggleBtn" title="Search" aria-label="Toggle Search">
+        <button type="button" class="icon-btn mobile-search-toggle" id="mobileSearchToggleBtn" title="Search"
+          aria-label="Toggle Search">
           <i class="fa-solid fa-magnifying-glass"></i>
         </button>
         <div class="theme-toggle-wrapper">
@@ -253,7 +281,9 @@
               <div class="theme-switch__clouds"></div>
               <div class="theme-switch__stars-container">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none">
-                  <path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545ZM0 36.3545C1.11136 36.2995 2.05513 35.8503 2.83131 35.0069C3.6075 34.1635 3.99559 33.1642 3.99559 32C3.99559 33.1642 4.38368 34.1635 5.15987 35.0069C5.93605 35.8503 6.87982 36.2903 8 36.3545C7.26792 36.3911 6.59757 36.602 5.98015 37.0053C5.37155 37.3995 4.88644 37.9312 4.52481 38.5913C4.172 39.2513 3.99559 39.9572 3.99559 40.7273C3.99559 39.563 3.6075 38.5546 2.83131 37.7112C2.05513 36.8587 1.11136 36.4095 0 36.3545ZM56.8313 24.0069C56.0551 24.8503 55.1114 25.2995 54 25.3545C55.1114 25.4095 56.0551 25.8587 56.8313 26.7112C57.6075 27.5546 57.9956 28.563 57.9956 29.7273C57.9956 28.9572 58.172 28.2513 58.5248 27.5913C58.8864 26.9312 59.3716 26.3995 59.9802 26.0053C60.5976 25.602 61.2679 25.3911 62 25.3545C60.8798 25.2903 59.9361 24.8503 59.1599 24.0069C58.3837 23.1635 57.9956 22.1642 57.9956 21C57.9956 22.1642 57.6075 23.1635 56.8313 24.0069ZM81 25.3545C82.1114 25.2995 83.0551 24.8503 83.8313 24.0069C84.6075 23.1635 84.9956 22.1642 84.9956 21C84.9956 22.1642 85.3837 23.1635 86.1599 24.0069C86.9361 24.8503 87.8798 25.2903 89 25.3545C88.2679 25.3911 87.5976 25.602 86.9802 26.0053C86.3716 26.3995 85.8864 26.9312 85.5248 27.5913C85.172 28.2513 84.9956 28.9572 84.9956 29.7273C84.9956 28.563 84.6075 27.5546 83.8313 26.7112C83.0551 25.8587 82.1114 25.4095 81 25.3545ZM136 36.3545C137.111 36.2995 138.055 35.8503 138.831 35.0069C139.607 34.1635 139.996 33.1642 139.996 32C139.996 33.1642 140.384 34.1635 141.16 35.0069C141.936 35.8503 142.88 36.2903 144 36.3545C143.268 36.3911 142.598 36.602 141.98 37.0053C141.372 37.3995 140.886 37.9312 140.525 38.5913C140.172 39.2513 139.996 39.9572 139.996 40.7273C139.996 39.563 139.607 38.5546 138.831 37.7112C138.055 36.8587 137.111 36.4095 136 36.3545ZM101.831 49.0069C101.055 49.8503 100.111 50.2995 99 50.3545C100.111 50.4095 101.055 50.8587 101.831 51.7112C102.607 52.5546 102.996 53.563 102.996 54.7273C102.996 53.9572 103.172 53.2513 103.525 52.5913C103.886 51.9312 104.372 51.3995 104.98 51.0053C105.598 50.602 106.268 50.3911 107 50.3545C105.88 50.2903 104.936 49.8503 104.16 49.0069C103.384 48.1635 102.996 47.1642 102.996 46C102.996 47.1642 102.607 48.1635 101.831 49.0069Z" fill="currentColor" />
+                  <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545ZM0 36.3545C1.11136 36.2995 2.05513 35.8503 2.83131 35.0069C3.6075 34.1635 3.99559 33.1642 3.99559 32C3.99559 33.1642 4.38368 34.1635 5.15987 35.0069C5.93605 35.8503 6.87982 36.2903 8 36.3545C7.26792 36.3911 6.59757 36.602 5.98015 37.0053C5.37155 37.3995 4.88644 37.9312 4.52481 38.5913C4.172 39.2513 3.99559 39.9572 3.99559 40.7273C3.99559 39.563 3.6075 38.5546 2.83131 37.7112C2.05513 36.8587 1.11136 36.4095 0 36.3545ZM56.8313 24.0069C56.0551 24.8503 55.1114 25.2995 54 25.3545C55.1114 25.4095 56.0551 25.8587 56.8313 26.7112C57.6075 27.5546 57.9956 28.563 57.9956 29.7273C57.9956 28.9572 58.172 28.2513 58.5248 27.5913C58.8864 26.9312 59.3716 26.3995 59.9802 26.0053C60.5976 25.602 61.2679 25.3911 62 25.3545C60.8798 25.2903 59.9361 24.8503 59.1599 24.0069C58.3837 23.1635 57.9956 22.1642 57.9956 21C57.9956 22.1642 57.6075 23.1635 56.8313 24.0069ZM81 25.3545C82.1114 25.2995 83.0551 24.8503 83.8313 24.0069C84.6075 23.1635 84.9956 22.1642 84.9956 21C84.9956 22.1642 85.3837 23.1635 86.1599 24.0069C86.9361 24.8503 87.8798 25.2903 89 25.3545C88.2679 25.3911 87.5976 25.602 86.9802 26.0053C86.3716 26.3995 85.8864 26.9312 85.5248 27.5913C85.172 28.2513 84.9956 28.9572 84.9956 29.7273C84.9956 28.563 84.6075 27.5546 83.8313 26.7112C83.0551 25.8587 82.1114 25.4095 81 25.3545ZM136 36.3545C137.111 36.2995 138.055 35.8503 138.831 35.0069C139.607 34.1635 139.996 33.1642 139.996 32C139.996 33.1642 140.384 34.1635 141.16 35.0069C141.936 35.8503 142.88 36.2903 144 36.3545C143.268 36.3911 142.598 36.602 141.98 37.0053C141.372 37.3995 140.886 37.9312 140.525 38.5913C140.172 39.2513 139.996 39.9572 139.996 40.7273C139.996 39.563 139.607 38.5546 138.831 37.7112C138.055 36.8587 137.111 36.4095 136 36.3545ZM101.831 49.0069C101.055 49.8503 100.111 50.2995 99 50.3545C100.111 50.4095 101.055 50.8587 101.831 51.7112C102.607 52.5546 102.996 53.563 102.996 54.7273C102.996 53.9572 103.172 53.2513 103.525 52.5913C103.886 51.9312 104.372 51.3995 104.98 51.0053C105.598 50.602 106.268 50.3911 107 50.3545C105.88 50.2903 104.936 49.8503 104.16 49.0069C103.384 48.1635 102.996 47.1642 102.996 46C102.996 47.1642 102.607 48.1635 101.831 49.0069Z"
+                    fill="currentColor" />
                 </svg>
               </div>
               <div class="theme-switch__circle-container">
@@ -279,11 +309,14 @@
             </div>
             <div class="user-details">
               <span class="user-name" id="userNameLabel">Alex Morgan</span>
-              <span class="user-role" id="userRoleLabel"><i class="fa-solid fa-circle status-dot-online"></i> QA Lead</span>
+              <span class="user-role" id="userRoleLabel"><i class="fa-solid fa-circle status-dot-online"></i> QA
+                Lead</span>
             </div>
           </div>
-          <button class="icon-btn-xs" id="logoutBtn" title="Sign Out & Return to Login"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-          <button class="icon-btn-xs" id="switchUserQuickBtn" title="Sign Out" style="display:none;"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+          <button class="icon-btn-xs" id="logoutBtn" title="Sign Out & Return to Login"><i
+              class="fa-solid fa-arrow-right-from-bracket"></i></button>
+          <button class="icon-btn-xs" id="switchUserQuickBtn" title="Sign Out" style="display:none;"><i
+              class="fa-solid fa-arrow-right-from-bracket"></i></button>
         </div>
       </div>
     </header>
@@ -300,7 +333,8 @@
           <div class="rail-top">
             <div class="uiverse-hamburger-switch" id="sidebarBurgerSwitch" title="Toggle Secondary Panel">
               <input class="label-check" id="sidebar-label-check" type="checkbox" />
-              <label for="sidebar-label-check" class="hamburger-label" id="sidebarBurgerBtn" aria-label="Toggle Secondary Panel">
+              <label for="sidebar-label-check" class="hamburger-label" id="sidebarBurgerBtn"
+                aria-label="Toggle Secondary Panel">
                 <div class="line1"></div>
                 <div class="line2"></div>
                 <div class="line3"></div>
@@ -315,7 +349,8 @@
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-flask-vial"></i></button>
               </li>
               <li class="rail-nav-item" data-view="defects" title="Defect Tracker">
-                <button type="button" class="rail-nav-btn"><i class="fa-solid fa-triangle-exclamation text-rose"></i></button>
+                <button type="button" class="rail-nav-btn"><i
+                    class="fa-solid fa-triangle-exclamation text-rose"></i></button>
               </li>
               <li class="rail-nav-item" data-view="suites" title="Suites & Modules">
                 <button type="button" class="rail-nav-btn"><i class="fa-solid fa-layer-group"></i></button>
@@ -410,902 +445,1007 @@
       <main class="main-content" id="mainContent">
         <!-- View Containers -->
         <div class="view-viewport" id="viewViewport">
-        
-        <!-- QA VIEW 1: DASHBOARD -->
-        <section class="view-panel active-view" id="view-dashboard">
-          <div class="view-header">
-            <div>
-              <h1 class="view-title">Manual Testing Logs & Analytics</h1>
-              <p class="view-subtitle">Real-time manual test logging metrics, pass/fail status, and defect tracking.</p>
-            </div>
-            <div class="view-actions">
-              <button class="btn btn-secondary btn-sm" id="refreshMetricsBtn">
-                <i class="fa-solid fa-arrows-rotate"></i> Refresh
-              </button>
-              <button class="btn btn-outline btn-sm" id="exportDashboardReportBtn">
-                <i class="fa-solid fa-file-export"></i> Export Report
-              </button>
-              <button class="btn btn-primary btn-sm" id="dashboardNewTestCaseBtn" title="Log new manual test case or bug">
-                <i class="fa-solid fa-plus"></i> New Test Case
-              </button>
-            </div>
-          </div>
 
-          <div class="retest-alert-banner" id="retestAlertBanner" style="display: none;">
-            <div class="d-flex align-center gap-2">
-              <i class="fa-solid fa-bell text-amber"></i>
-              <span><strong id="retestAlertCount">1 bug</strong> has been marked as <strong>Fixed & Ready for QA</strong> by developers!</span>
-            </div>
-            <button class="btn btn-secondary btn-xs" id="viewRetestBugsBtn">Review & Re-Verify</button>
-          </div>
-
-          <div class="kpi-grid">
-            <div class="kpi-card card-glow-indigo">
-              <div class="kpi-header">
-                <span class="kpi-title">Total Test Cases</span>
-                <span class="kpi-icon-badge icon-indigo"><i class="fa-solid fa-vials"></i></span>
+          <!-- QA VIEW 1: DASHBOARD -->
+          <section class="view-panel active-view" id="view-dashboard">
+            <div class="view-header">
+              <div>
+                <h1 class="view-title">Manual Testing Logs & Analytics</h1>
+                <p class="view-subtitle">Real-time manual test logging metrics, pass/fail status, and defect tracking.
+                </p>
               </div>
-              <div class="kpi-body">
-                <span class="kpi-value" id="kpiTotalTests">0</span>
-                <span class="kpi-trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i> +12% this cycle</span>
-              </div>
-              <div class="kpi-progress-bar">
-                <div class="kpi-progress-fill bg-indigo" id="kpiTotalTestsProgress" style="width: 100%"></div>
+              <div class="view-actions">
+                <button class="btn btn-secondary btn-sm" id="refreshMetricsBtn">
+                  <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                </button>
+                <button class="btn btn-outline btn-sm" id="exportDashboardReportBtn">
+                  <i class="fa-solid fa-file-export"></i> Export Report
+                </button>
+                <button class="btn btn-primary btn-sm" id="dashboardNewTestCaseBtn"
+                  title="Log new manual test case or bug">
+                  <i class="fa-solid fa-plus"></i> New Test Case
+                </button>
               </div>
             </div>
 
-            <div class="kpi-card card-glow-emerald">
-              <div class="kpi-header">
-                <span class="kpi-title">Pass Rate</span>
-                <span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-circle-check"></i></span>
+            <div class="retest-alert-banner" id="retestAlertBanner" style="display: none;">
+              <div class="d-flex align-center gap-2">
+                <i class="fa-solid fa-bell text-amber"></i>
+                <span><strong id="retestAlertCount">1 bug</strong> has been marked as <strong>Fixed & Ready for
+                    QA</strong> by developers!</span>
               </div>
-              <div class="kpi-body">
-                <span class="kpi-value text-emerald" id="kpiPassRate">0%</span>
-                <span class="kpi-trend trend-up" id="kpiPassRateSub">Target: 95%</span>
-              </div>
-              <div class="kpi-progress-bar">
-                <div class="kpi-progress-fill bg-emerald" id="kpiPassRateProgress" style="width: 0%"></div>
-              </div>
+              <button class="btn btn-secondary btn-xs" id="viewRetestBugsBtn">Review & Re-Verify</button>
             </div>
 
-            <div class="kpi-card card-glow-amber">
-              <div class="kpi-header">
-                <span class="kpi-title">Pending / Untested</span>
-                <span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-hourglass-half"></i></span>
-              </div>
-              <div class="kpi-body">
-                <span class="kpi-value text-amber" id="kpiUntestedCount">0</span>
-                <span class="kpi-trend trend-neutral" id="kpiUntestedSub">0 to test</span>
-              </div>
-              <div class="kpi-progress-bar">
-                <div class="kpi-progress-fill bg-amber" id="kpiUntestedProgress" style="width: 0%"></div>
-              </div>
-            </div>
-
-            <div class="kpi-card card-glow-rose">
-              <div class="kpi-header">
-                <span class="kpi-title">Active Defects</span>
-                <span class="kpi-icon-badge icon-rose"><i class="fa-solid fa-triangle-exclamation"></i></span>
-              </div>
-              <div class="kpi-body">
-                <span class="kpi-value text-rose" id="kpiDefectsCount">0</span>
-                <span class="kpi-trend trend-down" id="kpiCriticalDefects">0 Critical</span>
-              </div>
-              <div class="kpi-progress-bar">
-                <div class="kpi-progress-fill bg-rose" id="kpiDefectsProgress" style="width: 35%"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="dashboard-grid-2col">
-            <div class="dashboard-card chart-card">
-              <div class="card-header">
-                <div class="card-title-group">
-                  <h3><i class="fa-solid fa-chart-pie"></i> Test Execution Status Distribution</h3>
-                  <p class="card-subtitle">Breakdown across all test cases in current test cycle</p>
+            <div class="kpi-grid">
+              <div class="kpi-card card-glow-indigo">
+                <div class="kpi-header">
+                  <span class="kpi-title">Total Test Cases</span>
+                  <span class="kpi-icon-badge icon-indigo"><i class="fa-solid fa-vials"></i></span>
+                </div>
+                <div class="kpi-body">
+                  <span class="kpi-value" id="kpiTotalTests">0</span>
+                  <span class="kpi-trend trend-up"><i class="fa-solid fa-arrow-trend-up"></i> +12% this cycle</span>
+                </div>
+                <div class="kpi-progress-bar">
+                  <div class="kpi-progress-fill bg-indigo" id="kpiTotalTestsProgress" style="width: 100%"></div>
                 </div>
               </div>
-              <div class="card-body chart-flex">
-                <div class="donut-chart-wrapper">
-                  <div class="donut-chart" id="testStatusDonut"></div>
-                  <div class="donut-center-stat">
-                    <span class="donut-center-val" id="donutCenterVal">100%</span>
-                    <span class="donut-center-label">Coverage</span>
+
+              <div class="kpi-card card-glow-emerald">
+                <div class="kpi-header">
+                  <span class="kpi-title">Pass Rate</span>
+                  <span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-circle-check"></i></span>
+                </div>
+                <div class="kpi-body">
+                  <span class="kpi-value text-emerald" id="kpiPassRate">0%</span>
+                  <span class="kpi-trend trend-up" id="kpiPassRateSub">Target: 95%</span>
+                </div>
+                <div class="kpi-progress-bar">
+                  <div class="kpi-progress-fill bg-emerald" id="kpiPassRateProgress" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <div class="kpi-card card-glow-amber">
+                <div class="kpi-header">
+                  <span class="kpi-title">Pending / Untested</span>
+                  <span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-hourglass-half"></i></span>
+                </div>
+                <div class="kpi-body">
+                  <span class="kpi-value text-amber" id="kpiUntestedCount">0</span>
+                  <span class="kpi-trend trend-neutral" id="kpiUntestedSub">0 to test</span>
+                </div>
+                <div class="kpi-progress-bar">
+                  <div class="kpi-progress-fill bg-amber" id="kpiUntestedProgress" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <div class="kpi-card card-glow-rose">
+                <div class="kpi-header">
+                  <span class="kpi-title">Active Defects</span>
+                  <span class="kpi-icon-badge icon-rose"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                </div>
+                <div class="kpi-body">
+                  <span class="kpi-value text-rose" id="kpiDefectsCount">0</span>
+                  <span class="kpi-trend trend-down" id="kpiCriticalDefects">0 Critical</span>
+                </div>
+                <div class="kpi-progress-bar">
+                  <div class="kpi-progress-fill bg-rose" id="kpiDefectsProgress" style="width: 35%"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-grid-2col">
+              <div class="dashboard-card chart-card">
+                <div class="card-header">
+                  <div class="card-title-group">
+                    <h3><i class="fa-solid fa-chart-pie"></i> Test Execution Status Distribution</h3>
+                    <p class="card-subtitle">Breakdown across all test cases in current test cycle</p>
                   </div>
                 </div>
-                <div class="chart-legend" id="statusLegend"></div>
-              </div>
-            </div>
-
-            <div class="dashboard-card chart-card">
-              <div class="card-header">
-                <div class="card-title-group">
-                  <h3><i class="fa-solid fa-layer-group"></i> Module Health & Coverage</h3>
-                  <p class="card-subtitle">Pass rates and test counts grouped by functional suite</p>
+                <div class="card-body chart-flex">
+                  <div class="donut-chart-wrapper">
+                    <div class="donut-chart" id="testStatusDonut"></div>
+                    <div class="donut-center-stat">
+                      <span class="donut-center-val" id="donutCenterVal">100%</span>
+                      <span class="donut-center-label">Coverage</span>
+                    </div>
+                  </div>
+                  <div class="chart-legend" id="statusLegend"></div>
                 </div>
               </div>
-              <div class="card-body">
-                <div class="module-health-list" id="moduleHealthList"></div>
-              </div>
-            </div>
-          </div>
 
-          <div class="dashboard-grid-2col mt-4">
-            <div class="dashboard-card">
-              <div class="card-header">
-                <div class="card-title-group">
-                  <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Test Execution Logs</h3>
-                  <p class="card-subtitle">Latest manual test verification and execution activity</p>
+              <div class="dashboard-card chart-card">
+                <div class="card-header">
+                  <div class="card-title-group">
+                    <h3><i class="fa-solid fa-layer-group"></i> Module Health & Coverage</h3>
+                    <p class="card-subtitle">Pass rates and test counts grouped by functional suite</p>
+                  </div>
                 </div>
-                <button class="btn btn-ghost btn-sm" id="gotoTestRunsBtn">View All <i class="fa-solid fa-arrow-right"></i></button>
-              </div>
-              <div class="card-body p-0">
-                <div class="table-responsive">
-                  <table class="nexus-table">
-                    <thead>
-                      <tr>
-                        <th>Run Name</th>
-                        <th>Environment</th>
-                        <th>Status</th>
-                        <th>Executed</th>
-                        <th>Pass Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody id="recentRunsTableBody"></tbody>
-                  </table>
+                <div class="card-body">
+                  <div class="module-health-list" id="moduleHealthList"></div>
                 </div>
               </div>
             </div>
 
-            <div class="dashboard-card">
-              <div class="card-header">
-                <div class="card-title-group">
-                  <h3><i class="fa-solid fa-layer-group"></i> Test Priority Breakdown</h3>
-                  <p class="card-subtitle">Coverage by critical path, smoke, and regression</p>
+            <div class="dashboard-grid-2col mt-4">
+              <div class="dashboard-card">
+                <div class="card-header">
+                  <div class="card-title-group">
+                    <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Test Execution Logs</h3>
+                    <p class="card-subtitle">Latest manual test verification and execution activity</p>
+                  </div>
+                  <button class="btn btn-ghost btn-sm" id="gotoTestRunsBtn">View All <i
+                      class="fa-solid fa-arrow-right"></i></button>
                 </div>
-              </div>
-              <div class="card-body">
-                <div class="priority-breakdown" id="priorityBreakdown"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-
-
-        <!-- QA VIEW 2: REPOSITORY -->
-        <section class="view-panel" id="view-test-cases">
-          <!-- Row 1: Page Header -->
-          <div class="view-header">
-            <div>
-              <h1 class="view-title">Test Cases &amp; Manual Logs</h1>
-              <p class="view-subtitle">Author, review, categorize, and log manual test execution results.</p>
-            </div>
-            <div class="view-actions">
-              <button class="btn btn-outline btn-sm" id="importTestsBtn"><i class="fa-solid fa-file-import"></i> Import JSON</button>
-              <button class="btn btn-outline btn-sm" id="exportTestsBtn"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
-              <button class="btn btn-primary btn-sm" id="createNewTestCaseBtn"><i class="fa-solid fa-plus"></i> New Test Case</button>
-            </div>
-          </div>
-
-          <div class="repository-fullwidth">
-            <!-- Horizontal Suite / Module Pill Bar -->
-            <div class="suite-pill-bar" id="suiteNavList" role="tablist" aria-label="Module &amp; Suite Filters">
-              <!-- Dynamically rendered: All Cases + Supabase Suites + New Suite pill -->
-            </div>
-
-            <div class="repository-main">
-              <!-- Row 2: Unified Dark Slate Filter Toolbar -->
-              <div class="repo-filter-bar">
-                <div class="repo-search-box">
-                  <i class="fa-solid fa-magnifying-glass repo-search-icon"></i>
-                  <input placeholder="Search by title, ID, tag..." type="text" name="text" class="repo-dark-input" id="testCaseSearchInput" autocomplete="off" />
-                </div>
-
-                <div class="filter-group">
-                  <select id="filterStatus" class="nexus-select repo-dark-select" aria-label="Filter by Status">
-                    <option value="all">All Statuses</option>
-                    <optgroup label="QA Testing">
-                      <option value="Untested">Untested</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Pass">Pass</option>
-                      <option value="Fail">Fail</option>
-                      <option value="Blocked">Blocked</option>
-                    </optgroup>
-                    <optgroup label="Developer Triage">
-                      <option value="In Dev / Fixing">In Dev / Fixing</option>
-                      <option value="Cannot Reproduce">Cannot Reproduce</option>
-                      <option value="Ready for Re-Test">Ready for Re-Test</option>
-                    </optgroup>
-                    <optgroup label="Resolution">
-                      <option value="Verified &amp; Closed">Verified &amp; Closed</option>
-                      <option value="Won't Fix / By Design">Won't Fix / By Design</option>
-                    </optgroup>
-                  </select>
-
-                  <select id="filterPriority" class="nexus-select repo-dark-select" aria-label="Filter by Priority">
-                    <option value="all">All Priorities</option>
-                    <option value="P0 - Critical">P0 - Critical</option>
-                    <option value="P1 - High">P1 - High</option>
-                    <option value="P2 - Medium">P2 - Medium</option>
-                    <option value="P3 - Low">P3 - Low</option>
-                  </select>
-
-                  <button class="btn btn-ghost btn-sm repo-clear-btn" id="resetFiltersBtn" title="Clear Filters" aria-label="Clear Filters">
-                    <i class="fa-solid fa-filter-circle-xmark"></i>
-                  </button>
+                <div class="card-body p-0">
+                  <div class="table-responsive">
+                    <table class="nexus-table">
+                      <thead>
+                        <tr>
+                          <th>Run Name</th>
+                          <th>Environment</th>
+                          <th>Status</th>
+                          <th>Executed</th>
+                          <th>Pass Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody id="recentRunsTableBody"></tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
-              <!-- Batch Action Bar -->
-              <div class="batch-action-bar" id="batchActionBar" style="display: none;">
-                <div class="batch-info">
-                  <span class="selected-count-badge" id="selectedCountBadge">0</span>
-                  <span>test cases selected</span>
+              <div class="dashboard-card">
+                <div class="card-header">
+                  <div class="card-title-group">
+                    <h3><i class="fa-solid fa-layer-group"></i> Test Priority Breakdown</h3>
+                    <p class="card-subtitle">Coverage by critical path, smoke, and regression</p>
+                  </div>
                 </div>
-                <div class="batch-buttons">
-                  <button class="btn btn-success btn-xs" id="batchPassBtn"><i class="fa-solid fa-check"></i> Mark Pass</button>
-                  <button class="btn btn-danger btn-xs" id="batchFailBtn"><i class="fa-solid fa-xmark"></i> Mark Fail</button>
-                  <button class="btn btn-warning btn-xs" id="batchBlockBtn"><i class="fa-solid fa-ban"></i> Mark Blocked</button>
-                  <div class="styled-delete-wrapper btn-sm">
-                    <button type="button" class="button" id="batchDeleteBtn" title="Delete Selected">
-                      <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+                <div class="card-body">
+                  <div class="priority-breakdown" id="priorityBreakdown"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+
+
+          <!-- QA VIEW 2: REPOSITORY -->
+          <section class="view-panel" id="view-test-cases">
+            <!-- Row 1: Page Header -->
+            <div class="view-header">
+              <div>
+                <h1 class="view-title">Test Cases &amp; Manual Logs</h1>
+                <p class="view-subtitle">Author, review, categorize, and log manual test execution results.</p>
+              </div>
+              <div class="view-actions">
+                <button class="btn btn-outline btn-sm" id="importTestsBtn"><i class="fa-solid fa-file-import"></i>
+                  Import JSON</button>
+                <button class="btn btn-outline btn-sm" id="exportTestsBtn"><i class="fa-solid fa-file-csv"></i> Export
+                  CSV</button>
+                <button class="btn btn-primary btn-sm" id="createNewTestCaseBtn"><i class="fa-solid fa-plus"></i> New
+                  Test Case</button>
+              </div>
+            </div>
+
+            <div class="repository-fullwidth">
+              <!-- Horizontal Suite / Module Pill Bar -->
+              <div class="suite-pill-bar" id="suiteNavList" role="tablist" aria-label="Module &amp; Suite Filters">
+                <!-- Dynamically rendered: All Cases + Supabase Suites + New Suite pill -->
+              </div>
+
+              <div class="repository-main">
+                <!-- Row 2: Unified Dark Slate Filter Toolbar -->
+                <div class="repo-filter-bar">
+                  <div class="repo-search-box">
+                    <i class="fa-solid fa-magnifying-glass repo-search-icon"></i>
+                    <input placeholder="Search by title, ID, tag..." type="text" name="text" class="repo-dark-input"
+                      id="testCaseSearchInput" autocomplete="off" />
+                  </div>
+
+                  <div class="filter-group">
+                    <select id="filterStatus" class="nexus-select repo-dark-select" aria-label="Filter by Status">
+                      <option value="all">All Statuses</option>
+                      <optgroup label="QA Testing">
+                        <option value="Untested">Untested</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Pass">Pass</option>
+                        <option value="Fail">Fail</option>
+                        <option value="Blocked">Blocked</option>
+                      </optgroup>
+                      <optgroup label="Developer Triage">
+                        <option value="In Dev / Fixing">In Dev / Fixing</option>
+                        <option value="Cannot Reproduce">Cannot Reproduce</option>
+                        <option value="Ready for Re-Test">Ready for Re-Test</option>
+                      </optgroup>
+                      <optgroup label="Resolution">
+                        <option value="Verified &amp; Closed">Verified &amp; Closed</option>
+                        <option value="Won't Fix / By Design">Won't Fix / By Design</option>
+                      </optgroup>
+                    </select>
+
+                    <select id="filterPriority" class="nexus-select repo-dark-select" aria-label="Filter by Priority">
+                      <option value="all">All Priorities</option>
+                      <option value="P0 - Critical">P0 - Critical</option>
+                      <option value="P1 - High">P1 - High</option>
+                      <option value="P2 - Medium">P2 - Medium</option>
+                      <option value="P3 - Low">P3 - Low</option>
+                    </select>
+
+                    <button class="btn btn-ghost btn-sm repo-clear-btn" id="resetFiltersBtn" title="Clear Filters"
+                      aria-label="Clear Filters">
+                      <i class="fa-solid fa-filter-circle-xmark"></i>
                     </button>
                   </div>
                 </div>
-              </div>
 
-              <!-- Full-Width Data Table & Footer Bar -->
-              <div class="table-card repo-table-card">
-                <div class="table-responsive">
-                  <table class="nexus-table repo-full-table" id="testCasesTable">
-                    <thead>
-                      <tr>
-                        <th width="44"><input type="checkbox" id="selectAllCheckbox"></th>
-                        <th width="110" class="sortable" data-sort="id">Test ID</th>
-                        <th>Test Case Title</th>
-                        <th width="165">Module / Suite</th>
-                        <th width="135" class="sortable" data-sort="priority">Priority</th>
-                        <th width="165" class="sortable" data-sort="status">Status</th>
-                        <th width="155" class="sortable" data-sort="lastRun">Updated</th>
-                        <th width="120" class="text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="testCasesTableBody"></tbody>
-                  </table>
-                </div>
-
-                <div class="empty-state repo-empty-state" id="testCaseEmptyState" style="display: none;">
-                  <div class="empty-icon"><i class="fa-solid fa-vials"></i></div>
-                  <h3>No test cases found</h3>
-                  <p class="m-0">Try adjusting your search query or filters, or use <strong>+ New Test Case</strong> above to log one.</p>
-                </div>
-
-                <div class="table-footer repo-table-footer">
-                  <div class="table-footer-left">
-                    Showing <strong id="showingCount">0</strong> of <strong id="totalTestsCount">0</strong> test cases
+                <!-- Batch Action Bar -->
+                <div class="batch-action-bar" id="batchActionBar" style="display: none;">
+                  <div class="batch-info">
+                    <span class="selected-count-badge" id="selectedCountBadge">0</span>
+                    <span>test cases selected</span>
                   </div>
-                  <div class="table-footer-counts">
-                    <span class="badge badge-passed text-2xs" id="statPassed">0 Pass / Verified</span>
-                    <span class="badge badge-failed text-2xs" id="statFailed">0 Active Defects / Fail</span>
-                    <span class="badge badge-blocked text-2xs" id="statBlocked">0 Blocked</span>
-                    <span class="badge badge-untested text-2xs" id="statUntested">0 Untested / Pending</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- QA VIEW 3: DEFECTS -->
-        <section class="view-panel" id="view-defects">
-          <div class="view-header">
-            <div>
-              <h1 class="view-title">Defects & Bug Tracking</h1>
-              <p class="view-subtitle">Monitor defect lifecycles, assignees, and real-time developer re-test updates.</p>
-            </div>
-            <div class="view-actions">
-              <button class="btn btn-danger btn-sm" id="createNewBugBtn"><i class="fa-solid fa-plus"></i> Report New Defect</button>
-            </div>
-          </div>
-
-          <div class="kpi-grid">
-            <div class="kpi-card card-glow-rose">
-              <div class="kpi-header"><span class="kpi-title">Open Defects</span><span class="kpi-icon-badge icon-rose"><i class="fa-solid fa-bug"></i></span></div>
-              <div class="kpi-body"><span class="kpi-value text-rose" id="openBugsCount">0</span><span class="kpi-trend trend-down">Needs Resolution</span></div>
-            </div>
-            <div class="kpi-card card-glow-amber">
-              <div class="kpi-header"><span class="kpi-title">Critical Blockers</span><span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-fire"></i></span></div>
-              <div class="kpi-body"><span class="kpi-value text-amber" id="criticalBugsCount">0</span><span class="kpi-trend trend-neutral">P0 Severity</span></div>
-            </div>
-            <div class="kpi-card card-glow-indigo">
-              <div class="kpi-header"><span class="kpi-title">Ready for QA Re-Test</span><span class="kpi-icon-badge icon-indigo"><i class="fa-solid fa-flask"></i></span></div>
-              <div class="kpi-body"><span class="kpi-value text-primary" id="readyForRetestCount">0</span><span class="kpi-trend trend-up">Fixed by Dev</span></div>
-            </div>
-            <div class="kpi-card card-glow-emerald">
-              <div class="kpi-header"><span class="kpi-title">Resolved & Verified</span><span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-circle-check"></i></span></div>
-              <div class="kpi-body"><span class="kpi-value text-emerald" id="resolvedBugsCount">0</span><span class="kpi-trend trend-up">Closed</span></div>
-            </div>
-          </div>
-
-          <div class="repo-filter-bar mt-4">
-            <div class="uiverse-search-wrapper" style="width: auto;">
-              <input type="text" name="text" id="bugSearchInput" placeholder="Search defects by title, ID, assignee..." class="input" autocomplete="off" />
-            </div>
-            <div class="filter-group">
-              <select id="filterBugSeverity" class="nexus-select">
-                <option value="all">All Severities</option>
-                <option value="Critical">Critical</option>
-                <option value="Major">Major</option>
-                <option value="Medium">Medium</option>
-                <option value="Minor">Minor</option>
-              </select>
-              <select id="filterBugStatus" class="nexus-select">
-                <option value="all">All Statuses</option>
-                <option value="Open">Open</option>
-                <option value="In Progress">In Progress</option>
-                <option value="In Dev / Fixing">In Dev / Fixing</option>
-                <option value="Cannot Reproduce">Cannot Reproduce</option>
-                <option value="Ready for Re-Test">Ready for Re-Test</option>
-                <option value="Fixed - Ready for QA">Fixed - Ready for QA</option>
-                <option value="Verified &amp; Closed">Verified &amp; Closed</option>
-                <option value="Won't Fix / By Design">Won't Fix / By Design</option>
-                <option value="Resolved & Verified">Resolved & Verified</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="table-card mt-3">
-            <div class="table-responsive">
-              <table class="nexus-table">
-                <thead>
-                  <tr>
-                    <th width="100">Bug ID</th>
-                    <th>Summary</th>
-                    <th width="110">Severity</th>
-                    <th width="110">Priority</th>
-                    <th width="120">Linked Test</th>
-                    <th width="150">Assignee</th>
-                    <th width="150">Status</th>
-                    <th width="160">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="defectsTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- QA VIEW 5: VOICE & AI CHAT TEST CREATOR STUDIO -->
-        <section class="view-panel" id="view-ai-generator">
-          <div class="view-header">
-            <div>
-              <div class="d-flex align-center gap-2 mb-1">
-                <span class="badge badge-ai"><i class="fa-solid fa-sparkles"></i> AI Assistant</span>
-                <span class="badge badge-version">Manual Test Case Creator</span>
-              </div>
-              <h1 class="view-title">Voice & AI Manual Test Case Creator</h1>
-              <p class="view-subtitle">Speak or type your manual test steps, observations, and expected results. The assistant structures them into formal manual test cases ready for your log repository.</p>
-            </div>
-            <div class="view-actions">
-              <button class="btn btn-outline btn-sm" id="btnClearAiChat" title="Clear Chat History">
-                <i class="fa-solid fa-trash-can"></i> Clear Chat
-              </button>
-            </div>
-          </div>
-
-          <div class="ai-workspace-grid">
-            <!-- Left Pane: Conversational Chatbot & Voice Dictation Interface -->
-            <div class="ai-input-card ai-chat-interface-card">
-              <div class="card-header">
-                <div class="d-flex align-center gap-2">
-                  <div class="ai-avatar-icon">
-                    <i class="fa-solid fa-brain text-primary"></i>
-                  </div>
-                  <div>
-                    <h3 style="margin: 0; font-size: 0.95rem;">NexusQA AI Assistant</h3>
-                    <span class="text-xs text-muted">Powered by Gemini QA Engine</span>
-                  </div>
-                </div>
-                <div class="d-flex align-center gap-2">
-                  <label for="aiTargetSuiteSelect" class="text-xs text-muted mb-0">Target Suite:</label>
-                  <select id="aiTargetSuiteSelect" class="nexus-select" style="padding: 0.25rem 0.5rem; font-size: 0.78rem; width: auto;"></select>
-                </div>
-              </div>
-
-              <div class="card-body p-0">
-                <!-- Live Chat Message Stream -->
-                <div class="ai-chat-history" id="aiChatHistory">
-                  <div class="chat-message chat-msg-assistant">
-                    <div class="chat-msg-avatar"><i class="fa-solid fa-robot"></i></div>
-                    <div class="chat-msg-bubble">
-                      <p><strong>Hello Alex!</strong> How can I help you document your testing today?</p>
-                      <p class="mb-0">You can <strong>turn on the microphone</strong> and speak your test steps naturally, or type out what you did in chat. I will structure everything into formal test cases with step numbers, auto-assign <strong>Test IDs</strong>, and let you <strong>copy directly into Excel</strong> or <strong>save into your database</strong>.</p>
+                  <div class="batch-buttons">
+                    <button class="btn btn-success btn-xs" id="batchPassBtn"><i class="fa-solid fa-check"></i> Mark
+                      Pass</button>
+                    <button class="btn btn-danger btn-xs" id="batchFailBtn"><i class="fa-solid fa-xmark"></i> Mark
+                      Fail</button>
+                    <button class="btn btn-warning btn-xs" id="batchBlockBtn"><i class="fa-solid fa-ban"></i> Mark
+                      Blocked</button>
+                    <div class="styled-delete-wrapper btn-sm">
+                      <button type="button" class="button" id="batchDeleteBtn" title="Delete Selected">
+                        <svg viewBox="0 0 448 512" class="svgIcon">
+                          <path
+                            d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z">
+                          </path>
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                <!-- Voice Dictation Active Waveform Banner -->
-                <div class="voice-listening-banner" id="voiceListeningBanner" style="display: none;">
-                  <div class="voice-detector-loader">
-                    <div class="loading">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                      <span></span>
+                <!-- Full-Width Data Table & Footer Bar -->
+                <div class="table-card repo-table-card">
+                  <div class="table-responsive">
+                    <table class="nexus-table repo-full-table" id="testCasesTable">
+                      <thead>
+                        <tr>
+                          <th width="44"><input type="checkbox" id="selectAllCheckbox"></th>
+                          <th width="110" class="sortable" data-sort="id">Test ID</th>
+                          <th>Test Case Title</th>
+                          <th width="165">Module / Suite</th>
+                          <th width="135" class="sortable" data-sort="priority">Priority</th>
+                          <th width="165" class="sortable" data-sort="status">Status</th>
+                          <th width="155" class="sortable" data-sort="lastRun">Updated</th>
+                          <th width="120" class="text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="testCasesTableBody"></tbody>
+                    </table>
+                  </div>
+
+                  <div class="empty-state repo-empty-state" id="testCaseEmptyState" style="display: none;">
+                    <div class="empty-icon"><i class="fa-solid fa-vials"></i></div>
+                    <h3>No test cases found</h3>
+                    <p class="m-0">Try adjusting your search query or filters, or use <strong>+ New Test Case</strong>
+                      above to log one.</p>
+                  </div>
+
+                  <div class="table-footer repo-table-footer">
+                    <div class="table-footer-left">
+                      Showing <strong id="showingCount">0</strong> of <strong id="totalTestsCount">0</strong> test cases
+                    </div>
+                    <div class="table-footer-counts">
+                      <span class="badge badge-passed text-2xs" id="statPassed">0 Pass / Verified</span>
+                      <span class="badge badge-failed text-2xs" id="statFailed">0 Active Defects / Fail</span>
+                      <span class="badge badge-blocked text-2xs" id="statBlocked">0 Blocked</span>
+                      <span class="badge badge-untested text-2xs" id="statUntested">0 Untested / Pending</span>
                     </div>
                   </div>
-                  <div class="voice-listening-text">
-                    <strong>Listening to your voice...</strong> Speak your testing steps naturally. Click mic to finish.
-                  </div>
-                  <button type="button" class="btn btn-danger btn-xs" id="btnStopVoiceRec">Stop Dictation</button>
-                </div>
-
-                <!-- Chat & Voice Input Controls -->
-                <div class="ai-chat-input-container">
-                  <!-- Quick Prompt Presets -->
-                  <div class="ai-preset-chips mb-2">
-                    <span class="preset-label text-xs text-muted"><i class="fa-solid fa-bolt text-amber"></i> Quick Scenarios:</span>
-                    <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('checkout')"><i class="fa-solid fa-credit-card"></i> Stripe Checkout</button>
-                    <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('oauth')"><i class="fa-solid fa-key"></i> OAuth2 / SSO</button>
-                    <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('security')"><i class="fa-solid fa-shield-virus"></i> API Security</button>
-                  </div>
-
-                  <div class="ai-prompt-box-wrapper">
-                    <button type="button" class="btn-voice-mic" id="btnVoiceMic" title="Toggle Microphone Dictation (Speech to Text)">
-                      <i class="fa-solid fa-microphone"></i>
-                    </button>
-                    <textarea id="aiStoryPrompt" class="ai-chat-textarea" rows="2" placeholder="Tell AI what you tested or dictate steps via mic (e.g. 'I opened checkout, applied coupon SAVE20, verified 20% discount...')..."></textarea>
-                    <button type="button" class="btn-ai-send" id="generateAITestsBtn" title="Send to AI Assistant">
-                      <i class="fa-solid fa-paper-plane"></i>
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
+          </section>
 
-            <!-- Right Pane: Structured Extracted Test Cases Studio -->
-            <div class="ai-output-card">
-              <div class="output-header">
-                <div>
-                  <h3 style="margin: 0; font-size: 0.95rem;"><i class="fa-solid fa-table-list text-cyan"></i> Extracted Test Specifications</h3>
-                  <span class="text-xs text-muted">Automatically structured with unique test IDs and actions</span>
-                </div>
-                <div class="d-flex align-center gap-2">
-                  <button class="btn btn-secondary btn-sm" id="btnCopyExcelTsv" style="display: none;" title="Copy in Tabular Format for Excel / Google Sheets">
-                    <i class="fa-solid fa-file-excel text-emerald"></i> Copy for Excel
-                  </button>
-                  <button class="btn btn-success btn-sm" id="importAllAITestsBtn" style="display: none;">
-                    <i class="fa-solid fa-database"></i> Save to Database (<span id="aiGeneratedCount">0</span>)
-                  </button>
-                </div>
+          <!-- QA VIEW 3: DEFECTS -->
+          <section class="view-panel" id="view-defects">
+            <div class="view-header">
+              <div>
+                <h1 class="view-title">Defects & Bug Tracking</h1>
+                <p class="view-subtitle">Monitor defect lifecycles, assignees, and real-time developer re-test updates.
+                </p>
               </div>
-
-              <div class="ai-results-viewport" id="aiResultsViewport">
-                <div class="ai-idle-placeholder" id="aiIdlePlaceholder">
-                  <div class="ai-placeholder-icon"><i class="fa-solid fa-microphone-lines"></i></div>
-                  <h4>Ready for Voice Dictation & Natural Language</h4>
-                  <p>Turn on the microphone or type your testing narrative on the left. The AI will extract and structure test cases with preconditions, steps, expected results, and auto-generated IDs.</p>
-                </div>
-
-                <div class="ai-generating-loader" id="aiGeneratingLoader" style="display: none;">
-                  <div class="spinner-pulse"></div>
-                  <h4>Structuring test cases & assigning test IDs...</h4>
-                </div>
-
-                <div class="generated-cards-list" id="generatedCardsList" style="display: none;"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- QA VIEW 6: SUITES -->
-        <section class="view-panel" id="view-suites">
-          <div class="view-header">
-            <div>
-              <h1 class="view-title">Test Suites & Feature Modules</h1>
-              <p class="view-subtitle">Organize your test repository into hierarchical test suites and feature domains.</p>
-            </div>
-            <div class="view-actions">
-              <button class="btn btn-primary btn-sm" id="createSuiteModalBtn"><i class="fa-solid fa-folder-plus"></i> Create New Suite</button>
-            </div>
-          </div>
-          <div class="suites-grid-cards" id="suitesGridCards"></div>
-        </section>
-
-        <!-- QA VIEW: EMPLOYEE DIRECTORY -->
-        <section class="view-panel" id="view-dev-approvals">
-          <div class="view-header">
-            <div>
-              <div class="dev-header-badge"><i class="fa-solid fa-users"></i> Employees &amp; Access Control</div>
-              <h1 class="view-title">Employee Directory &amp; Workspace Team</h1>
-              <p class="view-subtitle">Explore team roster, view assigned project distribution across testers &amp; developers, and review workspace permissions.</p>
-            </div>
-            <div class="view-actions">
-              <button class="btn btn-secondary btn-sm" id="refreshApprovalsBtn"><i class="fa-solid fa-arrows-rotate"></i> Refresh Roster</button>
-            </div>
-          </div>
-
-          <!-- Approvals KPI summary -->
-          <div class="kpi-grid mb-4">
-            <div class="kpi-card card-glow-emerald">
-              <div class="kpi-header">
-                <span class="kpi-title">Active Workspace Members</span>
-                <span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-user-check"></i></span>
-              </div>
-              <div class="kpi-body">
-                <span class="kpi-value text-emerald" id="kpiActiveTestersCount">2</span>
-                <span class="kpi-trend trend-up">Authorized Team</span>
+              <div class="view-actions">
+                <button class="btn btn-danger btn-sm" id="createNewBugBtn"><i class="fa-solid fa-plus"></i> Report New
+                  Defect</button>
               </div>
             </div>
 
-            <div class="kpi-card card-glow-cyan">
-              <div class="kpi-header">
-                <span class="kpi-title">Active Projects</span>
-                <span class="kpi-icon-badge icon-cyan"><i class="fa-solid fa-folder-tree"></i></span>
+            <div class="kpi-grid">
+              <div class="kpi-card card-glow-rose">
+                <div class="kpi-header"><span class="kpi-title">Open Defects</span><span
+                    class="kpi-icon-badge icon-rose"><i class="fa-solid fa-bug"></i></span></div>
+                <div class="kpi-body"><span class="kpi-value text-rose" id="openBugsCount">0</span><span
+                    class="kpi-trend trend-down">Needs Resolution</span></div>
               </div>
-              <div class="kpi-body">
-                <span class="kpi-value text-cyan" id="kpiActiveProjectsCount">4</span>
-                <span class="kpi-trend trend-up">In Flight</span>
+              <div class="kpi-card card-glow-amber">
+                <div class="kpi-header"><span class="kpi-title">Critical Blockers</span><span
+                    class="kpi-icon-badge icon-amber"><i class="fa-solid fa-fire"></i></span></div>
+                <div class="kpi-body"><span class="kpi-value text-amber" id="criticalBugsCount">0</span><span
+                    class="kpi-trend trend-neutral">P0 Severity</span></div>
+              </div>
+              <div class="kpi-card card-glow-indigo">
+                <div class="kpi-header"><span class="kpi-title">Ready for QA Re-Test</span><span
+                    class="kpi-icon-badge icon-indigo"><i class="fa-solid fa-flask"></i></span></div>
+                <div class="kpi-body"><span class="kpi-value text-primary" id="readyForRetestCount">0</span><span
+                    class="kpi-trend trend-up">Fixed by Dev</span></div>
+              </div>
+              <div class="kpi-card card-glow-emerald">
+                <div class="kpi-header"><span class="kpi-title">Resolved & Verified</span><span
+                    class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-circle-check"></i></span></div>
+                <div class="kpi-body"><span class="kpi-value text-emerald" id="resolvedBugsCount">0</span><span
+                    class="kpi-trend trend-up">Closed</span></div>
               </div>
             </div>
 
-            <div class="kpi-card card-glow-amber">
-              <div class="kpi-header">
-                <span class="kpi-title">Pending Approvals</span>
-                <span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-clock-rotate-left"></i></span>
+            <div class="repo-filter-bar mt-4">
+              <div class="uiverse-search-wrapper" style="width: auto;">
+                <input type="text" name="text" id="bugSearchInput"
+                  placeholder="Search defects by title, ID, assignee..." class="input" autocomplete="off" />
               </div>
-              <div class="kpi-body">
-                <span class="kpi-value text-amber" id="kpiPendingApprovalsCount">0</span>
-                <span class="kpi-trend trend-neutral">Awaiting Dev Signoff</span>
+              <div class="filter-group">
+                <select id="filterBugSeverity" class="nexus-select">
+                  <option value="all">All Severities</option>
+                  <option value="Critical">Critical</option>
+                  <option value="Major">Major</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Minor">Minor</option>
+                </select>
+                <select id="filterBugStatus" class="nexus-select">
+                  <option value="all">All Statuses</option>
+                  <option value="Open">Open</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="In Dev / Fixing">In Dev / Fixing</option>
+                  <option value="Cannot Reproduce">Cannot Reproduce</option>
+                  <option value="Ready for Re-Test">Ready for Re-Test</option>
+                  <option value="Fixed - Ready for QA">Fixed - Ready for QA</option>
+                  <option value="Verified &amp; Closed">Verified &amp; Closed</option>
+                  <option value="Won't Fix / By Design">Won't Fix / By Design</option>
+                  <option value="Resolved & Verified">Resolved & Verified</option>
+                </select>
               </div>
             </div>
-          </div>
 
-          <!-- Pending Requests Container -->
-          <div class="dashboard-card mb-4" id="pendingApprovalsCard" style="display: none;">
-            <div class="card-header">
-              <div class="card-title-group">
-                <h3><i class="fa-solid fa-user-clock text-amber"></i> Pending Workspace Authorization Requests</h3>
-                <p class="card-subtitle">Members who completed email OTP verification and require Administrator authorization</p>
-              </div>
-            </div>
-            <div class="card-body p-0">
-              <div id="pendingApprovalsListContainer"></div>
-            </div>
-          </div>
-
-          <!-- Authorized Team Roster -->
-          <div class="dashboard-card">
-            <div class="card-header">
-              <div class="card-title-group">
-                <h3><i class="fa-solid fa-users text-primary"></i> Team Roster &amp; Assigned Projects</h3>
-                <p class="card-subtitle">Manage workspace authorization, roles, and view project workload for all active developers and QA testers</p>
-              </div>
-            </div>
-            <div class="card-body p-0">
+            <div class="table-card mt-3">
               <div class="table-responsive">
-                <table class="nexus-table" id="teamRosterTable">
-                  <thead id="teamRosterThead">
+                <table class="nexus-table">
+                  <thead>
                     <tr>
-                      <th>Team Member</th>
-                      <th>Email</th>
-                      <th>Specialty / Role</th>
-                      <th>Assigned Projects</th>
-                      <th class="senior-dev-col">OTP Status</th>
-                      <th class="senior-dev-col">Workspace Access</th>
-                      <th class="senior-dev-col">Approved By</th>
-                      <th class="senior-dev-col" width="160">Actions</th>
+                      <th width="100">Bug ID</th>
+                      <th>Summary</th>
+                      <th width="110">Severity</th>
+                      <th width="110">Priority</th>
+                      <th width="120">Linked Test</th>
+                      <th width="150">Assignee</th>
+                      <th width="150">Status</th>
+                      <th width="160">Actions</th>
                     </tr>
                   </thead>
-                  <tbody id="authorizedTestersTableBody"></tbody>
+                  <tbody id="defectsTableBody"></tbody>
                 </table>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <!-- VIEW: USER PROFILE & ACCOUNT SETTINGS -->
-        <section class="view-panel" id="view-settings">
-          <div class="view-header">
-            <div>
-              <div class="dev-header-badge"><i class="fa-solid fa-id-card"></i> User Profile & Account</div>
-              <h1 class="view-title">Profile & Personal Credentials</h1>
-              <p class="view-subtitle">Manage your personal identity, contact details, profile photo, and QA / Dev designation.</p>
-            </div>
-          </div>
-
-          <div class="profile-settings-grid">
-            <!-- Left Card: Profile Edit Form -->
-            <div class="profile-card-main">
-              <div class="d-flex justify-between align-center mb-3">
-                <div class="d-flex align-center gap-2">
-                  <div class="avatar-ring avatar-qa" id="profileFormAvatarPreview" style="width:44px; height:44px; font-size:15px; border-radius:50%; background-size:cover; background-position:center; display:flex; align-items:center; justify-content:center;">
-                    <span id="profileFormAvatarInitials">QA</span>
-                  </div>
-                  <div>
-                    <h3 class="m-0" id="profileFormHeaderName">Edit Profile</h3>
-                    <p class="text-xs text-muted m-0">Update your account credentials and contact details</p>
-                  </div>
-                </div>
-                <span class="badge badge-passed" id="profileRoleBadgeHeader"><i class="fa-solid fa-shield-halved"></i> Active</span>
-              </div>
-
-              <!-- Upload Photo Section -->
-              <div class="form-group mb-4 profile-photo-upload-zone">
-                <label class="form-label font-semibold">Profile Photo</label>
-                <div class="d-flex align-center gap-3 mt-1">
-                  <div class="profile-avatar-large" id="profileLargeAvatar" style="width:72px; height:72px; border-radius:50%; background: linear-gradient(135deg, #6366f1, #06b6d4); display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; font-weight:700; overflow:hidden; border:2px solid rgba(255,255,255,0.15); box-shadow:0 4px 12px rgba(0,0,0,0.15); background-size:cover; background-position:center;">
-                    <span id="profileLargeInitials">QA</span>
-                    <img id="profileLargeImg" src="" alt="Profile Photo" style="display:none; width:100%; height:100%; object-fit:cover;">
-                  </div>
-                  <div class="d-flex flex-column gap-1">
-                    <div class="d-flex gap-2">
-                      <label class="btn btn-secondary btn-sm" style="cursor:pointer; margin:0;" for="profilePhotoInput">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo
-                      </label>
-                      <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;">
-                      <div class="styled-delete-wrapper btn-sm" id="profileRemovePhotoWrap" style="display:none;">
-                        <button type="button" class="button" id="profileRemovePhotoBtn" title="Remove Profile Photo">
-                          <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
-                        </button>
-                      </div>
-                    </div>
-                    <span class="text-xs text-muted">Supports JPG, PNG, WEBP or GIF (Max 2MB)</span>
-                  </div>
-                </div>
-              </div>
-
-              <form id="userProfileForm">
-                <!-- Full Name -->
-                <div class="form-group mb-3">
-                  <label for="profileNameInput" class="form-label font-semibold">Full Name <span class="text-rose">*</span></label>
-                  <div class="input-with-icon">
-                    <i class="fa-solid fa-user input-icon"></i>
-                    <input type="text" id="profileNameInput" class="nexus-input pl-5" placeholder="e.g. Alex Morgan" required>
-                  </div>
-                </div>
-
-                <!-- Email ID -->
-                <div class="form-group mb-3">
-                  <label for="profileEmailInput" class="form-label font-semibold">Email ID <span class="text-rose">*</span></label>
-                  <div class="input-with-icon">
-                    <i class="fa-solid fa-envelope input-icon"></i>
-                    <input type="email" id="profileEmailInput" class="nexus-input font-mono pl-5" placeholder="e.g. user@nexusqa.io" required>
-                  </div>
-                </div>
-
-                <!-- Phone Number with 10 numbers validation -->
-                <div class="form-group mb-3">
-                  <label for="profilePhoneInput" class="form-label font-semibold">
-                    Phone Number <span class="text-rose">*</span>
-                    <span class="text-xs text-muted font-normal">(10 digits required)</span>
-                  </label>
-                  <div class="input-with-icon">
-                    <i class="fa-solid fa-phone input-icon"></i>
-                    <input type="tel" id="profilePhoneInput" class="nexus-input font-mono pl-5" placeholder="Enter 10-digit phone number (e.g. 9876543210)" maxlength="10">
-                  </div>
-                  <div class="phone-validation-feedback mt-1">
-                    <span id="profilePhoneError" class="text-xs text-rose" style="display:none;">
-                      <i class="fa-solid fa-circle-exclamation"></i> Must be exactly 10 digits
-                    </span>
-                    <span id="profilePhoneValid" class="text-xs text-emerald" style="display:none;">
-                      <i class="fa-solid fa-circle-check"></i> Valid 10-digit number
-                    </span>
-                    <span id="profilePhoneHint" class="text-xs text-muted">
-                      Please enter a valid 10-digit mobile number
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Designation (Read-Only, Assigned by Super Admin) & Department -->
-                <div class="form-row mb-3">
-                  <div class="form-group flex-1">
-                    <label for="profileDesignationReadonly" class="form-label font-semibold">
-                      Designation <i class="fa-solid fa-lock text-xs text-muted ml-1" title="Assigned by Super Admin"></i>
-                    </label>
-                    <div class="input-with-icon">
-                      <i class="fa-solid fa-lock input-icon text-muted"></i>
-                      <input type="text" id="profileDesignationReadonly" class="nexus-input pl-5 profile-readonly-designation" value="Pending Admin Assignment" readonly aria-readonly="true">
-                    </div>
-                    <span class="text-xs text-muted d-block mt-1"><i class="fa-solid fa-shield-halved text-primary"></i> Assigned by Super Admin</span>
-                  </div>
-                  <div class="form-group flex-1">
-                    <label for="profileDepartmentInput" class="form-label font-semibold">Department</label>
-                    <div class="input-with-icon">
-                      <i class="fa-solid fa-building input-icon"></i>
-                      <input type="text" id="profileDepartmentInput" class="nexus-input pl-5" placeholder="e.g. Quality Assurance / Engineering">
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Bio -->
-                <div class="form-group mb-4">
-                  <label for="profileBioInput" class="form-label font-semibold">Bio / Focus Areas</label>
-                  <textarea id="profileBioInput" class="nexus-textarea" rows="2" placeholder="Describe your role, testing focus, or team specialties..."></textarea>
-                </div>
-
-                <!-- Save Action -->
-                <div class="d-flex align-center gap-2 mt-4 pt-2" style="border-top: 1px solid var(--border-color, rgba(255,255,255,0.08));">
-                  <button type="button" class="btn btn-primary flex-1" id="saveProfileBtn">
-                    <i class="fa-solid fa-floppy-disk"></i> Save Profile Details
-                  </button>
-                  <button type="button" class="btn btn-secondary" id="resetProfileFormBtn" title="Reset changes">
-                    <i class="fa-solid fa-rotate-left"></i> Reset
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            <!-- Right Card: Live ID Card & Profile Card Preview -->
-            <div class="profile-preview-card">
-              <div class="d-flex justify-between align-center mb-3">
-                <h3 class="m-0"><i class="fa-solid fa-address-card text-primary"></i> Live Identity Badge</h3>
-                <span class="badge badge-version">Real-Time Preview</span>
-              </div>
-              <p class="text-muted text-sm mb-4">This badge reflects how your profile card and credentials appear to team members across NexusQA.</p>
-
-              <div id="profileFlipCardMount" class="profile-flipcard-mount"></div>
-            </div>
-          </div>
-        </section>
-
-        <!-- QA & DEV CONFERENCE VIEW -->
-        <section class="view-panel" id="view-conference">
-          <!-- 1. PROJECTS VIEW (Default View) -->
-          <div id="conferenceProjectsSection">
+          <!-- QA VIEW 5: VOICE & AI CHAT TEST CREATOR STUDIO -->
+          <section class="view-panel" id="view-ai-generator">
             <div class="view-header">
               <div>
                 <div class="d-flex align-center gap-2 mb-1">
-                  <span class="badge badge-primary"><i class="fa-solid fa-satellite-dish"></i> Live Conference Hub</span>
-                  <span class="badge badge-passed" id="conferenceLiveStatus"><i class="fa-solid fa-circle status-dot-online"></i> Cross-Portal Sync</span>
+                  <span class="badge badge-ai"><i class="fa-solid fa-sparkles"></i> AI Assistant</span>
+                  <span class="badge badge-version">Manual Test Case Creator</span>
                 </div>
-                <h1 class="view-title">Dev ↔ QA Conference Projects</h1>
-                <p class="view-subtitle">Select a project channel to collaborate on bug triage, repro steps, and hotfix verification in real time.</p>
+                <h1 class="view-title">Voice & AI Manual Test Case Creator</h1>
+                <p class="view-subtitle">Speak or type your manual test steps, observations, and expected results. The
+                  assistant structures them into formal manual test cases ready for your log repository.</p>
               </div>
               <div class="view-actions">
-                <button type="button" class="btn btn-secondary btn-sm" id="conferenceRefreshProjectsBtn" title="Refresh projects"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
-                <button type="button" class="btn btn-primary btn-sm" id="btnOpenNewProjectModal" title="Create a new Conference Project channel">
-                  <i class="fa-solid fa-plus"></i>
-                  <span>New Project</span>
+                <button class="btn btn-outline btn-sm" id="btnClearAiChat" title="Clear Chat History">
+                  <i class="fa-solid fa-trash-can"></i> Clear Chat
                 </button>
               </div>
             </div>
 
-            <!-- Project Filters and Search Bar -->
-            <div class="conference-filter-bar">
-              <div class="conference-search-box">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="conferenceProjectSearchInput" placeholder="Filter projects by title, scope, or tag..." />
-              </div>
-              <div class="conference-category-pills" id="conferenceCategoryPills">
-                <button type="button" class="cat-pill active" data-cat="all">All Channels</button>
-                <button type="button" class="cat-pill" data-cat="Payments">Payments</button>
-                <button type="button" class="cat-pill" data-cat="Security">Security</button>
-                <button type="button" class="cat-pill" data-cat="AI & NLP">AI &amp; NLP</button>
-                <button type="button" class="cat-pill" data-cat="Frontend">Frontend</button>
-              </div>
-            </div>
-
-            <!-- Project Cards Grid -->
-            <div class="conference-projects-grid" id="conferenceProjectsGrid">
-              <!-- Rendered via JS -->
-            </div>
-          </div>
-
-          <!-- 2. PROJECT CHAT ROOM VIEW (Active when a project card is opened) -->
-          <div id="conferenceChatSection" style="display: none;">
-            <div class="view-header">
-              <div class="d-flex align-center gap-3">
-                <button type="button" class="btn btn-secondary btn-sm" id="btnBackToProjects" title="Back to All Projects">
-                  <i class="fa-solid fa-arrow-left mr-1"></i> All Projects
-                </button>
-                <div>
-                  <div class="d-flex align-center gap-2 mb-1">
-                    <span class="badge badge-primary" id="chatProjectCatBadge">Payments</span>
-                    <span class="badge badge-passed"><i class="fa-solid fa-circle status-dot-online"></i> Live Synchronized</span>
-                  </div>
-                  <h1 class="view-title" id="chatProjectTitle">E-Commerce Checkout &amp; Payments</h1>
-                  <p class="view-subtitle" id="chatProjectSubtitle">Real-time collaboration between QA Engineers &amp; Developers</p>
-                </div>
-              </div>
-              <div class="view-actions">
-                <button type="button" class="btn btn-outline btn-sm" id="btnViewProjectMembers" title="View all people allotted to this project">
-                  <i class="fa-solid fa-users text-primary"></i> <span>Allotted Team (<strong id="chatProjectMemberCount">0</strong>)</span>
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="conferenceRefreshBtn" title="Refresh messages"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
-                <button type="button" class="btn btn-ghost btn-sm" id="conferenceClearBtn" title="Clear chat history for this project (Senior Developers only)" style="display: none;"><i class="fa-solid fa-broom"></i> Clear Room</button>
-                <button type="button" class="btn btn-outline-danger btn-sm" id="conferenceDeleteProjectBtn" title="Permanently Delete this Project Channel (Senior Developers only)" style="display: none;"><i class="fa-solid fa-trash-can mr-1"></i> Delete Project</button>
-              </div>
-            </div>
-
-            <!-- Conference Main Card -->
-            <div class="conference-card">
-              <!-- Channel Sub-Header -->
-              <div class="conference-channel-bar">
-                <div class="conference-channel-info">
-                  <div class="conference-channel-icon" id="chatProjectIcon"><i class="fa-solid fa-comments"></i></div>
-                  <div>
-                    <div class="conference-channel-name" id="chatChannelSlug"># project-channel</div>
-                    <div class="conference-channel-topic" id="chatProjectTopic">Collaborative triage, immediate blockers, test verification &amp; hotfix notifications</div>
-                  </div>
-                </div>
-                <div class="conference-channel-right-controls d-flex align-center gap-2">
-                  <button type="button" class="btn btn-primary btn-sm btn-launch-meeting" id="btnLaunchMeeting" title="Launch live team sync meeting for this project">
-                    <i class="fa-solid fa-video"></i> <span>Launch Meeting</span>
-                  </button>
-                  <div class="conference-participants-badge" id="chatParticipantsBadgeBtn" title="Click to view all allotted team members" style="cursor: pointer;">
-                    <div class="participant-avatars" id="chatChannelAvatarsList">
-                      <span class="p-avatar qa-avatar" title="QA Lead (Tester)">QA</span>
-                      <span class="p-avatar dev-avatar" title="Developer">DV</span>
+            <div class="ai-workspace-grid">
+              <!-- Left Pane: Conversational Chatbot & Voice Dictation Interface -->
+              <div class="ai-input-card ai-chat-interface-card">
+                <div class="card-header">
+                  <div class="d-flex align-center gap-2">
+                    <div class="ai-avatar-icon">
+                      <i class="fa-solid fa-brain text-primary"></i>
                     </div>
-                    <span class="participant-text"><strong id="conferenceOnlineCount">0</strong> allotted</span>
-                    <i class="fa-solid fa-chevron-right ml-1 text-2xs" style="opacity: 0.7;"></i>
+                    <div>
+                      <h3 style="margin: 0; font-size: 0.95rem;">NexusQA AI Assistant</h3>
+                      <span class="text-xs text-muted">Powered by Gemini QA Engine</span>
+                    </div>
+                  </div>
+                  <div class="d-flex align-center gap-2">
+                    <label for="aiTargetSuiteSelect" class="text-xs text-muted mb-0">Target Suite:</label>
+                    <select id="aiTargetSuiteSelect" class="nexus-select"
+                      style="padding: 0.25rem 0.5rem; font-size: 0.78rem; width: auto;"></select>
+                  </div>
+                </div>
+
+                <div class="card-body p-0">
+                  <!-- Live Chat Message Stream -->
+                  <div class="ai-chat-history" id="aiChatHistory">
+                    <div class="chat-message chat-msg-assistant">
+                      <div class="chat-msg-avatar"><i class="fa-solid fa-robot"></i></div>
+                      <div class="chat-msg-bubble">
+                        <p><strong>Hello Alex!</strong> How can I help you document your testing today?</p>
+                        <p class="mb-0">You can <strong>turn on the microphone</strong> and speak your test steps
+                          naturally, or type out what you did in chat. I will structure everything into formal test
+                          cases with step numbers, auto-assign <strong>Test IDs</strong>, and let you <strong>copy
+                            directly into Excel</strong> or <strong>save into your database</strong>.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Voice Dictation Active Waveform Banner -->
+                  <div class="voice-listening-banner" id="voiceListeningBanner" style="display: none;">
+                    <div class="voice-detector-loader">
+                      <div class="loading">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    </div>
+                    <div class="voice-listening-text">
+                      <strong>Listening to your voice...</strong> Speak your testing steps naturally. Click mic to
+                      finish.
+                    </div>
+                    <button type="button" class="btn btn-danger btn-xs" id="btnStopVoiceRec">Stop Dictation</button>
+                  </div>
+
+                  <!-- Chat & Voice Input Controls -->
+                  <div class="ai-chat-input-container">
+                    <!-- Quick Prompt Presets -->
+                    <div class="ai-preset-chips mb-2">
+                      <span class="preset-label text-xs text-muted"><i class="fa-solid fa-bolt text-amber"></i> Quick
+                        Scenarios:</span>
+                      <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('checkout')"><i
+                          class="fa-solid fa-credit-card"></i> Stripe Checkout</button>
+                      <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('oauth')"><i
+                          class="fa-solid fa-key"></i> OAuth2 / SSO</button>
+                      <button type="button" class="ai-preset-chip" onclick="window.setAiPreset('security')"><i
+                          class="fa-solid fa-shield-virus"></i> API Security</button>
+                    </div>
+
+                    <div class="ai-prompt-box-wrapper">
+                      <button type="button" class="btn-voice-mic" id="btnVoiceMic"
+                        title="Toggle Microphone Dictation (Speech to Text)">
+                        <i class="fa-solid fa-microphone"></i>
+                      </button>
+                      <textarea id="aiStoryPrompt" class="ai-chat-textarea" rows="2"
+                        placeholder="Tell AI what you tested or dictate steps via mic (e.g. 'I opened checkout, applied coupon SAVE20, verified 20% discount...')..."></textarea>
+                      <button type="button" class="btn-ai-send" id="generateAITestsBtn" title="Send to AI Assistant">
+                        <i class="fa-solid fa-paper-plane"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Inline Google Meet Link Share Banner (Shown when Launch Meeting is clicked) -->
-              <div class="conference-meet-banner" id="conferenceMeetShareBanner" style="display: none;">
-                <div class="meet-banner-top">
-                  <div class="meet-banner-title">
-                    <span class="meet-banner-badge"><i class="fa-solid fa-video"></i> Google Meet Tab Opened</span>
-                    <span>Paste the generated Google Meet link (<code>https://meet.google.com/...</code>) and share it with your team:</span>
+              <!-- Right Pane: Structured Extracted Test Cases Studio -->
+              <div class="ai-output-card">
+                <div class="output-header">
+                  <div>
+                    <h3 style="margin: 0; font-size: 0.95rem;"><i class="fa-solid fa-table-list text-cyan"></i>
+                      Extracted Test Specifications</h3>
+                    <span class="text-xs text-muted">Automatically structured with unique test IDs and actions</span>
                   </div>
-                  <button type="button" class="btn-icon meet-banner-close" id="cancelMeetShareBtn" title="Dismiss">
-                    <i class="fa-solid fa-xmark"></i>
-                  </button>
-                </div>
-                <form class="meet-banner-form" id="conferenceMeetShareForm">
-                  <div class="meet-banner-input-wrap">
-                    <i class="fa-solid fa-link"></i>
-                    <input type="text" id="meetLinkInput" class="meet-banner-input" placeholder="https://meet.google.com/abc-defg-hij" autocomplete="off" />
+                  <div class="d-flex align-center gap-2">
+                    <button class="btn btn-secondary btn-sm" id="btnCopyExcelTsv" style="display: none;"
+                      title="Copy in Tabular Format for Excel / Google Sheets">
+                      <i class="fa-solid fa-file-excel text-emerald"></i> Copy for Excel
+                    </button>
+                    <button class="btn btn-success btn-sm" id="importAllAITestsBtn" style="display: none;">
+                      <i class="fa-solid fa-database"></i> Save to Database (<span id="aiGeneratedCount">0</span>)
+                    </button>
                   </div>
-                  <button type="submit" class="btn btn-primary btn-sm meet-share-submit-btn" id="shareMeetWithTeamBtn">
-                    <i class="fa-solid fa-paper-plane mr-1"></i> Share with Team
-                  </button>
-                </form>
-              </div>
-
-              <!-- Messages Stream Container -->
-              <div class="conference-messages-stream" id="conferenceMessagesContainer">
-                <!-- Rendered via JS -->
-              </div>
-
-              <!-- Quick Action Suggestion Chips -->
-              <div class="conference-quick-chips">
-                <span class="chips-label"><i class="fa-solid fa-bolt text-amber"></i> Quick Prompts:</span>
-                <button type="button" class="quick-chip" data-text="🚨 Critical blocker identified! Please inspect high-priority defect.">🚨 Critical blocker</button>
-                <button type="button" class="quick-chip" data-text="🔍 Repro steps confirmed: cleared cache &amp; re-tested on staging.">🔍 Repro steps confirmed</button>
-                <button type="button" class="quick-chip" data-text="💻 Dev: Hotfix pushed to branch. Ready for QA re-test.">💻 Fix deployed</button>
-                <button type="button" class="quick-chip" data-text="✅ Test passed in current build. Closing defect ticket.">✅ Verified &amp; passed</button>
-                <button type="button" class="quick-chip" data-text="📸 Requesting HAR log trace / full screenshot for investigation.">📸 Requesting logs</button>
-              </div>
-
-              <!-- Message Input Area -->
-              <div class="conference-input-area">
-                <div class="conference-sender-indicator" id="conferenceSenderIndicator">
-                  <span class="sender-avatar" id="conferenceUserAvatar">AM</span>
-                  <span class="sender-name" id="conferenceUserName">Posting as Alex Morgan</span>
-                  <span class="badge badge-version" id="conferenceUserRoleBadge">QA Lead</span>
                 </div>
-                <form class="conference-form" id="conferenceForm">
-                  <div class="conference-input-wrapper">
-                    <textarea id="conferenceInput" class="conference-textarea" placeholder="Type a message to Devs &amp; Testers in this project... (Press Enter to send, Shift+Enter for new line)" rows="1"></textarea>
-                    <button type="submit" class="conference-send-btn" id="conferenceSendBtn" title="Send Message (Enter)">
-                      <i class="fa-solid fa-paper-plane"></i>
-                      <span>Send</span>
+
+                <div class="ai-results-viewport" id="aiResultsViewport">
+                  <div class="ai-idle-placeholder" id="aiIdlePlaceholder">
+                    <div class="ai-placeholder-icon"><i class="fa-solid fa-microphone-lines"></i></div>
+                    <h4>Ready for Voice Dictation & Natural Language</h4>
+                    <p>Turn on the microphone or type your testing narrative on the left. The AI will extract and
+                      structure test cases with preconditions, steps, expected results, and auto-generated IDs.</p>
+                  </div>
+
+                  <div class="ai-generating-loader" id="aiGeneratingLoader" style="display: none;">
+                    <div class="spinner-pulse"></div>
+                    <h4>Structuring test cases & assigning test IDs...</h4>
+                  </div>
+
+                  <div class="generated-cards-list" id="generatedCardsList" style="display: none;"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- QA VIEW 6: SUITES -->
+          <section class="view-panel" id="view-suites">
+            <div class="view-header">
+              <div>
+                <h1 class="view-title">Test Suites & Feature Modules</h1>
+                <p class="view-subtitle">Organize your test repository into hierarchical test suites and feature
+                  domains.</p>
+              </div>
+              <div class="view-actions">
+                <button class="btn btn-primary btn-sm" id="createSuiteModalBtn"><i class="fa-solid fa-folder-plus"></i>
+                  Create New Suite</button>
+              </div>
+            </div>
+            <div class="suites-folder-grid-host" id="suitesGridCards"></div>
+          </section>
+
+          <!-- QA VIEW: EMPLOYEE DIRECTORY -->
+          <section class="view-panel" id="view-dev-approvals">
+            <div class="view-header">
+              <div>
+                <div class="dev-header-badge"><i class="fa-solid fa-users"></i> Employees &amp; Access Control</div>
+                <h1 class="view-title">Employee Directory &amp; Workspace Team</h1>
+                <p class="view-subtitle">Explore team roster, view assigned project distribution across testers &amp;
+                  developers, and review workspace permissions.</p>
+              </div>
+              <div class="view-actions">
+                <button class="btn btn-secondary btn-sm" id="refreshApprovalsBtn"><i
+                    class="fa-solid fa-arrows-rotate"></i> Refresh Roster</button>
+              </div>
+            </div>
+
+            <!-- Approvals KPI summary -->
+            <div class="kpi-grid mb-4">
+              <div class="kpi-card card-glow-emerald">
+                <div class="kpi-header">
+                  <span class="kpi-title">Active Workspace Members</span>
+                  <span class="kpi-icon-badge icon-emerald"><i class="fa-solid fa-user-check"></i></span>
+                </div>
+                <div class="kpi-body">
+                  <span class="kpi-value text-emerald" id="kpiActiveTestersCount">2</span>
+                  <span class="kpi-trend trend-up">Authorized Team</span>
+                </div>
+              </div>
+
+              <div class="kpi-card card-glow-cyan">
+                <div class="kpi-header">
+                  <span class="kpi-title">Active Projects</span>
+                  <span class="kpi-icon-badge icon-cyan"><i class="fa-solid fa-folder-tree"></i></span>
+                </div>
+                <div class="kpi-body">
+                  <span class="kpi-value text-cyan" id="kpiActiveProjectsCount">4</span>
+                  <span class="kpi-trend trend-up">In Flight</span>
+                </div>
+              </div>
+
+              <div class="kpi-card card-glow-amber">
+                <div class="kpi-header">
+                  <span class="kpi-title">Pending Approvals</span>
+                  <span class="kpi-icon-badge icon-amber"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                </div>
+                <div class="kpi-body">
+                  <span class="kpi-value text-amber" id="kpiPendingApprovalsCount">0</span>
+                  <span class="kpi-trend trend-neutral">Awaiting Dev Signoff</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pending Requests Container -->
+            <div class="dashboard-card mb-4" id="pendingApprovalsCard" style="display: none;">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h3><i class="fa-solid fa-user-clock text-amber"></i> Pending Workspace Authorization Requests</h3>
+                  <p class="card-subtitle">Members who completed email OTP verification and require Administrator
+                    authorization</p>
+                </div>
+              </div>
+              <div class="card-body p-0">
+                <div id="pendingApprovalsListContainer"></div>
+              </div>
+            </div>
+
+            <!-- Authorized Team Roster -->
+            <div class="dashboard-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h3><i class="fa-solid fa-users text-primary"></i> Team Roster &amp; Assigned Projects</h3>
+                  <p class="card-subtitle">Manage workspace authorization, roles, and view project workload for all
+                    active developers and QA testers</p>
+                </div>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="nexus-table" id="teamRosterTable">
+                    <thead id="teamRosterThead">
+                      <tr>
+                        <th>Team Member</th>
+                        <th>Email</th>
+                        <th>Specialty / Role</th>
+                        <th>Assigned Projects</th>
+                        <th class="senior-dev-col">OTP Status</th>
+                        <th class="senior-dev-col">Workspace Access</th>
+                        <th class="senior-dev-col">Approved By</th>
+                        <th class="senior-dev-col" width="160">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="authorizedTestersTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- VIEW: USER PROFILE & ACCOUNT SETTINGS -->
+          <section class="view-panel" id="view-settings">
+            <div class="view-header">
+              <div>
+                <div class="dev-header-badge"><i class="fa-solid fa-id-card"></i> User Profile & Account</div>
+                <h1 class="view-title">Profile & Personal Credentials</h1>
+                <p class="view-subtitle">Manage your personal identity, contact details, profile photo, and QA / Dev
+                  designation.</p>
+              </div>
+            </div>
+
+            <div class="profile-settings-grid">
+              <!-- Left Card: Profile Edit Form -->
+              <div class="profile-card-main">
+                <div class="d-flex justify-between align-center mb-3">
+                  <div class="d-flex align-center gap-2">
+                    <div class="avatar-ring avatar-qa" id="profileFormAvatarPreview"
+                      style="width:44px; height:44px; font-size:15px; border-radius:50%; background-size:cover; background-position:center; display:flex; align-items:center; justify-content:center;">
+                      <span id="profileFormAvatarInitials">QA</span>
+                    </div>
+                    <div>
+                      <h3 class="m-0" id="profileFormHeaderName">Edit Profile</h3>
+                      <p class="text-xs text-muted m-0">Update your account credentials and contact details</p>
+                    </div>
+                  </div>
+                  <span class="badge badge-passed" id="profileRoleBadgeHeader"><i class="fa-solid fa-shield-halved"></i>
+                    Active</span>
+                </div>
+
+                <!-- Upload Photo Section -->
+                <div class="form-group mb-4 profile-photo-upload-zone">
+                  <label class="form-label font-semibold">Profile Photo</label>
+                  <div class="d-flex align-center gap-3 mt-1">
+                    <div class="profile-avatar-large" id="profileLargeAvatar"
+                      style="width:72px; height:72px; border-radius:50%; background: linear-gradient(135deg, #6366f1, #06b6d4); display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; font-weight:700; overflow:hidden; border:2px solid rgba(255,255,255,0.15); box-shadow:0 4px 12px rgba(0,0,0,0.15); background-size:cover; background-position:center;">
+                      <span id="profileLargeInitials">QA</span>
+                      <img id="profileLargeImg" src="" alt="Profile Photo"
+                        style="display:none; width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div class="d-flex flex-column gap-1">
+                      <div class="d-flex gap-2">
+                        <label class="btn btn-secondary btn-sm" style="cursor:pointer; margin:0;"
+                          for="profilePhotoInput">
+                          <i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo
+                        </label>
+                        <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;">
+                        <div class="styled-delete-wrapper btn-sm" id="profileRemovePhotoWrap" style="display:none;">
+                          <button type="button" class="button" id="profileRemovePhotoBtn" title="Remove Profile Photo">
+                            <svg viewBox="0 0 448 512" class="svgIcon">
+                              <path
+                                d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z">
+                              </path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <span class="text-xs text-muted">Supports JPG, PNG, WEBP or GIF (Max 2MB)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <form id="userProfileForm">
+                  <!-- Full Name -->
+                  <div class="form-group mb-3">
+                    <label for="profileNameInput" class="form-label font-semibold">Full Name <span
+                        class="text-rose">*</span></label>
+                    <div class="input-with-icon">
+                      <i class="fa-solid fa-user input-icon"></i>
+                      <input type="text" id="profileNameInput" class="nexus-input pl-5" placeholder="e.g. Alex Morgan"
+                        required>
+                    </div>
+                  </div>
+
+                  <!-- Email ID -->
+                  <div class="form-group mb-3">
+                    <label for="profileEmailInput" class="form-label font-semibold">Email ID <span
+                        class="text-rose">*</span></label>
+                    <div class="input-with-icon">
+                      <i class="fa-solid fa-envelope input-icon"></i>
+                      <input type="email" id="profileEmailInput" class="nexus-input font-mono pl-5"
+                        placeholder="e.g. user@nexusqa.io" required>
+                    </div>
+                  </div>
+
+                  <!-- Phone Number with 10 numbers validation -->
+                  <div class="form-group mb-3">
+                    <label for="profilePhoneInput" class="form-label font-semibold">
+                      Phone Number <span class="text-rose">*</span>
+                      <span class="text-xs text-muted font-normal">(10 digits required)</span>
+                    </label>
+                    <div class="input-with-icon">
+                      <i class="fa-solid fa-phone input-icon"></i>
+                      <input type="tel" id="profilePhoneInput" class="nexus-input font-mono pl-5"
+                        placeholder="Enter 10-digit phone number (e.g. 9876543210)" maxlength="10">
+                    </div>
+                    <div class="phone-validation-feedback mt-1">
+                      <span id="profilePhoneError" class="text-xs text-rose" style="display:none;">
+                        <i class="fa-solid fa-circle-exclamation"></i> Must be exactly 10 digits
+                      </span>
+                      <span id="profilePhoneValid" class="text-xs text-emerald" style="display:none;">
+                        <i class="fa-solid fa-circle-check"></i> Valid 10-digit number
+                      </span>
+                      <span id="profilePhoneHint" class="text-xs text-muted">
+                        Please enter a valid 10-digit mobile number
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Designation (Read-Only, Assigned by Super Admin) & Department -->
+                  <div class="form-row mb-3">
+                    <div class="form-group flex-1">
+                      <label for="profileDesignationReadonly" class="form-label font-semibold">
+                        Designation <i class="fa-solid fa-lock text-xs text-muted ml-1"
+                          title="Assigned by Super Admin"></i>
+                      </label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-lock input-icon text-muted"></i>
+                        <input type="text" id="profileDesignationReadonly"
+                          class="nexus-input pl-5 profile-readonly-designation" value="Pending Admin Assignment"
+                          readonly aria-readonly="true">
+                      </div>
+                      <span class="text-xs text-muted d-block mt-1"><i
+                          class="fa-solid fa-shield-halved text-primary"></i> Assigned by Super Admin</span>
+                    </div>
+                    <div class="form-group flex-1">
+                      <label for="profileDepartmentInput" class="form-label font-semibold">Department</label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-building input-icon"></i>
+                        <input type="text" id="profileDepartmentInput" class="nexus-input pl-5"
+                          placeholder="e.g. Quality Assurance / Engineering">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bio -->
+                  <div class="form-group mb-4">
+                    <label for="profileBioInput" class="form-label font-semibold">Bio / Focus Areas</label>
+                    <textarea id="profileBioInput" class="nexus-textarea" rows="2"
+                      placeholder="Describe your role, testing focus, or team specialties..."></textarea>
+                  </div>
+
+                  <!-- Save Action -->
+                  <div class="d-flex align-center gap-2 mt-4 pt-2"
+                    style="border-top: 1px solid var(--border-color, rgba(255,255,255,0.08));">
+                    <button type="button" class="btn btn-primary flex-1" id="saveProfileBtn">
+                      <i class="fa-solid fa-floppy-disk"></i> Save Profile Details
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="resetProfileFormBtn" title="Reset changes">
+                      <i class="fa-solid fa-rotate-left"></i> Reset
                     </button>
                   </div>
                 </form>
               </div>
-            </div>
-          </div>
-        </section>
 
-      </div>
-    </main>
+              <!-- Right Card: Live ID Card & Profile Card Preview -->
+              <div class="profile-preview-card">
+                <div class="d-flex justify-between align-center mb-3">
+                  <h3 class="m-0"><i class="fa-solid fa-address-card text-primary"></i> Live Identity Badge</h3>
+                  <span class="badge badge-version">Real-Time Preview</span>
+                </div>
+                <p class="text-muted text-sm mb-4">This badge reflects how your profile card and credentials appear to
+                  team members across NexusQA.</p>
+
+                <div id="profileFlipCardMount" class="profile-flipcard-mount"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- QA & DEV CONFERENCE VIEW -->
+          <section class="view-panel" id="view-conference">
+            <!-- 1. PROJECTS VIEW (Default View) -->
+            <div id="conferenceProjectsSection">
+              <div class="view-header">
+                <div>
+                  <div class="d-flex align-center gap-2 mb-1">
+                    <span class="badge badge-primary"><i class="fa-solid fa-satellite-dish"></i> Live Conference
+                      Hub</span>
+                    <span class="badge badge-passed" id="conferenceLiveStatus"><i
+                        class="fa-solid fa-circle status-dot-online"></i> Cross-Portal Sync</span>
+                  </div>
+                  <h1 class="view-title">Dev ↔ QA Conference Projects</h1>
+                  <p class="view-subtitle">Select a project channel to collaborate on bug triage, repro steps, and
+                    hotfix verification in real time.</p>
+                </div>
+                <div class="view-actions">
+                  <button type="button" class="btn btn-secondary btn-sm" id="conferenceRefreshProjectsBtn"
+                    title="Refresh projects"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+                  <button type="button" class="btn btn-primary btn-sm" id="btnOpenNewProjectModal"
+                    title="Create a new Conference Project channel">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>New Project</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Project Filters and Search Bar -->
+              <div class="conference-filter-bar">
+                <div class="conference-search-box">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="conferenceProjectSearchInput"
+                    placeholder="Filter projects by title, scope, or tag..." />
+                </div>
+                <div class="conference-category-pills" id="conferenceCategoryPills">
+                  <button type="button" class="cat-pill active" data-cat="all">All Channels</button>
+                  <button type="button" class="cat-pill" data-cat="Payments">Payments</button>
+                  <button type="button" class="cat-pill" data-cat="Security">Security</button>
+                  <button type="button" class="cat-pill" data-cat="AI & NLP">AI &amp; NLP</button>
+                  <button type="button" class="cat-pill" data-cat="Frontend">Frontend</button>
+                </div>
+              </div>
+
+              <!-- Project Cards Grid -->
+              <div class="conference-projects-grid" id="conferenceProjectsGrid">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+
+            <!-- 2. PROJECT CHAT ROOM VIEW (Active when a project card is opened) -->
+            <div id="conferenceChatSection" style="display: none;">
+              <div class="view-header">
+                <div class="d-flex align-center gap-3">
+                  <button type="button" class="btn btn-secondary btn-sm" id="btnBackToProjects"
+                    title="Back to All Projects">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> All Projects
+                  </button>
+                  <div>
+                    <div class="d-flex align-center gap-2 mb-1">
+                      <span class="badge badge-primary" id="chatProjectCatBadge">Payments</span>
+                      <span class="badge badge-passed"><i class="fa-solid fa-circle status-dot-online"></i> Live
+                        Synchronized</span>
+                    </div>
+                    <h1 class="view-title" id="chatProjectTitle">E-Commerce Checkout &amp; Payments</h1>
+                    <p class="view-subtitle" id="chatProjectSubtitle">Real-time collaboration between QA Engineers &amp;
+                      Developers</p>
+                  </div>
+                </div>
+                <div class="view-actions">
+                  <button type="button" class="btn btn-outline btn-sm" id="btnViewProjectMembers"
+                    title="View all people allotted to this project">
+                    <i class="fa-solid fa-users text-primary"></i> <span>Allotted Team (<strong
+                        id="chatProjectMemberCount">0</strong>)</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="conferenceRefreshBtn"
+                    title="Refresh messages"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="conferenceClearBtn"
+                    title="Clear chat history for this project (Senior Developers only)" style="display: none;"><i
+                      class="fa-solid fa-broom"></i> Clear Room</button>
+                  <button type="button" class="btn btn-outline-danger btn-sm" id="conferenceDeleteProjectBtn"
+                    title="Permanently Delete this Project Channel (Senior Developers only)" style="display: none;"><i
+                      class="fa-solid fa-trash-can mr-1"></i> Delete Project</button>
+                </div>
+              </div>
+
+              <!-- Conference Main Card -->
+              <div class="conference-card">
+                <!-- Channel Sub-Header -->
+                <div class="conference-channel-bar">
+                  <div class="conference-channel-info">
+                    <div class="conference-channel-icon" id="chatProjectIcon"><i class="fa-solid fa-comments"></i></div>
+                    <div>
+                      <div class="conference-channel-name" id="chatChannelSlug"># project-channel</div>
+                      <div class="conference-channel-topic" id="chatProjectTopic">Collaborative triage, immediate
+                        blockers, test verification &amp; hotfix notifications</div>
+                    </div>
+                  </div>
+                  <div class="conference-channel-right-controls d-flex align-center gap-2">
+                    <button type="button" class="btn btn-primary btn-sm btn-launch-meeting" id="btnLaunchMeeting"
+                      title="Launch live team sync meeting for this project">
+                      <i class="fa-solid fa-video"></i> <span>Launch Meeting</span>
+                    </button>
+                    <div class="conference-participants-badge" id="chatParticipantsBadgeBtn"
+                      title="Click to view all allotted team members" style="cursor: pointer;">
+                      <div class="participant-avatars" id="chatChannelAvatarsList">
+                        <span class="p-avatar qa-avatar" title="QA Lead (Tester)">QA</span>
+                        <span class="p-avatar dev-avatar" title="Developer">DV</span>
+                      </div>
+                      <span class="participant-text"><strong id="conferenceOnlineCount">0</strong> allotted</span>
+                      <i class="fa-solid fa-chevron-right ml-1 text-2xs" style="opacity: 0.7;"></i>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Inline Google Meet Link Share Banner (Shown when Launch Meeting is clicked) -->
+                <div class="conference-meet-banner" id="conferenceMeetShareBanner" style="display: none;">
+                  <div class="meet-banner-top">
+                    <div class="meet-banner-title">
+                      <span class="meet-banner-badge"><i class="fa-solid fa-video"></i> Google Meet Tab Opened</span>
+                      <span>Paste the generated Google Meet link (<code>https://meet.google.com/...</code>) and share it
+                        with your team:</span>
+                    </div>
+                    <button type="button" class="btn-icon meet-banner-close" id="cancelMeetShareBtn" title="Dismiss">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                  <form class="meet-banner-form" id="conferenceMeetShareForm">
+                    <div class="meet-banner-input-wrap">
+                      <i class="fa-solid fa-link"></i>
+                      <input type="text" id="meetLinkInput" class="meet-banner-input"
+                        placeholder="https://meet.google.com/abc-defg-hij" autocomplete="off" />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm meet-share-submit-btn"
+                      id="shareMeetWithTeamBtn">
+                      <i class="fa-solid fa-paper-plane mr-1"></i> Share with Team
+                    </button>
+                  </form>
+                </div>
+
+                <!-- Messages Stream Container -->
+                <div class="conference-messages-stream" id="conferenceMessagesContainer">
+                  <!-- Rendered via JS -->
+                </div>
+
+                <!-- Quick Action Suggestion Chips -->
+                <div class="conference-quick-chips">
+                  <span class="chips-label"><i class="fa-solid fa-bolt text-amber"></i> Quick Prompts:</span>
+                  <button type="button" class="quick-chip"
+                    data-text="🚨 Critical blocker identified! Please inspect high-priority defect.">🚨 Critical
+                    blocker</button>
+                  <button type="button" class="quick-chip"
+                    data-text="🔍 Repro steps confirmed: cleared cache &amp; re-tested on staging.">🔍 Repro steps
+                    confirmed</button>
+                  <button type="button" class="quick-chip"
+                    data-text="💻 Dev: Hotfix pushed to branch. Ready for QA re-test.">💻 Fix deployed</button>
+                  <button type="button" class="quick-chip"
+                    data-text="✅ Test passed in current build. Closing defect ticket.">✅ Verified &amp; passed</button>
+                  <button type="button" class="quick-chip"
+                    data-text="📸 Requesting HAR log trace / full screenshot for investigation.">📸 Requesting
+                    logs</button>
+                </div>
+
+                <!-- Message Input Area -->
+                <div class="conference-input-area">
+                  <div class="conference-sender-indicator" id="conferenceSenderIndicator">
+                    <span class="sender-avatar" id="conferenceUserAvatar">AM</span>
+                    <span class="sender-name" id="conferenceUserName">Posting as Alex Morgan</span>
+                    <span class="badge badge-version" id="conferenceUserRoleBadge">QA Lead</span>
+                  </div>
+                  <form class="conference-form" id="conferenceForm">
+                    <div class="conference-input-wrapper">
+                      <textarea id="conferenceInput" class="conference-textarea"
+                        placeholder="Type a message to Devs &amp; Testers in this project... (Press Enter to send, Shift+Enter for new line)"
+                        rows="1"></textarea>
+                      <button type="submit" class="conference-send-btn" id="conferenceSendBtn"
+                        title="Send Message (Enter)">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Send</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </main>
     </div>
     <!-- Mobile Floating Quick-Action (+) Button -->
     <button type="button" class="mobile-fab-btn" id="mobileFabBtn" title="New Test Case" aria-label="New Test Case">
@@ -1338,7 +1478,8 @@
             </div>
           </div>
         </div>
-        <button class="icon-btn close-modal-btn" id="closeTestCaseModalBtn" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+        <button class="icon-btn close-modal-btn" id="closeTestCaseModalBtn" aria-label="Close"><i
+            class="fa-solid fa-xmark"></i></button>
       </div>
 
       <div class="modal-body">
@@ -1353,12 +1494,14 @@
               <div class="tc-top-left-col">
                 <div class="form-group mb-3">
                   <label for="tcTitle">Title <span class="text-rose">*</span></label>
-                  <input type="text" id="tcTitle" class="nexus-input tc-title-input" placeholder="e.g. Checkout apply coupon button freezes on expired promo code" required>
+                  <input type="text" id="tcTitle" class="nexus-input tc-title-input"
+                    placeholder="e.g. Checkout apply coupon button freezes on expired promo code" required>
                 </div>
 
                 <div class="form-group m-0 d-flex flex-column flex-1">
                   <label for="tcExplanation">What is happening / Bug Explanation</label>
-                  <textarea id="tcExplanation" class="nexus-textarea tc-explanation-textarea" rows="4" placeholder="Describe what happened, expected vs actual behavior, console errors, or environment context..."></textarea>
+                  <textarea id="tcExplanation" class="nexus-textarea tc-explanation-textarea" rows="4"
+                    placeholder="Describe what happened, expected vs actual behavior, console errors, or environment context..."></textarea>
                 </div>
               </div>
 
@@ -1373,36 +1516,47 @@
                   <div class="tc-image-upload-box tc-media-upload-box" id="tcImageUploadBox" tabindex="0">
                     <!-- Empty Dropzone -->
                     <div class="tc-image-dropzone" id="tcImageDropzone">
-                      <i class="fa-solid fa-cloud-arrow-up text-primary" style="font-size: 22px; margin-bottom: 4px;"></i>
+                      <i class="fa-solid fa-cloud-arrow-up text-primary"
+                        style="font-size: 22px; margin-bottom: 4px;"></i>
                       <div class="text-sm font-semibold">Paste screenshot (<kbd>Ctrl+V</kbd>) or drop media here</div>
                       <p class="text-xs text-muted m-0 mt-1">PNG, JPG, WEBP, GIF &amp; short MP4 / WEBM / MOV</p>
                       <div class="d-flex flex-wrap justify-center gap-2 mt-2 align-center">
-                        <label class="btn btn-secondary btn-xs" style="cursor: pointer; margin: 0;" for="tcImageFileInput">
+                        <label class="btn btn-secondary btn-xs" style="cursor: pointer; margin: 0;"
+                          for="tcImageFileInput">
                           <i class="fa-solid fa-folder-open"></i> Browse Image or Video
                         </label>
-                        <input type="file" id="tcImageFileInput" accept="image/*,video/mp4,video/webm,video/quicktime,video/*" style="display: none;">
+                        <input type="file" id="tcImageFileInput"
+                          accept="image/*,video/mp4,video/webm,video/quicktime,video/*" style="display: none;">
                       </div>
                     </div>
 
                     <!-- Attached Preview (Image or Video) -->
                     <div class="tc-image-preview-wrap" id="tcImagePreviewWrap" style="display: none;">
                       <div class="tc-image-preview-container">
-                        <img id="tcImagePreview" src="" alt="Attached Screenshot Evidence" class="tc-image-preview-img" style="display: none;">
-                        <video id="tcVideoPreview" src="" controls muted playsinline class="tc-video-preview-player" style="display: none;"></video>
+                        <img id="tcImagePreview" src="" alt="Attached Screenshot Evidence" class="tc-image-preview-img"
+                          style="display: none;">
+                        <video id="tcVideoPreview" src="" controls muted playsinline class="tc-video-preview-player"
+                          style="display: none;"></video>
                         <div class="tc-image-preview-overlay">
                           <div class="styled-delete-wrapper btn-sm">
                             <button type="button" class="button" id="tcRemoveImageBtn" title="Remove attached media">
-                              <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+                              <svg viewBox="0 0 448 512" class="svgIcon">
+                                <path
+                                  d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z">
+                                </path>
+                              </svg>
                             </button>
                           </div>
-                          <a id="tcViewImageFullBtn" href="#" target="_blank" class="btn btn-secondary btn-xs" title="Open Media in New Tab">
+                          <a id="tcViewImageFullBtn" href="#" target="_blank" class="btn btn-secondary btn-xs"
+                            title="Open Media in New Tab">
                             <i class="fa-solid fa-up-right-from-square"></i> Full View
                           </a>
                         </div>
                       </div>
                       <div class="d-flex align-center justify-between gap-2 mt-2 w-100">
                         <div class="d-flex align-center gap-2">
-                          <span class="badge badge-passed text-xs" id="tcMediaStorageBadge"><i class="fa-solid fa-check"></i> Attached</span>
+                          <span class="badge badge-passed text-xs" id="tcMediaStorageBadge"><i
+                              class="fa-solid fa-check"></i> Attached</span>
                           <span class="text-xs text-muted font-mono" id="tcImageFileName">evidence.png</span>
                         </div>
                         <label class="btn btn-ghost btn-xs" style="cursor: pointer;" for="tcImageFileInput">
@@ -1420,12 +1574,15 @@
           <div class="tc-logger-section tc-steps-section">
             <div class="d-flex justify-between align-center mb-2">
               <div>
-                <label class="m-0 font-semibold"><i class="fa-solid fa-list-ol text-cyan mr-1"></i> Steps to Reproduce</label>
-                <span class="text-xs text-muted d-block">Write numbered steps or paste multi-line instructions to trigger the issue</span>
+                <label class="m-0 font-semibold"><i class="fa-solid fa-list-ol text-cyan mr-1"></i> Steps to
+                  Reproduce</label>
+                <span class="text-xs text-muted d-block">Write numbered steps or paste multi-line instructions to
+                  trigger the issue</span>
               </div>
               <div class="d-flex align-center gap-2">
                 <span class="text-xs text-muted">(Shift + Enter for next step)</span>
-                <button type="button" class="btn btn-secondary btn-xs" id="addStepBtn"><i class="fa-solid fa-plus"></i> Add Step</button>
+                <button type="button" class="btn btn-secondary btn-xs" id="addStepBtn"><i class="fa-solid fa-plus"></i>
+                  Add Step</button>
               </div>
             </div>
             <div class="steps-builder-container" id="stepsBuilderList"></div>
@@ -1491,13 +1648,18 @@
         <div class="d-flex align-center gap-2">
           <div class="styled-delete-wrapper" id="editTestCaseDeleteWrap" style="display: none;">
             <button type="button" class="button" id="deleteTestCaseModalBtn" title="Delete Test Case">
-              <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+              <svg viewBox="0 0 448 512" class="svgIcon">
+                <path
+                  d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z">
+                </path>
+              </svg>
             </button>
           </div>
         </div>
         <div class="d-flex align-center gap-2">
           <button type="button" class="btn btn-ghost" id="cancelTestCaseModalBtn">Cancel</button>
-          <button type="button" class="btn btn-primary" id="saveTestCaseBtn"><i class="fa-solid fa-cloud-arrow-up"></i> Save to Supabase</button>
+          <button type="button" class="btn btn-primary" id="saveTestCaseBtn"><i class="fa-solid fa-cloud-arrow-up"></i>
+            Save to Supabase</button>
         </div>
       </div>
     </div>
@@ -1510,19 +1672,25 @@
         <div class="modal-title-group d-flex align-center gap-2">
           <div class="ai-avatar ai-bot-avatar"><i class="fa-solid fa-sparkles"></i></div>
           <div>
-            <h2 id="autoInputModalTitle" style="display: flex; align-items: center; gap: 8px; font-size: 1.15rem; margin: 0;">
+            <h2 id="autoInputModalTitle"
+              style="display: flex; align-items: center; gap: 8px; font-size: 1.15rem; margin: 0;">
               Conversational AI QA Assistant — CampusOS
-              <span class="badge badge-primary text-xs" style="text-transform: none; letter-spacing: 0;">⚡ NLP Extraction Engine</span>
+              <span class="badge badge-primary text-xs" style="text-transform: none; letter-spacing: 0;">⚡ NLP
+                Extraction Engine</span>
             </h2>
-            <p class="text-xs text-muted" style="margin: 0;">Dictate or type observations naturally • Auto Expected vs Actual • Cross-role comparison • Duplicate detection • 22-col tracker</p>
+            <p class="text-xs text-muted" style="margin: 0;">Dictate or type observations naturally • Auto Expected vs
+              Actual • Cross-role comparison • Duplicate detection • 22-col tracker</p>
           </div>
         </div>
         <div class="d-flex align-center gap-2">
-          <button type="button" class="btn btn-secondary btn-sm" id="openTaskRefModalBtn" title="View CampusOS Task Reference Table">
+          <button type="button" class="btn btn-secondary btn-sm" id="openTaskRefModalBtn"
+            title="View CampusOS Task Reference Table">
             <i class="fa-solid fa-table-list mr-1"></i> Task References
           </button>
-          <button class="icon-btn-xs" id="clearAiChatBtn" title="Reset Session & Clear Stream"><i class="fa-solid fa-rotate-left"></i></button>
-          <button class="icon-btn close-modal-btn" id="closeAutoInputModalBtn"><i class="fa-solid fa-xmark"></i></button>
+          <button class="icon-btn-xs" id="clearAiChatBtn" title="Reset Session & Clear Stream"><i
+              class="fa-solid fa-rotate-left"></i></button>
+          <button class="icon-btn close-modal-btn" id="closeAutoInputModalBtn"><i
+              class="fa-solid fa-xmark"></i></button>
         </div>
       </div>
 
@@ -1530,17 +1698,24 @@
       <div class="ai-session-bar">
         <div class="ai-session-left">
           <span class="ai-session-label"><i class="fa-solid fa-layer-group text-primary"></i> Active Session:</span>
-          <span class="ai-session-pill" id="pillTestRef"><i class="fa-solid fa-vial"></i> Test: <strong id="valTestRef">Not Set</strong></span>
-          <span class="ai-session-pill" id="pillSide"><i class="fa-solid fa-user-gear"></i> Side: <strong id="valSide">Student</strong></span>
-          <span class="ai-session-pill" id="pillCounts"><i class="fa-solid fa-scale-balanced"></i> Trainer: <strong id="valTrainerCount">-</strong> | Student: <strong id="valStudentCount">-</strong></span>
-          <span class="ai-session-pill pill-warning" id="pillMismatch" style="display: none;"><i class="fa-solid fa-triangle-exclamation"></i> Mismatch Detected</span>
+          <span class="ai-session-pill" id="pillTestRef"><i class="fa-solid fa-vial"></i> Test: <strong
+              id="valTestRef">Not Set</strong></span>
+          <span class="ai-session-pill" id="pillSide"><i class="fa-solid fa-user-gear"></i> Side: <strong
+              id="valSide">Student</strong></span>
+          <span class="ai-session-pill" id="pillCounts"><i class="fa-solid fa-scale-balanced"></i> Trainer: <strong
+              id="valTrainerCount">-</strong> | Student: <strong id="valStudentCount">-</strong></span>
+          <span class="ai-session-pill pill-warning" id="pillMismatch" style="display: none;"><i
+              class="fa-solid fa-triangle-exclamation"></i> Mismatch Detected</span>
         </div>
         <div class="ai-session-right">
           <div class="d-flex align-center gap-1">
-            <label for="aiTargetSuite" class="text-xs text-muted font-bold" style="white-space: nowrap;">Target Suite:</label>
-            <select id="aiTargetSuite" class="nexus-select" style="padding: 3px 8px; font-size: 0.76rem; min-width: 130px;"></select>
+            <label for="aiTargetSuite" class="text-xs text-muted font-bold" style="white-space: nowrap;">Target
+              Suite:</label>
+            <select id="aiTargetSuite" class="nexus-select"
+              style="padding: 3px 8px; font-size: 0.76rem; min-width: 130px;"></select>
           </div>
-          <button type="button" class="btn btn-ghost btn-xs" id="resetSessionBtn" title="Reset Context"><i class="fa-solid fa-arrows-rotate mr-1"></i> Reset Context</button>
+          <button type="button" class="btn btn-ghost btn-xs" id="resetSessionBtn" title="Reset Context"><i
+              class="fa-solid fa-arrows-rotate mr-1"></i> Reset Context</button>
         </div>
       </div>
 
@@ -1558,10 +1733,14 @@
                     <span class="badge badge-success text-xs">Listening</span>
                   </div>
                   <p style="margin: 0 0 0.5rem 0; font-size: 0.86rem; line-height: 1.45;">
-                    Welcome! Type or dictate your testing observations naturally across one or multiple messages. You can attach screenshots of defects, compiler outputs, or task previews. I will automatically extract structured facts, compare Trainer vs Student configuration, identify bugs vs enhancements, search existing defects, and prepare <strong>22-column QA tracker records</strong> for your review.
+                    Welcome! Type or dictate your testing observations naturally across one or multiple messages. You
+                    can attach screenshots of defects, compiler outputs, or task previews. I will automatically extract
+                    structured facts, compare Trainer vs Student configuration, identify bugs vs enhancements, search
+                    existing defects, and prepare <strong>22-column QA tracker records</strong> for your review.
                   </p>
-                  
-                  <div class="text-xs text-muted font-bold mb-1"><i class="fa-solid fa-bolt text-amber mr-1"></i> Quick Testing Scenarios (Click to test):</div>
+
+                  <div class="text-xs text-muted font-bold mb-1"><i class="fa-solid fa-bolt text-amber mr-1"></i> Quick
+                    Testing Scenarios (Click to test):</div>
                   <div class="ai-chip-group">
                     <button type="button" class="ai-prompt-chip" data-scenario="test5-mismatch">
                       <i class="fa-solid fa-code-compare text-rose mr-1"></i> Test 5: Trainer (5 Qs) vs Student (1 Q)
@@ -1573,7 +1752,8 @@
                       <i class="fa-solid fa-copy text-indigo mr-1"></i> Duplicate Check: BUG-037 Python/Java
                     </button>
                     <button type="button" class="ai-prompt-chip" data-scenario="test5-unexpected-challenge">
-                      <i class="fa-solid fa-triangle-exclamation text-rose mr-1"></i> Test 5: Practical Challenge in Fill-in-Blanks
+                      <i class="fa-solid fa-triangle-exclamation text-rose mr-1"></i> Test 5: Practical Challenge in
+                      Fill-in-Blanks
                     </button>
                   </div>
                 </div>
@@ -1583,11 +1763,13 @@
             <!-- Screenshot / Evidence Preview Bar -->
             <div class="ai-evidence-preview-bar" id="aiEvidencePreviewBar" style="display: none;">
               <div class="d-flex align-center gap-2">
-                <span class="text-xs font-bold text-muted"><i class="fa-solid fa-paperclip text-primary"></i> Attached Evidence:</span>
+                <span class="text-xs font-bold text-muted"><i class="fa-solid fa-paperclip text-primary"></i> Attached
+                  Evidence:</span>
                 <div class="evidence-thumb-chip" id="evidenceThumbChip">
                   <img id="evidencePreviewImg" src="" alt="Screenshot Evidence" class="evidence-preview-thumb">
                   <span id="evidenceFileName" class="text-xs">screenshot.png</span>
-                  <button type="button" class="remove-evidence-btn" id="removeEvidenceBtn" title="Remove Screenshot"><i class="fa-solid fa-xmark"></i></button>
+                  <button type="button" class="remove-evidence-btn" id="removeEvidenceBtn" title="Remove Screenshot"><i
+                      class="fa-solid fa-xmark"></i></button>
                 </div>
               </div>
             </div>
@@ -1605,7 +1787,8 @@
               </div>
               <div class="voice-status-text">
                 <strong>Listening to your narration...</strong>
-                <span class="text-xs text-muted">Speak your observation naturally. Click microphone or press Esc to stop.</span>
+                <span class="text-xs text-muted">Speak your observation naturally. Click microphone or press Esc to
+                  stop.</span>
               </div>
               <button type="button" class="btn btn-danger btn-xs" id="stopVoiceBtn">Stop Recording</button>
             </div>
@@ -1613,27 +1796,33 @@
             <!-- Prompt Console Bar -->
             <div class="ai-prompt-console-wrapper">
               <div class="ai-prompt-box">
-                <textarea id="aiTestCasePromptInput" class="ai-prompt-textarea" placeholder="Type or dictate testing observations (e.g. 'I\'m testing Test 5. Trainer created 5 questions, but student only sees one.'). Paste screenshots directly with Ctrl+V..."></textarea>
-                
+                <textarea id="aiTestCasePromptInput" class="ai-prompt-textarea"
+                  placeholder="Type or dictate testing observations (e.g. 'I\'m testing Test 5. Trainer created 5 questions, but student only sees one.'). Paste screenshots directly with Ctrl+V..."></textarea>
+
                 <div class="ai-prompt-toolbar">
                   <div class="ai-tool-chips">
-                    <button type="button" class="ai-media-btn" id="aiVoiceDictateBtn" title="Dictate with Microphone (Speech-to-Text)">
+                    <button type="button" class="ai-media-btn" id="aiVoiceDictateBtn"
+                      title="Dictate with Microphone (Speech-to-Text)">
                       <i class="fa-solid fa-microphone text-rose"></i>
                       <span>Voice Dictate</span>
                     </button>
-                    <label class="ai-media-btn" id="aiAttachScreenshotLabel" title="Attach Screenshot (or Paste Ctrl+V)" style="margin: 0; cursor: pointer;">
+                    <label class="ai-media-btn" id="aiAttachScreenshotLabel" title="Attach Screenshot (or Paste Ctrl+V)"
+                      style="margin: 0; cursor: pointer;">
                       <i class="fa-solid fa-image text-indigo"></i>
                       <span>Screenshot</span>
                       <input type="file" id="aiScreenshotFileInput" accept="image/*" style="display: none;">
                     </label>
-                    <button type="button" class="ai-prompt-chip" id="chipTrainerSide"><i class="fa-solid fa-chalkboard-user mr-1"></i> Trainer Side</button>
-                    <button type="button" class="ai-prompt-chip" id="chipStudentSide"><i class="fa-solid fa-user-graduate mr-1"></i> Student Side</button>
+                    <button type="button" class="ai-prompt-chip" id="chipTrainerSide"><i
+                        class="fa-solid fa-chalkboard-user mr-1"></i> Trainer Side</button>
+                    <button type="button" class="ai-prompt-chip" id="chipStudentSide"><i
+                        class="fa-solid fa-user-graduate mr-1"></i> Student Side</button>
                   </div>
-                  
+
                   <button type="button" class="ai-send-btn" id="aiExtractSubmitBtn">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                     <span>Analyze & Extract</span>
-                    <kbd style="font-size: 0.65rem; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; margin-left: 2px;">Ctrl+Enter</kbd>
+                    <kbd
+                      style="font-size: 0.65rem; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; margin-left: 2px;">Ctrl+Enter</kbd>
                   </button>
                 </div>
               </div>
@@ -1649,10 +1838,12 @@
                 <span class="badge badge-secondary text-xs" id="stagedRecordsCountBadge">0 Pending</span>
               </div>
               <div class="d-flex align-center gap-1">
-                <button type="button" class="btn btn-outline btn-xs" id="copyAllTsvBtn" title="Copy 22-column TSV for Excel">
+                <button type="button" class="btn btn-outline btn-xs" id="copyAllTsvBtn"
+                  title="Copy 22-column TSV for Excel">
                   <i class="fa-solid fa-file-excel text-emerald mr-1"></i> 22-Col TSV
                 </button>
-                <button type="button" class="btn btn-outline btn-xs" id="downloadAllCsvBtn" title="Download 22-column CSV file">
+                <button type="button" class="btn btn-outline btn-xs" id="downloadAllCsvBtn"
+                  title="Download 22-column CSV file">
                   <i class="fa-solid fa-download mr-1"></i> CSV
                 </button>
               </div>
@@ -1664,7 +1855,8 @@
                 <div class="empty-icon"><i class="fa-solid fa-clipboard-question"></i></div>
                 <h4>No Records Extracted Yet</h4>
                 <p class="text-xs text-muted">
-                  Speak or type your testing notes on the left. The AI will extract facts, expected vs actual behavior, and generate structured 22-column records here for your review and confirmation before saving.
+                  Speak or type your testing notes on the left. The AI will extract facts, expected vs actual behavior,
+                  and generate structured 22-column records here for your review and confirmation before saving.
                 </p>
               </div>
             </div>
@@ -1675,7 +1867,8 @@
       <div class="modal-footer justify-between">
         <div class="d-flex align-center gap-2">
           <button type="button" class="btn btn-ghost" id="cancelAutoInputModalBtn">Close Assistant</button>
-          <span class="text-xs text-muted" id="aiStudioStatusText"><i class="fa-solid fa-circle-check text-emerald"></i> Ready for observations</span>
+          <span class="text-xs text-muted" id="aiStudioStatusText"><i class="fa-solid fa-circle-check text-emerald"></i>
+            Ready for observations</span>
         </div>
         <div class="d-flex align-center gap-2">
           <button type="button" class="btn btn-secondary" id="aiExportTsvFooterBtn">
@@ -1697,7 +1890,8 @@
           <i class="fa-solid fa-table-list text-primary modal-icon"></i>
           <div>
             <h2 style="margin: 0; font-size: 1.15rem;">CampusOS Task Reference Table</h2>
-            <p class="text-xs text-muted" style="margin: 0;">Preconfigured task benchmarks used by AI to compare Trainer vs Student side specifications</p>
+            <p class="text-xs text-muted" style="margin: 0;">Preconfigured task benchmarks used by AI to compare Trainer
+              vs Student side specifications</p>
           </div>
         </div>
         <button class="icon-btn close-modal-btn" id="closeTaskRefModalBtn"><i class="fa-solid fa-xmark"></i></button>
@@ -1705,7 +1899,8 @@
       <div class="modal-body">
         <div class="d-flex align-center justify-between mb-3">
           <div class="text-xs text-muted">Showing <strong>3</strong> active task benchmarks</div>
-          <button type="button" class="btn btn-primary btn-sm" id="addNewTaskRefBtn"><i class="fa-solid fa-plus mr-1"></i> Add Task Reference</button>
+          <button type="button" class="btn btn-primary btn-sm" id="addNewTaskRefBtn"><i
+              class="fa-solid fa-plus mr-1"></i> Add Task Reference</button>
         </div>
         <div class="table-container" style="max-height: 480px; overflow: auto;">
           <table class="nexus-table" id="taskRefTable">
@@ -1741,7 +1936,8 @@
           <i class="fa-solid fa-pen-to-square text-indigo modal-icon"></i>
           <div>
             <h2 id="qaEditModalTitle" style="margin: 0; font-size: 1.15rem;">Edit QA Record (22-Column Schema)</h2>
-            <p class="text-xs text-muted" style="margin: 0;">Verify and customize exact field values with controlled dropdowns before saving</p>
+            <p class="text-xs text-muted" style="margin: 0;">Verify and customize exact field values with controlled
+              dropdowns before saving</p>
           </div>
         </div>
         <button class="icon-btn close-modal-btn" id="closeQaEditModalBtn"><i class="fa-solid fa-xmark"></i></button>
@@ -1749,7 +1945,7 @@
       <div class="modal-body">
         <form id="qa22ColForm">
           <input type="hidden" id="editRecordIndex">
-          
+
           <div class="form-row">
             <div class="form-group flex-1">
               <label for="edit_test_module">1. Test Module <span class="text-rose">*</span></label>
@@ -1865,7 +2061,8 @@
       </div>
       <div class="modal-footer justify-between">
         <button type="button" class="btn btn-ghost" id="cancelQaEditModalBtn">Cancel</button>
-        <button type="button" class="btn btn-primary" id="saveQaEditModalBtn"><i class="fa-solid fa-check mr-1"></i> Update Record</button>
+        <button type="button" class="btn btn-primary" id="saveQaEditModalBtn"><i class="fa-solid fa-check mr-1"></i>
+          Update Record</button>
       </div>
     </div>
   </div>
@@ -1874,21 +2071,31 @@
   <div class="modal-backdrop" id="testCaseDetailModal" style="display: none;">
     <div class="modal-dialog modal-lg">
       <div class="modal-header">
-        <div class="modal-title-group"><span class="test-id-pill" id="viewDetailId">TC-101</span><h2 id="viewDetailTitle">Test Case Details</h2></div>
+        <div class="modal-title-group"><span class="test-id-pill" id="viewDetailId">TC-101</span>
+          <h2 id="viewDetailTitle">Test Case Details</h2>
+        </div>
         <button class="icon-btn close-modal-btn" id="closeDetailModalBtn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body" id="viewDetailBody"></div>
       <div class="modal-footer justify-between">
         <div class="styled-delete-wrapper">
           <button type="button" class="button" id="deleteDetailTestCaseBtn" title="Delete Test Case">
-            <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+            <svg viewBox="0 0 448 512" class="svgIcon">
+              <path
+                d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z">
+              </path>
+            </svg>
           </button>
         </div>
         <div class="d-flex align-center gap-2">
-          <button type="button" class="btn btn-secondary btn-sm" id="editDetailTestCaseBtn"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
-          <button type="button" class="btn btn-warning btn-sm" id="detailBlockedTestCaseBtn" title="Mark as Blocked"><i class="fa-solid fa-ban"></i> Blocked</button>
-          <button type="button" class="btn btn-danger btn-sm" id="detailFailedTestCaseBtn" title="Mark as Fail"><i class="fa-solid fa-xmark"></i> Fail</button>
-          <button type="button" class="btn btn-success btn-sm" id="detailPassedTestCaseBtn" title="Mark as Pass"><i class="fa-solid fa-check"></i> Pass</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="editDetailTestCaseBtn"><i
+              class="fa-solid fa-pen-to-square"></i> Edit</button>
+          <button type="button" class="btn btn-warning btn-sm" id="detailBlockedTestCaseBtn" title="Mark as Blocked"><i
+              class="fa-solid fa-ban"></i> Blocked</button>
+          <button type="button" class="btn btn-danger btn-sm" id="detailFailedTestCaseBtn" title="Mark as Fail"><i
+              class="fa-solid fa-xmark"></i> Fail</button>
+          <button type="button" class="btn btn-success btn-sm" id="detailPassedTestCaseBtn" title="Mark as Pass"><i
+              class="fa-solid fa-check"></i> Pass</button>
         </div>
       </div>
     </div>
@@ -1898,7 +2105,9 @@
   <div class="modal-backdrop" id="defectModal" style="display: none;">
     <div class="modal-dialog">
       <div class="modal-header">
-        <div class="modal-title-group"><i class="fa-solid fa-bug text-rose modal-icon"></i><h2 id="defectModalTitle">Report New Defect</h2></div>
+        <div class="modal-title-group"><i class="fa-solid fa-bug text-rose modal-icon"></i>
+          <h2 id="defectModalTitle">Report New Defect</h2>
+        </div>
         <button class="icon-btn close-modal-btn" id="closeDefectModalBtn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
@@ -1906,7 +2115,8 @@
           <input type="hidden" id="editDefectId">
           <div class="form-group">
             <label for="bugSummary">Defect Summary <span class="text-rose">*</span></label>
-            <input type="text" id="bugSummary" class="nexus-input" placeholder="e.g. Checkout fails with 500 error" required>
+            <input type="text" id="bugSummary" class="nexus-input" placeholder="e.g. Checkout fails with 500 error"
+              required>
           </div>
           <div class="form-row">
             <div class="form-group flex-1">
@@ -1947,12 +2157,17 @@
       <div class="modal-footer justify-between">
         <div class="styled-delete-wrapper" id="editDefectDeleteWrap" style="display: none;">
           <button type="button" class="button" id="deleteDefectModalBtn" title="Delete Defect">
-            <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+            <svg viewBox="0 0 448 512" class="svgIcon">
+              <path
+                d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z">
+              </path>
+            </svg>
           </button>
         </div>
         <div class="d-flex align-center gap-2">
           <button type="button" class="btn btn-ghost" id="cancelDefectModalBtn">Cancel</button>
-          <button type="button" class="btn btn-danger" id="saveDefectBtn"><i class="fa-solid fa-bug"></i> Save & Broadcast Defect</button>
+          <button type="button" class="btn btn-danger" id="saveDefectBtn"><i class="fa-solid fa-bug"></i> Save &
+            Broadcast Defect</button>
         </div>
       </div>
     </div>
@@ -1962,7 +2177,9 @@
   <div class="modal-backdrop" id="suiteModal" style="display: none;">
     <div class="modal-dialog modal-sm">
       <div class="modal-header">
-        <div class="modal-title-group"><i class="fa-solid fa-folder-plus modal-icon"></i><h2 id="suiteModalTitle">New Test Suite</h2></div>
+        <div class="modal-title-group"><i class="fa-solid fa-folder-plus modal-icon"></i>
+          <h2 id="suiteModalTitle">New Test Suite</h2>
+        </div>
         <button class="icon-btn close-modal-btn" id="closeSuiteModalBtn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
@@ -1974,7 +2191,8 @@
           </div>
           <div class="form-group">
             <label for="newSuiteDescription">Description</label>
-            <textarea id="newSuiteDescription" class="nexus-textarea" rows="3" placeholder="Scope and functional boundaries..."></textarea>
+            <textarea id="newSuiteDescription" class="nexus-textarea" rows="3"
+              placeholder="Scope and functional boundaries..."></textarea>
           </div>
           <div class="form-group">
             <label for="newSuiteIcon">Icon</label>
@@ -2006,12 +2224,14 @@
           <div>
             <h2 id="newProjectModalTitle">Create Project &amp; Assign Team</h2>
             <div class="d-flex align-center gap-2 mt-1">
-              <span class="badge badge-passed"><i class="fa-solid fa-shield-halved"></i> Senior Dev Access Verified</span>
+              <span class="badge badge-passed"><i class="fa-solid fa-shield-halved"></i> Senior Dev Access
+                Verified</span>
               <span class="text-xs text-muted">Syncs to Conference &amp; Employee Directory</span>
             </div>
           </div>
         </div>
-        <button class="icon-btn close-modal-btn" id="closeNewConferenceProjectModalBtn"><i class="fa-solid fa-xmark"></i></button>
+        <button class="icon-btn close-modal-btn" id="closeNewConferenceProjectModalBtn"><i
+            class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
         <form id="newConferenceProjectForm" onsubmit="return false;">
@@ -2021,7 +2241,8 @@
               <span>Project Name <span class="text-rose">*</span></span>
               <span class="text-2xs text-muted">Unique Project Channel</span>
             </label>
-            <input type="text" id="confProjName" class="nexus-input" placeholder="e.g. Payment Gateway v2 / Biometric Auth / API Core" required>
+            <input type="text" id="confProjName" class="nexus-input"
+              placeholder="e.g. Payment Gateway v2 / Biometric Auth / API Core" required>
           </div>
 
           <!-- Category and Status Row -->
@@ -2051,8 +2272,10 @@
           </div>
 
           <div class="form-group mb-3">
-            <label for="confProjDescription" class="font-semibold">Description / Scope <span class="text-2xs text-muted">(Optional)</span></label>
-            <textarea id="confProjDescription" class="nexus-textarea" rows="2" placeholder="Define the testing objectives, active sprint features, or defect triage focus..."></textarea>
+            <label for="confProjDescription" class="font-semibold">Description / Scope <span
+                class="text-2xs text-muted">(Optional)</span></label>
+            <textarea id="confProjDescription" class="nexus-textarea" rows="2"
+              placeholder="Define the testing objectives, active sprint features, or defect triage focus..."></textarea>
           </div>
 
           <!-- 2. Horizontal Bar for Adding Testers and Devs -->
@@ -2097,7 +2320,8 @@
               <option value="">-- None / No Project Head (Optional) --</option>
               <!-- Populated via JS -->
             </select>
-            <p class="text-2xs text-muted mt-1">Designate an optional lead to spearhead project triage. Can be selected from assigned team members.</p>
+            <p class="text-2xs text-muted mt-1">Designate an optional lead to spearhead project triage. Can be selected
+              from assigned team members.</p>
           </div>
         </form>
       </div>
@@ -2115,15 +2339,18 @@
     <div class="modal-dialog modal-dialog-lg project-members-modal-dialog">
       <div class="modal-header">
         <div class="d-flex align-center gap-2">
-          <div class="modal-header-icon" style="background: rgba(6, 182, 212, 0.12); color: #06b6d4; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+          <div class="modal-header-icon"
+            style="background: rgba(6, 182, 212, 0.12); color: #06b6d4; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px;">
             <i class="fa-solid fa-users"></i>
           </div>
           <div>
             <h3 class="modal-title m-0">Allotted Project Team</h3>
-            <p class="modal-subtitle text-xs text-muted m-0" id="projectMembersModalSubtitle">Team members &amp; roles assigned to this project room</p>
+            <p class="modal-subtitle text-xs text-muted m-0" id="projectMembersModalSubtitle">Team members &amp; roles
+              assigned to this project room</p>
           </div>
         </div>
-        <button type="button" class="btn-icon modal-close-btn" id="closeProjectMembersModalBtn" aria-label="Close dialog">
+        <button type="button" class="btn-icon modal-close-btn" id="closeProjectMembersModalBtn"
+          aria-label="Close dialog">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -2138,7 +2365,8 @@
         <div class="project-members-controls mb-3">
           <div class="project-members-search">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="projectMembersSearchInput" placeholder="Filter allotted members by name, role, email..." />
+            <input type="text" id="projectMembersSearchInput"
+              placeholder="Filter allotted members by name, role, email..." />
           </div>
           <div class="project-members-filter-tabs" id="projectMembersFilterTabs">
             <button type="button" class="tab-pill active" data-filter="all">
@@ -2161,7 +2389,8 @@
 
       <div class="modal-footer justify-between">
         <div class="text-xs text-muted" id="projectMembersFooterSummary">
-          <i class="fa-solid fa-circle-info mr-1 text-primary"></i> <span id="projectMembersTotalCountText">0 team members allotted</span>
+          <i class="fa-solid fa-circle-info mr-1 text-primary"></i> <span id="projectMembersTotalCountText">0 team
+            members allotted</span>
         </div>
         <button type="button" class="btn btn-secondary" id="closeProjectMembersModalBottomBtn">Close</button>
       </div>
@@ -2173,35 +2402,43 @@
     <div class="modal-dialog modal-dialog-md private-chat-dialog">
       <div class="modal-header d-flex align-center justify-between">
         <div class="d-flex align-center gap-2">
-          <div class="avatar-ring" id="privateChatHeaderAvatar" style="width: 40px; height: 40px; font-size: 14px; font-weight: 700;">
+          <div class="avatar-ring" id="privateChatHeaderAvatar"
+            style="width: 40px; height: 40px; font-size: 14px; font-weight: 700;">
             MV
           </div>
           <div>
             <div class="d-flex align-center gap-2">
               <h3 class="modal-title m-0" id="privateChatHeaderName">Marcus Vance</h3>
               <span class="badge badge-primary text-2xs" id="privateChatHeaderRole">Lead Developer</span>
-              <span class="badge badge-passed text-2xs"><i class="fa-solid fa-circle status-dot-online mr-1"></i> Online</span>
+              <span class="badge badge-passed text-2xs"><i class="fa-solid fa-circle status-dot-online mr-1"></i>
+                Online</span>
             </div>
             <p class="modal-subtitle text-xs text-muted m-0" id="privateChatHeaderSubtitle">
-              <i class="fa-solid fa-lock text-emerald mr-1"></i> Private 1-on-1 • <span id="privateChatProjectName"><span class="font-mono text-primary font-bold">#payments-engine</span> <span class="text-muted">(E-Commerce Checkout &amp; Payments)</span></span>
+              <i class="fa-solid fa-lock text-emerald mr-1"></i> Private 1-on-1 • <span
+                id="privateChatProjectName"><span class="font-mono text-primary font-bold">#payments-engine</span> <span
+                  class="text-muted">(E-Commerce Checkout &amp; Payments)</span></span>
             </p>
           </div>
         </div>
         <div class="d-flex align-center gap-2">
-          <button type="button" class="btn btn-ghost btn-sm" id="btnPrivateChatBackToMembers" title="Back to Allotted Team Roster">
+          <button type="button" class="btn btn-ghost btn-sm" id="btnPrivateChatBackToMembers"
+            title="Back to Allotted Team Roster">
             <i class="fa-solid fa-users mr-1 text-primary"></i> Team List
           </button>
-          <button type="button" class="btn-icon modal-close-btn" id="closePrivateChatModalBtn" aria-label="Close private chat">
+          <button type="button" class="btn-icon modal-close-btn" id="closePrivateChatModalBtn"
+            aria-label="Close private chat">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
       </div>
 
-      <div class="modal-body p-0 d-flex flex-column" style="height: 520px; max-height: 75vh; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
+      <div class="modal-body p-0 d-flex flex-column"
+        style="height: 520px; max-height: 75vh; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
         <!-- Privacy info banner -->
         <div class="private-chat-security-banner">
           <i class="fa-solid fa-shield-halved text-emerald"></i>
-          <span>Confidential Project Thread: Messages are restricted exclusively to you and <strong id="privateChatBannerTargetName">Marcus Vance</strong> within this project scope.</span>
+          <span>Confidential Project Thread: Messages are restricted exclusively to you and <strong
+              id="privateChatBannerTargetName">Marcus Vance</strong> within this project scope.</span>
         </div>
 
         <!-- Messages Stream -->
@@ -2220,17 +2457,23 @@
         <!-- Quick Suggestion Chips -->
         <div class="private-chat-quick-chips">
           <span class="text-2xs text-muted font-bold"><i class="fa-solid fa-bolt text-amber mr-1"></i> Quick:</span>
-          <button type="button" class="private-quick-chip" data-text="🚨 Critical blocker identified! Can you check the logs on staging?">🚨 Critical blocker</button>
-          <button type="button" class="private-quick-chip" data-text="🔍 Need clarification on the expected behavior for this scenario.">🔍 Expected behavior</button>
-          <button type="button" class="private-quick-chip" data-text="💻 Fix pushed to branch? Let me know when ready for QA re-test.">💻 Ready for QA?</button>
-          <button type="button" class="private-quick-chip" data-text="✅ Test verified and passed in the latest build! Thank you.">✅ Verified &amp; passed</button>
+          <button type="button" class="private-quick-chip"
+            data-text="🚨 Critical blocker identified! Can you check the logs on staging?">🚨 Critical blocker</button>
+          <button type="button" class="private-quick-chip"
+            data-text="🔍 Need clarification on the expected behavior for this scenario.">🔍 Expected behavior</button>
+          <button type="button" class="private-quick-chip"
+            data-text="💻 Fix pushed to branch? Let me know when ready for QA re-test.">💻 Ready for QA?</button>
+          <button type="button" class="private-quick-chip"
+            data-text="✅ Test verified and passed in the latest build! Thank you.">✅ Verified &amp; passed</button>
         </div>
 
         <!-- Input Area -->
         <div class="private-chat-input-area">
           <form id="privateChatForm" class="d-flex align-center gap-2 w-100">
-            <input type="text" id="privateChatInput" class="private-chat-input flex-1" placeholder="Type a private message... (Press Enter to send)" autocomplete="off" />
-            <button type="submit" class="btn btn-primary private-chat-send-btn" id="privateChatSendBtn" title="Send Private Message (Enter)">
+            <input type="text" id="privateChatInput" class="private-chat-input flex-1"
+              placeholder="Type a private message... (Press Enter to send)" autocomplete="off" />
+            <button type="submit" class="btn btn-primary private-chat-send-btn" id="privateChatSendBtn"
+              title="Send Private Message (Enter)">
               <i class="fa-solid fa-paper-plane mr-1"></i> Send
             </button>
           </form>
@@ -2251,17 +2494,20 @@
           </div>
           <div>
             <h3 class="meeting-room-title m-0" id="meetingModalTitle">Project Sync &amp; Triage Meeting</h3>
-            <p class="meeting-room-subtitle m-0 text-xs text-muted" id="meetingModalSubtitle">Connecting allotted team members via real-time WebRTC room</p>
+            <p class="meeting-room-subtitle m-0 text-xs text-muted" id="meetingModalSubtitle">Connecting allotted team
+              members via real-time WebRTC room</p>
           </div>
         </div>
         <div class="meeting-header-actions d-flex align-center gap-2">
-          <button type="button" class="btn btn-secondary btn-xs" id="btnCopyMeetingLink" title="Copy meeting link to clipboard">
+          <button type="button" class="btn btn-secondary btn-xs" id="btnCopyMeetingLink"
+            title="Copy meeting link to clipboard">
             <i class="fa-solid fa-link mr-1"></i> Copy Link
           </button>
           <span class="badge badge-primary text-xs" id="meetingModalAllottedBadge">
             <i class="fa-solid fa-users mr-1"></i> <span id="meetingParticipantCount">4</span> allotted
           </span>
-          <button type="button" class="btn-icon modal-close-btn" id="closeMeetingModalBtn" title="Leave &amp; Close Meeting">
+          <button type="button" class="btn-icon modal-close-btn" id="closeMeetingModalBtn"
+            title="Leave &amp; Close Meeting">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
@@ -2276,7 +2522,8 @@
         <!-- Optional Screen Share Area -->
         <div class="meeting-screenshare-stage" id="meetingScreenShareStage" style="display: none;">
           <div class="screenshare-header">
-            <span><i class="fa-solid fa-desktop text-cyan mr-1"></i> Live Screen Presentation — <strong id="screensharePresenter">Marcus Vance</strong></span>
+            <span><i class="fa-solid fa-desktop text-cyan mr-1"></i> Live Screen Presentation — <strong
+                id="screensharePresenter">Marcus Vance</strong></span>
             <button type="button" class="btn btn-xs btn-ghost" id="stopScreenShareBtn">Stop Presenting</button>
           </div>
           <div class="screenshare-content">
@@ -2288,7 +2535,8 @@
               <div class="preview-screen-body">
                 <i class="fa-solid fa-credit-card text-cyan mb-2" style="font-size: 32px;"></i>
                 <div class="font-bold text-sm">Stripe 3D-Secure Test Validation Flow</div>
-                <div class="text-xs text-muted mt-1">Shared live in meeting for collaborative defect verification &amp; triage</div>
+                <div class="text-xs text-muted mt-1">Shared live in meeting for collaborative defect verification &amp;
+                  triage</div>
               </div>
             </div>
           </div>
@@ -2335,7 +2583,9 @@
   <div class="styled-back-to-top-wrapper" id="scrollToTopWrapper">
     <button type="button" class="button" id="scrollToTopBtn" title="Back to Top" aria-label="Back to Top">
       <svg class="svgIcon" viewBox="0 0 384 512">
-        <path d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"></path>
+        <path
+          d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z">
+        </path>
       </svg>
     </button>
   </div>
@@ -2347,13 +2597,14 @@
 
   <!-- Supabase JS Client SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
+
   <!-- Scripts -->
   <script src="js/data.js?v=1.0.6"></script>
   <script src="js/supabase.js?v=1.0.16"></script>
   <script src="js/storage.js?v=1.0.19"></script>
   <script src="js/qa-assistant.js?v=1.0.5"></script>
-  <script src="js/flip-card-bundle.js?v=1.0.0"></script>
-  <script src="js/app.js?v=1.0.27"></script>
+  <script src="js/nexus-widgets-bundle.js?v=1.0.0"></script>
+  <script src="js/app.js?v=1.0.30"></script>
 </body>
+
 </html>
